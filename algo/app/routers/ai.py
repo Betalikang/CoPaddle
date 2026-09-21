@@ -5,11 +5,13 @@
 
 统一约定（《技术选型说明书》T6）：openai SDK + JSON 模式，temperature=0.2，
 超时 90s，失败重试 1 次后降级；每次调用写 ai_call_logs（S6 期接入）。
-脚手架阶段为占位实现（501）。
 """
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from ..ai.decompose import decompose as decompose_impl
+from ..ai.llm import LlmNotConfiguredError, LlmUnavailableError
+from ..config import get_settings
 from ..deps import require_internal_secret
 from ..schemas import ConflictRequest, ConflictResponse, DecomposeRequest, DecomposeResponse
 
@@ -18,8 +20,18 @@ router = APIRouter(prefix="/internal/ai", dependencies=[Depends(require_internal
 
 @router.post("/decompose", response_model=DecomposeResponse)
 def decompose(req: DecomposeRequest) -> DecomposeResponse:
-    """LLM 调用点 1：拆解为任务 DAG + 协作契约，后置规则校验（重复 id/悬空依赖/成环）。"""
-    raise HTTPException(status_code=501, detail="S3 期实现：LLM 作业拆解")
+    """LLM 调用点 1：拆解为任务 DAG + 协作契约，后置规则校验（重复 id/悬空依赖/成环）。
+
+    失败降级（规格书 S4.10）：503 + 明确提示「可手工创建任务」。
+    """
+    try:
+        result = decompose_impl(req)
+    except LlmNotConfiguredError as err:
+        raise HTTPException(status_code=503, detail=f"AI 未配置（{err}），可手工创建任务") from err
+    except LlmUnavailableError as err:
+        raise HTTPException(status_code=503, detail=f"AI 暂不可用：{err}。可手工创建任务") from err
+    result.model = get_settings().llm_model
+    return result
 
 
 @router.post("/conflict", response_model=ConflictResponse)

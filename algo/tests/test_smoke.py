@@ -89,9 +89,11 @@ def test_internal_rejects_missing_or_wrong_secret(client: TestClient) -> None:
 
 
 def test_internal_stubs_return_501(client: TestClient, auth_headers: dict[str, str]) -> None:
-    # 尚未实现的端点仍返回 501 占位（S3–S5 期逐个落地）
+    # 尚未实现的端点仍返回 501 占位（S5 期逐个落地）；
+    # grouping 三端点与 ai/decompose 已实现，见各自专项测试
+    live_paths = ("/internal/grouping/", "/internal/ai/decompose")
     for path, payload in INTERNAL_ENDPOINTS:
-        if path.startswith("/internal/grouping/"):
+        if any(path.startswith(p) for p in live_paths):
             continue
         r = client.post(path, json=payload, headers=auth_headers)
         assert r.status_code == 501, f"{path} 应返回 501 占位，实际 {r.status_code}"
