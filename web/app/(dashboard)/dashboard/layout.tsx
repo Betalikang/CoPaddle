@@ -65,10 +65,8 @@ export default function DashboardLayout({
           </nav>
         </aside>
 
-        {/* Main content（内容区居中限宽） */}
-        <main className="flex-1 overflow-y-auto p-0 lg:p-4">
-          <div className="max-w-7xl mx-auto w-full">{children}</div>
-        </main>
+        {/* Main content（撑满侧栏右侧空间，页面内部自行限宽） */}
+        <main className="flex-1 overflow-y-auto p-0 lg:p-4">{children}</main>
       </div>
     </div>
   );
