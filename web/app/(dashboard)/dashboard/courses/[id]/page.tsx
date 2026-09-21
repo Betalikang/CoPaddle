@@ -5,8 +5,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { use } from 'react';
 import {
+  AlertTriangle,
   BookOpenCheck,
   FileText,
+  GitMerge,
+  ScanSearch,
   ClipboardList,
   FileSpreadsheet,
   GitBranch,
@@ -169,6 +172,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           <EntryCard href={`/dashboard/courses/${id}/settings`} icon={<Settings className="h-5 w-5" />} title="分组策略与权重" desc="组数规模、四项目标权重、三类证据权重与阈值" ready />
           <EntryCard href={`/dashboard/courses/${id}/grouping`} icon={<GitBranch className="h-5 w-5" />} title="分组工作台" desc="AI 生成三方案、拖动微调实时看分、破坏硬约束标红" ready />
           <EntryCard href={`/dashboard/courses/${id}/tasks`} icon={<ListChecks className="h-5 w-5" />} title="任务与依赖" desc="AI 拆解任务 DAG、分工指派、协作契约" ready />
+          <EntryCard href={`/dashboard/courses/${id}/alerts`} icon={<AlertTriangle className="h-5 w-5" />} title="健康度与预警" desc="小组三维健康度、待处理预警、一键处理" ready />
+          <EntryCard href={`/dashboard/courses/${id}/conflicts`} icon={<ScanSearch className="h-5 w-5" />} title="冲突中心" desc="依赖冲突自动检测、退回对齐/重指派/忽略" ready />
+          <EntryCard href={`/dashboard/courses/${id}/replans`} icon={<GitMerge className="h-5 w-5" />} title="重规划中心" desc="三方案决策包（重新分配/缩减范围/组间补位）与采纳" ready />
           <EntryCard href={`/dashboard/courses/${id}/contributions`} icon={<ClipboardList className="h-5 w-5" />} title="贡献账本" desc="区间估计、贡献构成、证据下钻、教师终审与申诉" ready />
           <EntryCard href={`/dashboard/courses/${id}/artifacts`} icon={<FileText className="h-5 w-5" />} title="交付物与溯源" desc="平台内分段撰写、diff 归属、汇编终稿" ready />
           <EntryCard href={`/dashboard/courses/${id}/skill-card`} icon={<FileSpreadsheet className="h-5 w-5" />} title="我的技能卡" desc="填写我的能力自评（30 秒）" ready />

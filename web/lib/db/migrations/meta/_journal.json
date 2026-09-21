@@ -43,6 +43,13 @@
       "when": 1789999947081,
       "tag": "0005_smiling_nebula",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790005591064,
+      "tag": "0006_gifted_kylun",
+      "breakpoints": true
     }
   ]
 }

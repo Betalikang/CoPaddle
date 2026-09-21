@@ -68,6 +68,9 @@ async function main() {
     `/dashboard/courses/${course.id}/tasks`,
     `/dashboard/courses/${course.id}/artifacts`,
     `/dashboard/courses/${course.id}/contributions`,
+    `/dashboard/courses/${course.id}/alerts`,
+    `/dashboard/courses/${course.id}/conflicts`,
+    `/dashboard/courses/${course.id}/replans`,
     `/dashboard/my-tasks`
   ]) {
     const res = await fetch(`${BASE}${path}`, { headers: { Cookie: cookie }, redirect: 'manual' });

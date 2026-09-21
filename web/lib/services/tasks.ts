@@ -3,6 +3,7 @@ import { db } from '../db/drizzle';
 import {
   Contract,
   Task,
+  progressSignals,
   contractAcceptances,
   contractGlossary,
   contracts,
@@ -355,6 +356,14 @@ export async function changeTaskStatus(
     toStatus: input.toStatus,
     actorId,
     note: input.note ?? null
+  });
+  // 进度信号沉淀（B-10 的第一手来源：不依赖人上报）
+  await db.insert(progressSignals).values({
+    groupId: task.groupId,
+    taskId,
+    userId: actorId,
+    signalType: 'status_changed',
+    payload: { from: task.status, to: input.toStatus }
   });
   return { ok: true as const, task: updated };
 }

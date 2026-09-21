@@ -853,6 +853,14 @@ export type ContributionSnapshot = typeof contributionSnapshots.$inferSelect;
 export type EvidenceItem = typeof evidenceItems.$inferSelect;
 export type AttributionReview = typeof attributionReviews.$inferSelect;
 export type AttributionAppeal = typeof attributionAppeals.$inferSelect;
+export type ProgressSignal = typeof progressSignals.$inferSelect;
+export type Milestone = typeof milestones.$inferSelect;
+export type GroupHealthSnapshot = typeof groupHealthSnapshots.$inferSelect;
+export type Conflict = typeof conflicts.$inferSelect;
+export type ConflictAttribution = typeof conflictAttributions.$inferSelect;
+export type ConflictResolution = typeof conflictResolutions.$inferSelect;
+export type ReplanEvent = typeof replanEvents.$inferSelect;
+export type ReplanOption = typeof replanOptions.$inferSelect;
 
 // 课程级角色（规格书 S5 权限矩阵）；判定时与小组级 duty 求交
 export const COURSE_ROLES = ['teacher', 'assistant', 'captain', 'member'] as const;
@@ -870,3 +878,140 @@ export enum ActivityType {
   INVITE_TEAM_MEMBER = 'INVITE_TEAM_MEMBER',
   ACCEPT_INVITATION = 'ACCEPT_INVITATION',
 }
+
+// ============================================================
+// 共桨域⑥：进度与健康度（规格书 S1）
+// ============================================================
+
+export const progressSignals = pgTable('progress_signals', {
+  id: serial('id').primaryKey(),
+  groupId: integer('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+  taskId: integer('task_id').references(() => tasks.id, { onDelete: 'cascade' }),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  // deliverable_submitted | status_changed | segment_edited | comment
+  // | checkin | idle_detected | peer_helped
+  signalType: varchar('signal_type', { length: 30 }).notNull(),
+  weight: numeric('weight', { precision: 3, scale: 2 }).notNull().default('1.00'),
+  payload: jsonb('payload').$type<Record<string, unknown>>(),
+  observedAt: timestamp('observed_at').notNull().defaultNow(),
+}, (t) => [
+  index('progress_signals_group_observed_idx').on(t.groupId, t.observedAt),
+  index('progress_signals_user_idx').on(t.userId),
+]);
+
+export const milestones = pgTable('milestones', {
+  id: serial('id').primaryKey(),
+  groupId: integer('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 100 }).notNull(),
+  orderIndex: integer('order_index').notNull().default(0),
+  dueAt: timestamp('due_at'),
+  status: varchar('status', { length: 20 }).notNull().default('pending'),
+  completedAt: timestamp('completed_at'),
+}, (t) => [uniqueIndex('milestones_group_order_uniq').on(t.groupId, t.orderIndex)]);
+
+export const groupHealthSnapshots = pgTable('group_health_snapshots', {
+  id: serial('id').primaryKey(),
+  groupId: integer('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+  snapshotAt: timestamp('snapshot_at').notNull().defaultNow(),
+  // 三维健康度，0–100，越高越好
+  blockedScore: numeric('blocked_score', { precision: 5, scale: 1 }).notNull().default('100'),
+  idleScore: numeric('idle_score', { precision: 5, scale: 1 }).notNull().default('100'),
+  overloadScore: numeric('overload_score', { precision: 5, scale: 1 }).notNull().default('100'),
+  onTrackRatio: numeric('on_track_ratio', { precision: 4, scale: 3 }).notNull().default('1.000'),
+  criticalDelayDays: numeric('critical_delay_days', { precision: 4, scale: 1 }).notNull().default('0'),
+  openConflicts: integer('open_conflicts').notNull().default(0),
+  unassignedTasks: integer('unassigned_tasks').notNull().default(0),
+  diagnosis: jsonb('diagnosis').$type<string[]>(),
+}, (t) => [index('group_health_snapshots_group_snapshot_idx').on(t.groupId, t.snapshotAt)]);
+
+// ============================================================
+// 共桨域⑦：冲突与重规划（规格书 S1）
+// ============================================================
+
+export const conflicts = pgTable('conflicts', {
+  id: serial('id').primaryKey(),
+  groupId: integer('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+  taskId: integer('task_id').references(() => tasks.id, { onDelete: 'set null' }),
+  // dependency | contract | content
+  type: varchar('type', { length: 20 }).notNull(),
+  severity: varchar('severity', { length: 20 }).notNull().default('medium'),
+  status: varchar('status', { length: 20 }).notNull().default('open'),
+  detectedBy: varchar('detected_by', { length: 20 }).notNull().default('auto'),
+  detectedAt: timestamp('detected_at').notNull().defaultNow(),
+  title: varchar('title', { length: 200 }).notNull().default(''),
+  summary: text('summary'),
+  resolvedAt: timestamp('resolved_at'),
+}, (t) => [index('conflicts_group_status_idx').on(t.groupId, t.status)]);
+
+export const conflictAttributions = pgTable('conflict_attributions', {
+  id: serial('id').primaryKey(),
+  conflictId: integer('conflict_id')
+    .notNull()
+    .references(() => conflicts.id, { onDelete: 'cascade' }),
+  kind: varchar('kind', { length: 24 }),
+  severity: varchar('severity', { length: 20 }),
+  reason: text('reason'),
+  suggestion: text('suggestion'),
+  mergedText: text('merged_text'),
+  llmModel: varchar('llm_model', { length: 50 }),
+  promptTokens: integer('prompt_tokens'),
+  completionTokens: integer('completion_tokens'),
+  rawResponse: jsonb('raw_response').$type<unknown>(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+export const conflictResolutions = pgTable('conflict_resolutions', {
+  id: serial('id').primaryKey(),
+  conflictId: integer('conflict_id')
+    .notNull()
+    .references(() => conflicts.id, { onDelete: 'cascade' }),
+  // merge | realign | reassign | dismiss
+  action: varchar('action', { length: 20 }).notNull(),
+  actorId: integer('actor_id')
+    .notNull()
+    .references(() => users.id),
+  note: text('note'),
+  appliedPayload: jsonb('applied_payload').$type<Record<string, unknown>>(),
+  resolvedAt: timestamp('resolved_at').notNull().defaultNow(),
+});
+
+export const replanEvents = pgTable('replan_events', {
+  id: serial('id').primaryKey(),
+  groupId: integer('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+  // critical_delay | member_idle | rework_overflow | deadline_changed | manual
+  triggerType: varchar('trigger_type', { length: 30 }).notNull(),
+  triggerTaskId: integer('trigger_task_id').references(() => tasks.id, { onDelete: 'set null' }),
+  triggerPayload: jsonb('trigger_payload').$type<Record<string, unknown>>(),
+  status: varchar('status', { length: 20 }).notNull().default('pending'),
+  adoptedOptionId: integer('adopted_option_id'),
+  handledBy: integer('handled_by').references(() => users.id),
+  handledAt: timestamp('handled_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [index('replan_events_group_status_idx').on(t.groupId, t.status)]);
+
+export const replanOptions = pgTable('replan_options', {
+  id: serial('id').primaryKey(),
+  eventId: integer('event_id')
+    .notNull()
+    .references(() => replanEvents.id, { onDelete: 'cascade' }),
+  label: varchar('label', { length: 50 }).notNull(),
+  // redistribute | scope_cut | borrow_member
+  action: varchar('action', { length: 30 }).notNull(),
+  payload: jsonb('payload').$type<Record<string, unknown>[]>(),
+  // 模板拼装的代价说明（非 LLM）
+  costSummary: text('cost_summary'),
+  estImpactDays: numeric('est_impact_days', { precision: 4, scale: 1 }).notNull().default('0'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
