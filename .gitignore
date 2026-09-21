@@ -1,0 +1,36 @@
+# ---- 通用 ----
+.DS_Store
+Thumbs.db
+*.log
+
+# ---- 环境变量（密钥不入库，模板 .env.example 保留）----
+.env
+.env.local
+.env*.local
+
+# ---- web/（Next.js）----
+web/node_modules/
+web/.next/
+web/out/
+web/build/
+web/next-env.d.ts
+web/.turbo/
+web/.vercel/
+web/*.tsbuildinfo
+
+# ---- algo/（Python FastAPI）----
+algo/.venv/
+algo/**/__pycache__/
+algo/**/*.py[cod]
+algo/.pytest_cache/
+algo/.mypy_cache/
+algo/.ruff_cache/
+algo/htmlcov/
+algo/.coverage
+
+# ---- 本地存储与数据库 ----
+storage/
+*.sqlite
+
+# ---- 编辑器 ----
+.idea/

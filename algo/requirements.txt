@@ -1,0 +1,37 @@
+# 共桨算法服务依赖（版本纪律见《技术选型说明书》T12：锁定次版本，不追最新）
+# 安装：pip install -r requirements.txt（走阿里云 PyPI 镜像，见全局 pip.ini）
+
+# Web 框架与校验
+fastapi>=0.115,<0.116
+uvicorn[standard]>=0.32,<0.33
+pydantic>=2.9,<3
+pydantic-settings>=2.6,<3
+
+# 约束求解与图算法
+ortools>=9.11,<10
+networkx>=3.4,<4
+
+# 文本处理（冲突检测前置筛选 / 文档解析）
+rapidfuzz>=3.10,<4
+jieba>=0.42.1,<0.43
+python-docx>=1.1,<2
+pdfplumber>=0.11,<0.12
+
+# 定时任务（健康度快照 / 失联检测）
+apscheduler>=3.10,<4
+
+# 数据库与数值计算
+psycopg[binary]>=3.2,<4
+numpy>=2.1,<3
+
+# LLM 调用（OpenAI 兼容协议，指向 DeepSeek；换服务商只改 base_url）
+openai>=1.54,<2
+
+# 测试（覆盖率要求 >= 80%）
+pytest>=8.3,<9
+pytest-cov>=6.0,<7
+httpx>=0.27,<0.28
+
+# 代码检查（T9：ruff 同时做 lint 与 format；mypy 全量类型检查）
+ruff>=0.8,<1
+mypy>=1.13,<2

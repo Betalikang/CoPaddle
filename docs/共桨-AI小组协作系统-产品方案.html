@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>共桨 CoPaddle · AI 小组协作调度系统 · 产品方案</title>
+<style>
+:root{
+  --bg:#141413; --surface:#1c1c1b; --surface2:#242423;
+  --border:#33332f; --border2:#454540;
+  --text:#ececea; --muted:#a3a39d; --dim:#75756f;
+  --accent:#afa9ec; --accent-bg:#2a2450;
+  --teal:#5dcaa5; --teal-bg:#0d3b30;
+  --amber:#ef9f27; --amber-bg:#3d2a08;
+  --red:#f09595; --red-bg:#3d1616;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:920px;margin:0 auto;padding:0 28px 120px;}
+header{padding:72px 0 48px;border-bottom:1px solid var(--border);}
+.tag{display:inline-block;font-size:12px;letter-spacing:.14em;color:var(--accent);background:var(--accent-bg);padding:5px 12px;border-radius:999px;margin-bottom:22px;}
+h1{font-size:40px;line-height:1.25;font-weight:600;margin:0 0 14px;letter-spacing:-.02em;}
+h1 .sub{display:block;font-size:17px;font-weight:400;color:var(--muted);margin-top:14px;letter-spacing:0;}
+.meta{display:flex;flex-wrap:wrap;gap:26px;margin-top:30px;font-size:13px;color:var(--dim);}
+.meta b{color:var(--muted);font-weight:500;}
+nav{display:flex;flex-wrap:wrap;gap:8px;padding:26px 0 0;}
+nav a{font-size:13px;color:var(--muted);text-decoration:none;border:1px solid var(--border);border-radius:999px;padding:5px 12px;transition:.15s;}
+nav a:hover{color:var(--text);border-color:var(--border2);}
+section{padding:60px 0 8px;border-bottom:1px solid var(--border);}
+section:last-of-type{border-bottom:none;}
+.secnum{font-size:12px;letter-spacing:.16em;color:var(--accent);font-weight:500;}
+h2{font-size:26px;font-weight:600;margin:10px 0 8px;letter-spacing:-.015em;line-height:1.35;}
+h2 + .lead{font-size:16px;color:var(--muted);margin:0 0 32px;max-width:760px;}
+h3{font-size:16px;font-weight:600;margin:36px 0 10px;}
+h4{font-size:14px;font-weight:600;margin:0 0 6px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:22px;}
+li{margin-bottom:7px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px 24px;margin:20px 0;}
+.card.acc{border-left:2px solid var(--accent);}
+.card.warn{border-left:2px solid var(--amber);}
+.card.dang{border-left:2px solid var(--red);}
+.card.ok{border-left:2px solid var(--teal);}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin:20px 0;}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin:20px 0;}
+.kv{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;}
+.kv .n{font-size:11px;letter-spacing:.12em;color:var(--dim);margin-bottom:8px;}
+.kv .v{font-size:14px;color:var(--text);}
+table{width:100%;border-collapse:collapse;margin:22px 0;font-size:14px;}
+th{text-align:left;font-weight:600;font-size:13px;color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--border2);white-space:nowrap;}
+td{padding:12px 14px;border-bottom:1px solid var(--border);vertical-align:top;color:var(--text);}
+td.mut{color:var(--muted);}
+tr:last-child td{border-bottom:none;}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--accent);}
+.formula{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:18px 0;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13.5px;line-height:2;color:var(--text);overflow-x:auto;}
+.formula .c{color:var(--muted);}
+.pill{display:inline-block;font-size:11.5px;padding:2px 9px;border-radius:999px;font-weight:500;white-space:nowrap;}
+.pill.p{background:var(--accent-bg);color:var(--accent);}
+.pill.t{background:var(--teal-bg);color:var(--teal);}
+.pill.a{background:var(--amber-bg);color:var(--amber);}
+.pill.r{background:var(--red-bg);color:var(--red);}
+.redline{counter-reset:rl;list-style:none;padding:0;margin:20px 0;}
+.redline li{counter-increment:rl;position:relative;padding:14px 0 14px 46px;border-bottom:1px solid var(--border);}
+.redline li:last-child{border-bottom:none;}
+.redline li::before{content:counter(rl,decimal-leading-zero);position:absolute;left:0;top:14px;font-size:12px;font-weight:600;color:var(--accent);font-family:ui-monospace,monospace;}
+.redline b{display:block;font-weight:600;margin-bottom:3px;}
+.redline span{color:var(--muted);font-size:14px;}
+.mock{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin:18px 0;}
+.mock .bar{display:flex;align-items:center;gap:7px;padding:11px 16px;background:var(--surface2);border-bottom:1px solid var(--border);}
+.mock .dot{width:8px;height:8px;border-radius:50%;background:var(--border2);}
+.mock .ttl{font-size:12px;color:var(--muted);margin-left:8px;}
+.mock .body{padding:18px;}
+.row{display:flex;gap:10px;flex-wrap:wrap;}
+.chip{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-size:12.5px;color:var(--muted);flex:1;min-width:120px;}
+.chip b{display:block;color:var(--text);font-size:13.5px;font-weight:500;margin-bottom:2px;}
+.barline{height:7px;border-radius:4px;background:var(--surface2);overflow:hidden;margin:7px 0 14px;}
+.barline i{display:block;height:100%;background:var(--accent);border-radius:4px;}
+.barline i.t{background:var(--teal);}
+.barline i.a{background:var(--amber);}
+.lbl{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);}
+.lbl b{color:var(--text);font-weight:500;}
+.quote{border-left:2px solid var(--accent);padding:2px 0 2px 20px;margin:24px 0;font-size:17px;color:var(--text);line-height:1.7;}
+.note{font-size:13px;color:var(--dim);margin-top:10px;}
+footer{padding:48px 0 0;font-size:13px;color:var(--dim);border-top:1px solid var(--border);margin-top:60px;}
+strong{color:#fff;font-weight:600;}
+.hl{color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <span class="tag">ICAN 九月赛题 · AI 产品实现</span>
+  <h1>共桨 CoPaddle<br>让小组作业变成一条可调度、可归因的协作流水线
+    <span class="sub">面向高校小组协作的 AI 调度系统。教师、队长、队员三端，一个持续在线的调度中枢。</span>
+  </h1>
+  <div class="meta">
+    <span><b>产品形态</b>　Web + 微信小程序</span>
+    <span><b>核心用户</b>　任课教师 / 学生队长 / 组内成员</span>
+    <span><b>AI 参与</b>　理解 · 生成 · 识别 · 判断 · 规划 · 交互</span>
+  </div>
+  <nav>
+    <a href="#s1">01 问题定义</a>
+    <a href="#s2">02 角色与权限</a>
+    <a href="#s3">03 AI 调度引擎</a>
+    <a href="#s4">04 分组目标函数</a>
+    <a href="#s5">05 冲突与重规划</a>
+    <a href="#s6">06 贡献归因账本</a>
+    <a href="#s7">07 产品形态</a>
+    <a href="#s8">08 MVP 路径</a>
+    <a href="#s9">09 风险与规避</a>
+    <a href="#s10">10 赛题契合</a>
+    <a href="#s11">11 差异化</a>
+  </nav>
+</header>
+
+<section id="s1">
+  <div class="secnum">01</div>
+  <h2>问题定义：我们卖的不是"分得准"</h2>
+  <p class="lead">小组协作产品的直觉答案是"把组分好"。但分组一学期只发生一次，而痛苦每天都在发生。</p>
+
+  <p>高校小组作业的真实失效链路是这样的：<strong>教学要求规定了分组形式，但没有规定协作过程</strong>。于是责任在分组那一刻就被切断了——老师只在终点看到一份署了四个名字的文档，队长在中间当人肉调度器，队员在黑箱里等活。</p>
+
+  <div class="grid3">
+    <div class="kv"><div class="n">教师视角</div><div class="v">只在终点看到结果。<b>过程不可见</b>，无从干预，只能凭署名顺序给分。</div></div>
+    <div class="kv"><div class="n">队长视角</div><div class="v">承担了调度责任，却没有调度权威。<b>催办靠人情</b>，怕得罪人，最后自己兜底。</div></div>
+    <div class="kv"><div class="n">队员视角</div><div class="v">不清楚"我到底负责什么"、依赖谁、什么时候必须交。<b>规则不透明</b>，也没处申诉。</div></div>
+  </div>
+
+  <h3>三个被忽视的结构性断点</h3>
+  <table>
+    <tr><th>断点</th><th>表现</th><th>根因</th></tr>
+    <tr><td><strong>分完组就失联</strong></td><td class="mut">任务分完没有任何后续跟踪，中途崩盘无人知晓，直到截止前一天</td><td class="mut">缺少过程数据的采集入口</td></tr>
+    <tr><td><strong>没人有合法权威催办</strong></td><td class="mut">同学之间不好意思催，队长怕得罪人，老师没有介入的理由</td><td class="mut">协调责任没有制度化载体</td></tr>
+    <tr><td><strong>贡献无法公平归因</strong></td><td class="mut">"搭便车"现象普遍，但拿不出证据，只能自由心证</td><td class="mut">协作过程没有留下可复核的痕迹</td></tr>
+  </table>
+
+  <div class="card acc">
+    <h4>我们的核心主张</h4>
+    <p style="margin:0">把教师的角色从<strong>终点裁判</strong>变为<strong>过程中可介入的调度者</strong>；把同学之间"不好意思说的话"交给<strong>中立的系统</strong>去说；把"贡献"从主观印象变成<strong>可复核的证据链</strong>。分组只是入口，真正的产品是那个一直在线的调度中枢。</p>
+  </div>
+
+  <div class="quote">一句话定位：共桨把「小组作业」从一次性分工，变成一条有据可查、可调度、可归因的协作流水线。</div>
+</section>
+
+<section id="s2">
+  <div class="secnum">02</div>
+  <h2>三个角色，三种被授权的稀缺能力</h2>
+  <p class="lead">角色的划分不是界面分区，而是把三种原本不存在的"授权"交到三种人手上。</p>
+
+  <div class="grid3">
+    <div class="card acc" style="margin:0">
+      <h4>教师端</h4>
+      <p class="mut" style="font-size:13.5px;margin-bottom:12px">拿到的是<strong class="hl">过程里可介入的合法理由</strong></p>
+      <ul style="font-size:13.5px;margin-bottom:0">
+        <li>建课、导入班级名单</li>
+        <li>设定约束：组数、人数、不可同组、评分权重</li>
+        <li>审核 AI 分组方案（三选一 + 手动微调）</li>
+        <li>过程中查看小组健康度与预警</li>
+        <li>一键救火：重分 / 补位 / 降规模</li>
+        <li>终审贡献账本并最终调分</li>
+      </ul>
+    </div>
+    <div class="card acc" style="margin:0">
+      <h4>队长端</h4>
+      <p class="mut" style="font-size:13.5px;margin-bottom:12px">拿到的是<strong class="hl">"不是我在针对你，是系统判定的阻塞"</strong></p>
+      <ul style="font-size:13.5px;margin-bottom:0">
+        <li>确认并微调 AI 生成的任务 DAG</li>
+        <li>指定主责 / 协作 / 审阅人</li>
+        <li>查看组内阻塞与负载失衡</li>
+        <li>发起重规划（附 AI 方案背书）</li>
+        <li>提交组内互评与队长评语</li>
+      </ul>
+    </div>
+    <div class="card acc" style="margin:0">
+      <h4>队员端</h4>
+      <p class="mut" style="font-size:13.5px;margin-bottom:12px">拿到的是<strong class="hl">看得见的透明规则与申诉权</strong></p>
+      <ul style="font-size:13.5px;margin-bottom:0">
+        <li>看到"我的部分 / 依赖谁 / 何时必须交"</li>
+        <li>在平台内产出交付物（自动溯源）</li>
+        <li>申请延期、请求支援</li>
+        <li>发起冲突仲裁</li>
+        <li>查看自己的贡献账本与申诉入口</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="s3">
+  <div class="secnum">03</div>
+  <h2>AI 调度引擎：六个模块</h2>
+  <p class="lead">这是产品的技术主体。每个模块都对应赛题要求的"AI 直接参与核心过程"，而不是外挂一个聊天框。</p>
+
+  <h3>M1　班级画像理解</h3>
+  <table>
+    <tr><th style="width:88px">输入</th><td>教务成绩（可选）、历史小组作业记录、30 秒技能自选卡、以往互评、可选协作行为信号</td></tr>
+    <tr><th>处理</th><td>构建多维画像：<strong>能力向量</strong>（编程/写作/设计/表达/数据分析）+ <strong>协作倾向</strong>（主责完成率、延期率、被依赖度、补位次数）+ <strong>社交联系图</strong>（历史同组、高频协作）+ <strong>硬约束</strong>（时间可用性、不可同组名单）</td></tr>
+    <tr><th>输出</th><td>班级画像图谱；每位学生一组可解释标签（不是黑箱分数）</td></tr>
+    <tr><th>冷启动</th><td>首轮无数据时采用「均衡随机 + 硬约束满足」，从第二轮起切换真实画像。<strong>叙事价值：分组质量随学期复利上升</strong>——这本身就是续费理由</td></tr>
+  </table>
+
+  <h3>M2　多目标最优分组</h3>
+  <p>关键认知纠正：<strong>"联系度最优"如果被理解成"和熟人一组"，方向就是错的</strong>。真实最优是能力互补 + 弱连接引入 + 组间公平 + 历史搭便车者规避。目标函数见 <a href="#s4" style="color:var(--accent)">第 04 节</a>。</p>
+  <table>
+    <tr><th style="width:88px">处理</th><td>硬约束裁剪 → 图划分 / 局部搜索（小规模可求 ILP 精确解）→ LLM 生成候选方案并<strong>产出自然语言解释</strong></td></tr>
+    <tr><th>输出</th><td>三个候选方案，每个附「为什么这样分 / 代价是什么」</td></tr>
+    <tr><th>交互亮点</th><td>教师手动拖动微调时，<strong>实时显示目标函数得分变化</strong>——"这样调整会牺牲 12% 的弱连接引入度"。这是答辩现场最容易做出效果的一处</td></tr>
+  </table>
+
+  <h3>M3　任务拆解与分配</h3>
+  <table>
+    <tr><th style="width:88px">输入</th><td>作业要求原文（PDF / 链接 / 教师口述）</td></tr>
+    <tr><th>处理</th><td>LLM 解析为<strong>任务 DAG</strong>：里程碑 → 子任务 → 依赖关系 → 预估工时 → 所需技能 → 交付格式。再按技能匹配 + 负载均衡做 RACI 分配（主责 R / 协作 C / 审阅 A）</td></tr>
+    <tr><th>同时产出</th><td><strong>小组协作契约</strong>：术语表、接口约定、交付格式模板。<span class="hl">这是抑制冲突的根治手段，不是事后补救</span></td></tr>
+    <tr><th>输出</th><td>每人一份"我的部分"清单；组长一个甘特 + 看板视图</td></tr>
+  </table>
+
+  <h3>M4　实时进度感知</h3>
+  <div class="card warn">
+    <h4>设计原则：不依赖人上报</h4>
+    <p style="margin:0">让同学每天汇报进度是产品自杀。所有信号必须从协作行为里<strong>自动沉淀</strong>：交付物版本与编辑痕迹、看板状态变更、里程碑打卡、可选的 Git / 在线文档协作者记录、消息响应时延。</p>
+  </div>
+  <p>核心能力是<strong>关键路径监控</strong>：关键路径上的任务一旦滞后，系统<strong>提前预警</strong>而非事后告状。输出「小组健康度」三维读表——阻塞 / 空转 / 过载。</p>
+
+  <h3>M5　冲突检测与合并</h3>
+  <table>
+    <tr><th style="width:110px">依赖冲突<br><span class="mut" style="font-weight:400">（主战场）</span></th><td>A 的产出是 B 的输入，A 延期或改口径 → 立即检测，评估下游波及幅度，触发重规划</td></tr>
+    <tr><th>契约冲突</th><td>术语、格式、接口不一致 → 基于协作契约做语义 diff，给出就地合并建议</td></tr>
+    <tr><th>内容冲突</th><td>语义相似度只作辅助信号，<strong>不作为主判据</strong>（用文本相似度检测协作冲突是打偏靶子）</td></tr>
+    <tr><th>输出</th><td>冲突单 + 三种解法：就地合并 / 退回对齐契约 / 重指派</td></tr>
+  </table>
+
+  <h3>M6　贡献归因账本</h3>
+  <p>详见 <a href="#s6" style="color:var(--accent)">第 06 节</a>——这是整个产品的价值闭环，也是最需要谨慎设计边界的地方。</p>
+</section>
+
+<section id="s4">
+  <div class="secnum">04</div>
+  <h2>分组不是一个"算法"，是一个带约束的多目标优化</h2>
+  <p class="lead">能在答辩现场把目标函数写清楚、把权重来源说清楚，就是硬实力。含糊地说"AI 智能分组"是会被追问到穿帮的。</p>
+
+  <div class="formula">
+    <span class="c"># 目标（对候选分组方案 S 求最大）</span><br>
+    max&nbsp;&nbsp; w₁ · <b>技能覆盖度</b>(S)　　　<span class="c"># 组内技能维度覆盖，避免全员同质</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;+ w₂ · <b>弱连接引入度</b>(S)　<span class="c"># 社会学：弱连接带来信息增量</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;− w₃ · <b>组间实力方差</b>(S)　<span class="c"># 公平：不让强人抱团、不把落后者堆一组</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;− w₄ · <b>历史搭便车重复率</b>(S) <span class="c"># 避免与历史低贡献同伴重复同组</span>
+  </div>
+  <div class="formula">
+    <span class="c"># 约束（硬性，先裁剪可行域）</span><br>
+    s.t.&nbsp;&nbsp;组数 = 教师指定　　　　　　　<span class="c"># 硬约束</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;每组人数 ∈ [m, M]　　　　　<span class="c"># 规模约束</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;不可同组配对 ∩ S = ∅　　　<span class="c"># 时间冲突、主动申请回避</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;队长人选互斥　　　　　　　<span class="c"># 每队恰好一名队长</span>
+  </div>
+
+  <p><strong>权重怎么定？</strong>不能拍脑袋。三个来源：教师首次建课时用滑块设定（默认值由学科类型推荐，如理工科给 w₁ 更高、文科给 w₂ 更高）、上一轮的学生满意度互评回流、以及系统保留一个"公平优先"预设档给有特殊需求的班级。</p>
+
+  <div class="card dang">
+    <h4>一条必须写进产品里的伦理红线</h4>
+    <p style="margin:0"><code>w₄ 历史搭便车重复率</code> 用得不当会造成<strong>污名化</strong>——被系统标记过一次的人，可能永远分不到好组，形成自我实现的预言。我们的处理是：该指标<strong>只用于"避免重复"而非"标记个人"</strong>，不向学生公开，且每学期清空一次历史。这件事在答辩上讲出来，比闷声做掉的分数高得多。</p>
+  </div>
+</section>
+
+<section id="s5">
+  <div class="secnum">05</div>
+  <h2>滚动重规划：产品真正的护城河</h2>
+  <p class="lead">分组是静态的，协作是动态的。一次性的"最优分组"只是起点，持续的重规划才是产品持续被打开的理由。</p>
+
+  <p>重规划的触发条件有四类：<strong>关键路径滞后</strong>（最核心）、成员失联超过阈值、任务返工超过两轮、外部条件变更（老师改要求 / 截止日期变动）。触发后 AI 给出的是<strong>一个决策包</strong>，而不是一条告警：</p>
+
+  <div class="grid3">
+    <div class="kv"><div class="n">方案 A · 重新分配</div><div class="v">把滞后任务的子块转移给当前有空档且技能匹配的成员，附预计完成时间</div></div>
+    <div class="kv"><div class="n">方案 B · 缩减范围</div><div class="v">标出非必要交付项及砍掉后的影响评估，供教师确认</div></div>
+    <div class="kv"><div class="n">方案 C · 组间补位</div><div class="v">从其他进度领先的小组临时借调人力，需教师授权</div></div>
+  </div>
+
+  <p>每个方案都带<strong>代价说明</strong>（谁的工作量增加多少、哪个里程碑受影响、对最终评分的影响区间）。教师或队长一键采纳，系统自动重算 DAG、重发任务、更新看板。</p>
+
+  <div class="card ok">
+    <h4>为什么这条护城河很难被抄</h4>
+    <p style="margin:0">通用项目管理工具（飞书项目、Notion、腾讯文档）都有看板和甘特，但它们<strong>没有教学语境下的约束</strong>——不知道什么是"公平分组"，不理解"课程评分权重"，更不会替老师做"这个组要不要救"的判断。我们的壁垒在<strong>教育语义层</strong>，不在可视化层。</p>
+  </div>
+</section>
+
+<section id="s6">
+  <div class="secnum">06</div>
+  <h2>贡献归因账本：不输出分数，输出证据</h2>
+  <p class="lead">你提出的"量化每个人的成果"是整个产品最值钱、也最容易做死的部分。我们的答案很明确：<strong>绝不输出单一分数。</strong></p>
+
+  <h3>输入：三类可复核证据</h3>
+  <div class="grid3">
+    <div class="kv"><div class="n">证据类型 一</div><div class="v"><strong>产出物溯源</strong><br><span class="mut" style="font-size:13px">最终交付物里哪一段、哪个文件、哪个图表由谁产出。基于版本记录与编辑痕迹，不靠人自报。</span></div></div>
+    <div class="kv"><div class="n">证据类型 二</div><div class="v"><strong>过程行为</strong><br><span class="mut" style="font-size:13px">主责完成任务数、按期率、关键路径延期次数、返工轮次、主动补位次数。</span></div></div>
+    <div class="kv"><div class="n">证据类型 三</div><div class="v"><strong>同伴证据</strong><br><span class="mut" style="font-size:13px">组内互评（去极值后取中位）、队长评语、跨组可见的协作评价。</span></div></div>
+  </div>
+
+  <h3>输出：贡献构成 + 区间估计 + 可追溯条目</h3>
+  <div class="card">
+    <div class="lbl"><span>主责产出 · 建模脚本</span><b>34%</b></div>
+    <div class="barline"><i style="width:34%"></i></div>
+    <div class="lbl"><span>协作产出 · 数据清洗</span><b>12%</b></div>
+    <div class="barline"><i style="width:12%"></i></div>
+    <div class="lbl"><span>审阅与返工 · 图表修订</span><b>9%</b></div>
+    <div class="barline"><i style="width:9%"></i></div>
+    <div class="lbl"><span>主动补位 · 摘要撰写</span><b>6%</b></div>
+    <div class="barline"><i class="t" style="width:6%"></i></div>
+    <p style="margin:14px 0 0;font-size:14px"><strong>系统结论：</strong>贡献度区间 58%–64%，置信度 中。每条结论均可下钻查看原始证据（版本记录、看板日志、互评原文）。</p>
+    <p class="note">系统不输出分数，终审权与调分权归教师。</p>
+  </div>
+
+  <h3>五条设计红线</h3>
+  <ol class="redline">
+    <li><b>只给依据，不给分数</b><span>系统输出的是决策依据，评分与权重由教师终审。规避"AI 判分"引发的一次性信任崩塌——只要出一次争议，老师就再也不敢用了。</span></li>
+    <li><b>输出区间与置信度，不输出点值</b><span>58%–64% 比 61% 诚实，也更能抵御质疑。诚实地表达不确定性，是产品的成熟度。</span></li>
+    <li><b>每条结论可下钻到原始证据</b><span>可复核、可质疑。没有证据的结论不允许出现在界面上。</span></li>
+    <li><b>设申诉与更正通道</b><span>队员可提交补充证据、可发起复议。有申诉机制的产品才能被学生接受。</span></li>
+    <li><b>防博弈设计</b><span>互评异常检测（识别互刷高分的小圈子）、产出物溯源权重高于活跃度、教师可调整三类证据的相对权重。</span></li>
+  </ol>
+
+  <div class="card dang">
+    <h4>必须直面的 Goodhart 定律</h4>
+    <p style="margin:0">分数一旦成为目标，同学们就会去优化"让系统觉得我在干活"，而不是真的干活。我们的应对不是追求完美的检测算法，而是<strong>从产品定位上就不把数字当唯一目标</strong>——把"系统给出的不是成绩，是证据"明确写进产品文案与教师侧说明。<span class="hl">主动承认这个边界，反而比假装能解决它更有说服力。</span></p>
+  </div>
+</section>
+
+<section id="s7">
+  <div class="secnum">07</div>
+  <h2>产品形态：三端界面</h2>
+  <p class="lead">教师用 Web 大屏，队长用 Web / 移动端，队员以微信小程序为主——降低入口摩擦是这套产品能否采到数据的前提。</p>
+
+  <div class="mock">
+    <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="ttl">教师端 · 分组方案审核与班级健康度</span></div>
+    <div class="body">
+      <div class="row" style="margin-bottom:14px">
+        <div class="chip"><b>班级人数 48</b>已填技能卡 45 / 48</div>
+        <div class="chip"><b>建议组数 8</b>每组 6 人（约束已满足）</div>
+        <div class="chip"><b>待处理预警 2</b>1 组关键路径滞后</div>
+      </div>
+      <div class="lbl"><span>方案 A · 能力互补优先（推荐）</span><b>综合得分 87</b></div>
+      <div class="barline"><i style="width:87%"></i></div>
+      <div class="lbl"><span>方案 B · 弱连接优先</span><b>综合得分 81</b></div>
+      <div class="barline"><i style="width:81%"></i></div>
+      <div class="lbl"><span>方案 C · 公平优先</span><b>综合得分 76</b></div>
+      <div class="barline"><i class="a" style="width:76%"></i></div>
+      <p class="note">拖动任一组员到其他小组，实时显示目标函数各项得分的增减。</p>
+    </div>
+  </div>
+
+  <div class="mock">
+    <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="ttl">队长端 · 任务 DAG 与组内负载</span></div>
+    <div class="body">
+      <div class="row" style="margin-bottom:14px">
+        <div class="chip"><b>需求拆解</b><span class="pill t">已交付</span></div>
+        <div class="chip"><b>数据与素材</b><span class="pill p">进行中 70%</span></div>
+        <div class="chip"><b>核心产出</b><span class="pill r">延期 2 天</span></div>
+        <div class="chip"><b>图文整合</b><span class="pill a">待启动</span></div>
+      </div>
+      <div class="card warn" style="margin:0;padding:14px 16px">
+        <p style="margin:0;font-size:13.5px"><strong>系统建议：</strong>「核心产出」延期将影响下游 2 个任务，预计波及 1.5 天。已生成重规划方案 A（转移子任务 3.2 给有空档的成员），是否采纳？</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="mock">
+    <div class="bar"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="ttl">队员端 · 我的部分与贡献账本</span></div>
+    <div class="body">
+      <div class="row" style="margin-bottom:14px">
+        <div class="chip"><b>我的任务 3 项</b>2 项已完成，1 项今日到期</div>
+        <div class="chip"><b>我依赖 1 人</b>「数据与素材」待对方交付</div>
+        <div class="chip"><b>我的贡献账本</b>查看构成与证据</div>
+      </div>
+      <p class="note">每个任务卡片都标注：我负责什么、依赖谁、什么时候必须交、完成后交给谁。</p>
+    </div>
+  </div>
+
+  <p><strong>数据入口策略（决定产品生死）：</strong>学生习惯用微信和腾讯文档，强行要求迁移必死。因此产品采用<strong>低摩擦回流</strong>——粘贴 / 导入 / 截图解析 / 与主流文档工具打通，只在"最终交付物"这一环强制在平台内沉淀，以换取溯源数据。<span class="hl">只要交付物在系统内，贡献归因就成立。</span></p>
+</section>
+
+<section id="s8">
+  <div class="secnum">08</div>
+  <h2>MVP 范围与实现路径</h2>
+  <p class="lead">竞赛演示需要一条"能跑通的完整闭环"，而不是功能清单。以下六步构成可演示的最小链路。</p>
+
+  <table>
+    <tr><th style="width:52px">步骤</th><th>演示动作</th><th>展示的 AI 能力</th></tr>
+    <tr><td><span class="pill p">01</span></td><td>教师建课、导入 30 人名单，学生填写技能自选卡</td><td class="mut">理解 · 画像构建</td></tr>
+    <tr><td><span class="pill p">02</span></td><td>AI 生成三个分组方案并给出解释，教师拖动微调，实时看到得分变化</td><td class="mut">规划 · 判断 · 多目标优化</td></tr>
+    <tr><td><span class="pill p">03</span></td><td>上传作业要求 PDF，自动生成任务 DAG、分工方案与协作契约</td><td class="mut">理解 · 生成</td></tr>
+    <tr><td><span class="pill p">04</span></td><td>队员在平台内提交交付物，进度看板实时更新健康度</td><td class="mut">识别 · 进度感知</td></tr>
+    <tr><td><span class="pill p">05</span></td><td>模拟一名成员延期，系统触发关键路径预警并给出重规划决策包</td><td class="mut">识别 · 判断 · 重规划</td></tr>
+    <tr><td><span class="pill p">06</span></td><td>生成贡献归因账本，点击任一条结论下钻到原始证据</td><td class="mut">归因 · 可解释性</td></tr>
+  </table>
+
+  <div class="card acc">
+    <h4>答辩的杀手锏：把两个东西做成可视化</h4>
+    <p style="margin:0">一是<strong>分组目标函数</strong>——拖动组员时实时显示四项得分的增减曲线，让评委直观看到"多目标优化"不是口号；二是<strong>贡献归因证据链</strong>——从结论一路点回到原始版本记录。这两处做扎实，比堆十个功能更能拉开差距。</p>
+  </div>
+</section>
+
+<section id="s9">
+  <div class="secnum">09</div>
+  <h2>风险与规避</h2>
+  <table>
+    <tr><th style="width:200px">风险</th><th>为什么致命</th><th>规避策略</th></tr>
+    <tr>
+      <td><strong>学生不愿迁移协作入口</strong></td>
+      <td class="mut">数据采不到，整条产品链归零。学生习惯微信 / QQ / 腾讯文档</td>
+      <td>低摩擦回流（粘贴 / 导入 / 截图解析）；与主流文档工具打通；只强制"最终交付物"在平台内</td>
+    </tr>
+    <tr>
+      <td><strong>AI 判分引发公平争议</strong></td>
+      <td class="mut">只要出一次争议，教师群体就再也不敢用</td>
+      <td>只给依据不给分；输出区间与置信度；教师终审；证据可下钻；申诉通道</td>
+    </tr>
+    <tr>
+      <td><strong>数据冷启动</strong></td>
+      <td class="mut">首轮分组不准，口碑当场崩掉</td>
+      <td>首轮"均衡随机 + 硬约束"；技能自选卡 30 秒补齐；明确告知质量随数据复利上升</td>
+    </tr>
+    <tr>
+      <td><strong>教师使用成本高</strong></td>
+      <td class="mut">B 端不买单，产品没有付费方</td>
+      <td>教师端只做三件事：建课、审核、救火，其余全自动。默认值开箱即用</td>
+    </tr>
+    <tr>
+      <td><strong>学生行为数据隐私</strong></td>
+      <td class="mut">采集行为数据敏感，政策与伦理双重风险</td>
+      <td>最小必要采集；每项信号可开关；脱敏展示；提供校级本地化部署选项；学生可查看"系统知道我什么"</td>
+    </tr>
+    <tr>
+      <td><strong>搭便车标记的污名化</strong></td>
+      <td class="mut">被标记者可能永远分不到好组，形成自我实现的预言</td>
+      <td>历史指标只用于"避免重复分组"，不用于标记个人；不向学生公开；每学期清空</td>
+    </tr>
+  </table>
+</section>
+
+<section id="s10">
+  <div class="secnum">10</div>
+  <h2>赛题契合度：AI 六项能力全覆盖</h2>
+  <p class="lead">赛题明确要求"AI 应直接参与理解、生成、识别、判断、规划或交互等核心过程"。我们的六个模块逐项对应，不留空档。</p>
+  <table>
+    <tr><th style="width:110px">能力</th><th>在产品中的具体落点</th></tr>
+    <tr><td><span class="pill p">理解</span></td><td>读懂作业要求原文，拆出任务与依赖；读懂班级画像与成员差异</td></tr>
+    <tr><td><span class="pill p">生成</span></td><td>生成任务 DAG、生成小组协作契约、生成重规划决策包、生成分组方案的自然语言解释</td></tr>
+    <tr><td><span class="pill p">识别</span></td><td>识别关键路径滞后、识别依赖断裂、识别契约不一致、识别搭便车与互评异常</td></tr>
+    <tr><td><span class="pill p">判断</span></td><td>判断谁能补位、判断冲突归因、判断该不该触发重规划、判断贡献构成</td></tr>
+    <tr><td><span class="pill p">规划</span></td><td>多目标分组规划、任务分配规划、滚动重规划</td></tr>
+    <tr><td><span class="pill t">交互</span></td><td>以<strong>中立第三方身份</strong>向成员发送提醒、催办与协调通知——把同学之间"不好意思说的话"交给系统说，这是产品最独特的一处交互设计</td></tr>
+  </table>
+  <p class="note">赛题还强调"重新设计人与人建立联系的方式"。共桨的答案不是让人际关系更热闹，而是<strong>让协作责任变得可见、可分配、可追溯</strong>——用制度设计替代人情消耗。</p>
+</section>
+
+<section id="s11">
+  <div class="secnum">11</div>
+  <h2>差异化：与既有方案的真实对比</h2>
+  <p class="lead">诚实地说，这个赛道不是空白。学术界的实际对标是 Purdue 的 CATME——团队组建 + 同伴评价系统，已经用了十几年。我们必须说清楚自己多了什么。</p>
+  <table>
+    <tr><th style="width:150px">维度</th><th>CATME（学术界对标）</th><th>通用项目管理工具</th><th>共桨 CoPaddle</th></tr>
+    <tr><td><strong>分组</strong></td><td class="mut">问卷 + 静态规则匹配</td><td class="mut">不具备</td><td>多目标优化 + 可解释 + 实时调优反馈</td></tr>
+    <tr><td><strong>过程跟踪</strong></td><td class="mut">无（仅期末自评互评）</td><td class="mut">有看板，但无教学语义</td><td>关键路径监控 + 提前预警</td></tr>
+    <tr><td><strong>动态调整</strong></td><td class="mut">无</td><td class="mut">靠人手动改</td><td>AI 滚动重规划决策包</td></tr>
+    <tr><td><strong>贡献归因</strong></td><td class="mut">纯主观自评互评</td><td class="mut">无</td><td>交付物级溯源 + 证据链</td></tr>
+    <tr><td><strong>冲突处理</strong></td><td class="mut">无</td><td class="mut">无</td><td>依赖断裂检测 + 前置协作契约</td></tr>
+    <tr><td><strong>中文场景</strong></td><td class="mut">英文界面，海外教学语境</td><td class="mut">通用</td><td>本土教材与工具链打通</td></tr>
+  </table>
+
+  <div class="card ok">
+    <h4>一句话总结差异化</h4>
+    <p style="margin:0">既有方案解决的是<strong>"怎么把组分好"</strong>和<strong>"怎么让人打分"</strong>；共桨解决的是<strong>"分完之后怎么持续把事推下去，并且说得清谁做了什么"</strong>。</p>
+  </div>
+</section>
+
+<footer>
+  <p><strong>共桨 CoPaddle</strong> · AI 小组协作调度系统 · 产品方案 v1.0</p>
+  <p>提交方向：ICAN 九月赛题「AI 产品实现」 · 面向多人协作场景</p>
+</footer>
+
+</div>
+</body>
+</html>

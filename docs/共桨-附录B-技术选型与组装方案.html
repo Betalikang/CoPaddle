@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>共桨 · 技术选型与组装方案（附录 B）</title>
+<style>
+:root{
+  --bg:#141413; --surface:#1c1c1b; --surface2:#242423;
+  --border:#33332f; --border2:#454540;
+  --text:#ececea; --muted:#a3a39d; --dim:#75756f;
+  --accent:#afa9ec; --accent-bg:#2a2450;
+  --teal:#5dcaa5; --teal-bg:#0d3b30;
+  --amber:#ef9f27; --amber-bg:#3d2a08;
+  --red:#f09595; --red-bg:#3d1616;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:960px;margin:0 auto;padding:0 28px 120px;}
+header{padding:64px 0 40px;border-bottom:1px solid var(--border);}
+.tag{display:inline-block;font-size:12px;letter-spacing:.14em;color:var(--accent);background:var(--accent-bg);padding:5px 12px;border-radius:999px;margin-bottom:20px;}
+h1{font-size:34px;line-height:1.3;font-weight:600;margin:0 0 12px;letter-spacing:-.02em;}
+h1 .sub{display:block;font-size:16px;font-weight:400;color:var(--muted);margin-top:12px;letter-spacing:0;}
+section{padding:52px 0 8px;border-bottom:1px solid var(--border);}
+section:last-of-type{border-bottom:none;}
+.secnum{font-size:12px;letter-spacing:.16em;color:var(--accent);font-weight:500;}
+h2{font-size:23px;font-weight:600;margin:10px 0 8px;letter-spacing:-.015em;line-height:1.35;}
+h2 + .lead{font-size:15.5px;color:var(--muted);margin:0 0 26px;max-width:790px;}
+h3{font-size:16px;font-weight:600;margin:32px 0 8px;}
+h4{font-size:14px;font-weight:600;margin:0 0 8px;}
+p{margin:0 0 16px;}
+ul,ol{margin:0 0 18px;padding-left:22px;}
+li{margin-bottom:6px;}
+table{width:100%;border-collapse:collapse;margin:20px 0;font-size:13.5px;}
+th{text-align:left;font-weight:600;font-size:12.5px;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--border2);white-space:nowrap;}
+td{padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
+td.mut{color:var(--muted);}
+tr:last-child td{border-bottom:none;}
+code{font-family:var(--mono);font-size:12.5px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--accent);}
+pre{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin:16px 0;overflow-x:auto;font-family:var(--mono);font-size:12.5px;line-height:1.7;color:var(--text);}
+pre .c{color:var(--dim);}
+pre .k{color:var(--accent);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin:20px 0;}
+.card.acc{border-left:2px solid var(--accent);}
+.card.ok{border-left:2px solid var(--teal);}
+.card.warn{border-left:2px solid var(--amber);}
+.card.dang{border-left:2px solid var(--red);}
+.card p:last-child,.card ul:last-child{margin-bottom:0;}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:500;white-space:nowrap;}
+.pill.p{background:var(--accent-bg);color:var(--accent);}
+.pill.t{background:var(--teal-bg);color:var(--teal);}
+.pill.a{background:var(--amber-bg);color:var(--amber);}
+.pill.r{background:var(--red-bg);color:var(--red);}
+.repo{font-family:var(--mono);font-size:12.5px;color:var(--accent);word-break:break-all;}
+strong{color:#fff;font-weight:600;}
+.hl{color:var(--accent);}
+.note{font-size:13px;color:var(--dim);margin-top:10px;}
+footer{padding:44px 0 0;font-size:13px;color:var(--dim);border-top:1px solid var(--border);margin-top:56px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <span class="tag">附录 B · 技术选型与组装方案</span>
+  <h1>不从 0 开发：fork 脚手架，装零件，只自建三块
+    <span class="sub">前提：项目仅用于学习，不商用、不对外开放上线。这个前提大幅放松了许可约束，但改变了推荐结论的方向——<strong>不是变得更激进，而是变得更务实。</strong></span>
+  </h1>
+</header>
+
+<section id="b1">
+  <div class="secnum">B.1</div>
+  <h2>先厘清一件被普遍误解的事：许可管的是「分发」，不是「使用」</h2>
+  <p class="lead">开源许可几乎从不限制你如何使用软件，只限制你如何<em>传播</em>它。理解这条，你手上的选择会瞬间多出一倍。</p>
+
+  <table>
+    <tr>
+      <th style="width:150px">许可类型</th>
+      <th style="width:210px">本地自用 / 学习 / 私有仓库</th>
+      <th>公开发布或对外提供服务</th>
+    </tr>
+    <tr>
+      <td><span class="pill r">GPL-3.0</span><br><span class="mut" style="font-size:12px">gruepr</span></td>
+      <td><strong style="color:var(--teal)">完全自由</strong><br><span class="mut">随便用、随便改、随便抄。<br>义务只在你把代码交出去时才产生。</span></td>
+      <td>你的产品需整体以 GPL-3.0 开源，并保留原作者署名。<br><span class="mut">对不商用的学生项目，合规成本几乎为零。</span></td>
+    </tr>
+    <tr>
+      <td><span class="pill a">无许可声明</span><br><span class="mut" style="font-size:12px">trackdev / PeerEval / Teambuilder</span></td>
+      <td>法律上仍属"保留全部权利"，但实际风险极低。<br><span class="hl">建议：只读设计思路，代码自己重写。</span></td>
+      <td>不建议携带。<span class="mut">这类项目连作者自己都停维护了，代码质量也不值得依赖。</span></td>
+    </tr>
+    <tr>
+      <td><span class="pill t">MIT / Apache-2.0</span><br><span class="mut" style="font-size:12px">saas-starter / ortools / dnd-kit</span></td>
+      <td><strong style="color:var(--teal)">完全自由</strong></td>
+      <td>保留版权声明即可，可商用、可闭源。<span class="mut">唯一"零负担"的一类。</span></td>
+    </tr>
+    <tr>
+      <td><span class="pill r">AGPL-3.0</span><br><span class="mut" style="font-size:12px">多数大型 LMS</span></td>
+      <td><strong style="color:var(--teal)">完全自由</strong></td>
+      <td><strong>最严格</strong>：即使是"只提供网络服务、不分发代码"，也须公开源码。<br><span class="mut">参赛阶段不触发，但若未来想做 SaaS 需警惕。</span></td>
+    </tr>
+  </table>
+
+  <div class="card ok">
+    <h4>结论：你现在几乎可以用任何东西</h4>
+    <p>在"仅学习、不商用、不对外开放上线"的前提下，<strong>GPL-3.0 的 gruepr 从"只能读思想"升级为"可以直接读代码、抄算法、甚至整体借鉴"</strong>。这是这次前提变化带来的最大收益——它恰好是开源世界里唯一一个完整实现了"多目标分组评分函数"的项目。</p>
+  </div>
+
+  <div class="card warn">
+    <h4>三个仍然要注意的点</h4>
+    <ul>
+      <li><strong>参赛材料的性质是灰色的。</strong>提交代码、答辩演示、上传仓库截图——严格说不构成法律意义上的"分发"，但如果评委或观众据此复现，性质会变。安全做法：<strong>仓库保持私有，演示用本地或内网环境。</strong></li>
+      <li><strong>学术诚信要立住。</strong>在方案书里明确标注哪些思路来自开源项目（gruepr 的评分函数、CATME 的方法论对标）。<span class="hl">主动标注来源是加分项，被评委问出来才扣分。</span></li>
+      <li><strong>别让"反正是学习"变成技术债。</strong>现在省下的 3 天重构成本，将来要上线时会以 30 天的代价还回来。核心的溯源与归因模块建议从一开始就自己写。</li>
+    </ul>
+  </div>
+</section>
+
+<section id="b2">
+  <div class="secnum">B.2</div>
+  <h2>但推荐结论没变：仍然 fork 脚手架，而不是 fork 教育项目</h2>
+  <p class="lead">许可闸门打开之后，唯一还剩下的障碍是<strong>工程量与技术栈</strong>。这两个障碍反而比许可更硬。</p>
+
+  <table>
+    <tr>
+      <th style="width:190px">候选基座</th><th style="width:130px">技术栈</th><th>还剩下的问题</th>
+    </tr>
+    <tr>
+      <td><span class="repo">trackdevel/trackdev</span><br><span class="mut" style="font-size:12px">形态最全</span></td>
+      <td>Java Spring Boot<br>+ Next.js</td>
+      <td><strong>双栈 + 陌生语言。</strong>要读别人的 Java 代码，还要理解它的领域模型才能改。<strong>2 star 的项目意味着几乎没有社区支持</strong>，遇到问题只能自己啃。而它缺的恰恰是你要加的全部 AI 部分</td>
+    </tr>
+    <tr>
+      <td><span class="repo">ItzPabz/PeerEval</span><br><span class="mut" style="font-size:12px">数据模型好</span></td>
+      <td>Django + PostgreSQL</td>
+      <td>代码总量仅 255 KB，<strong>不具备生产级结构</strong>；只有互评，没有任务管理与分组。<span class="hl">建议：读它的数据模型设计，自己按同样思路建表</span></td>
+    </tr>
+    <tr>
+      <td><span class="repo">UTDallasEPICS/Teambuilder</span></td>
+      <td>TypeScript</td>
+      <td><strong>仓库已归档，停止维护。</strong>且只做分组一件事，不构成产品骨架</td>
+    </tr>
+    <tr style="background:var(--accent-bg)">
+      <td><span class="repo">nextjs/saas-starter</span><br><span class="mut" style="font-size:12px">✅ 推荐</span></td>
+      <td>Next.js + TS<br>+ PostgreSQL</td>
+      <td><strong>MIT · 16.1k star · 2.7k fork · 活跃维护。</strong>开箱即得登录鉴权、数据库与迁移、shadcn/ui 组件体系、Dashboard 骨架、中间件路由保护。<span class="hl">你要付的只是"改造业务语义"的成本，而不是"搭地基"的成本</span></td>
+    </tr>
+  </table>
+
+  <div class="card acc">
+    <h4>为什么"形态最全"反而不是优势</h4>
+    <p>一个已经做完了产品 A 的项目，你要把它改成产品 B，改动量往往<strong>大于</strong>在一个干净脚手架上新建——因为你要先理解它、再拆除它、最后重建。而一个只提供地基和通用能力（登录、数据库、UI、权限中间件）的脚手架，<strong>不需要你拆除任何东西</strong>。这就是"fork 脚手架"与"fork 整机"的本质差别。</p>
+  </div>
+</section>
+
+<section id="b3">
+  <div class="secnum">B.3</div>
+  <h2>组装清单：每个模块用什么，谁写</h2>
+  <p class="lead">左列是你要实现的能力，右列是它的来源。"净新增"标注了需要你真正动手写的部分。</p>
+
+  <table>
+    <tr>
+      <th style="width:170px">能力模块</th>
+      <th style="width:230px">来源</th>
+      <th style="width:100px">许可</th>
+      <th>净新增工作量</th>
+    </tr>
+    <tr>
+      <td><strong>应用骨架</strong><br><span class="mut" style="font-size:12px">路由 / 布局 / 中间件</span></td>
+      <td><span class="repo">nextjs/saas-starter</span></td>
+      <td><span class="pill t">MIT</span></td>
+      <td><span style="color:var(--teal)">零</span> — 直接 fork 启动</td>
+    </tr>
+    <tr>
+      <td><strong>登录与鉴权</strong></td>
+      <td>starter 自带的 JWT 会话 + 中间件路由保护</td>
+      <td><span class="pill t">MIT</span></td>
+      <td><span style="color:var(--teal)">极小</span> — 只在会话里加一个 <code>role</code> 字段</td>
+    </tr>
+    <tr>
+      <td><strong>数据库与迁移</strong></td>
+      <td>starter 自带的 ORM + 迁移工具</td>
+      <td><span class="pill t">MIT</span></td>
+      <td><span style="color:var(--teal)">小</span> — 写表结构定义</td>
+    </tr>
+    <tr>
+      <td><strong>UI 组件体系</strong></td>
+      <td><span class="repo">shadcn/ui</span> + Tailwind</td>
+      <td><span class="pill t">MIT</span></td>
+      <td><span style="color:var(--teal)">小</span> — 按需复制组件，不写样式</td>
+    </tr>
+    <tr>
+      <td><strong>拖拽分组交互</strong><br><span class="mut" style="font-size:12px">教师手动微调</span></td>
+      <td><span class="repo">dnd-kit</span></td>
+      <td><span class="pill t">MIT</span></td>
+      <td><span style="color:var(--amber)">小</span> — 接上自己的重算逻辑</td>
+    </tr>
+    <tr>
+      <td><strong>目标函数得分可视化</strong><br><span class="mut" style="font-size:12px">答辩杀手锏</span></td>
+      <td><span class="repo">recharts</span></td>
+      <td><span class="pill t">MIT</span></td>
+      <td><span style="color:var(--amber)">小</span> — 四项得分的实时增减曲线</td>
+    </tr>
+    <tr>
+      <td><strong>甘特图 / 看板</strong></td>
+      <td><span class="repo">frappe-gantt</span> + dnd-kit 看板</td>
+      <td><span class="pill t">MIT</span></td>
+      <td><span style="color:var(--amber)">中</span> — 与任务 DAG 数据对接</td>
+    </tr>
+    <tr>
+      <td><strong>约束求解式分组</strong><br><span class="mut" style="font-size:12px">M2 核心</span></td>
+      <td><span class="repo">Google OR-Tools (CP-SAT)</span><br><span class="mut" style="font-size:12px">建模思路参考 Teambuilder 与 gruepr</span></td>
+      <td><span class="pill t">Apache-2.0</span><br><span class="mut" style="font-size:12px">思路来源已停维护，仅作参考</span></td>
+      <td><span style="color:var(--amber)">小</span> — 约 150 行，见 B.5</td>
+    </tr>
+    <tr>
+      <td><strong>图算法</strong><br><span class="mut" style="font-size:12px">关键路径 / 依赖波及</span></td>
+      <td><span class="repo">networkx</span></td>
+      <td><span class="pill t">BSD</span></td>
+      <td><span style="color:var(--teal)">小</span> — 拓扑排序 + 最长路径</td>
+    </tr>
+    <tr>
+      <td><strong>LLM 任务拆解</strong><br><span class="mut" style="font-size:12px">M3 核心</span></td>
+      <td>结构化输出 + 校验库，Prompt 自写</td>
+      <td>—</td>
+      <td><span style="color:var(--amber)">小</span> — 一个 schema + 一段提示词</td>
+    </tr>
+    <tr>
+      <td><strong>交付物溯源</strong><br><span class="mut" style="font-size:12px">护城河</span></td>
+      <td><strong>无处可抄</strong> — 开源生态真空</td>
+      <td>—</td>
+      <td><span class="pill r">必须自建</span></td>
+    </tr>
+    <tr>
+      <td><strong>贡献归因账本</strong><br><span class="mut" style="font-size:12px">护城河</span></td>
+      <td><strong>无处可抄</strong> — 开源项目全为主观互评</td>
+      <td>—</td>
+      <td><span class="pill r">必须自建</span></td>
+    </tr>
+    <tr>
+      <td><strong>同伴互评问卷</strong></td>
+      <td>维度设计参考 CATME 与 PeerEval<br><span class="mut" style="font-size:12px">读设计，代码自写</span></td>
+      <td>—</td>
+      <td><span style="color:var(--teal)">小</span> — 表单 + 去极值统计</td>
+    </tr>
+    <tr>
+      <td><strong>算法服务</strong></td>
+      <td>FastAPI（Python 算法生态）</td>
+      <td><span class="pill t">MIT</span></td>
+      <td><span style="color:var(--teal)">小</span> — 暴露几个接口</td>
+    </tr>
+    <tr>
+      <td><strong>AI 编排</strong></td>
+      <td>直接调 LLM API 即可，<br>复杂了再上 LangGraph</td>
+      <td><span class="pill t">MIT</span></td>
+      <td><span style="color:var(--teal)">小</span></td>
+    </tr>
+  </table>
+
+  <p><strong>汇总：真正需要你"发明"的只有三块</strong> —— <span class="hl">分组优化、任务拆解、贡献归因</span>。其余全部是配置、对接与业务逻辑。这就是"不从 0 开发"的量化含义：<strong>你写的代码里，几乎不含样板代码，全是产品独有逻辑。</strong></p>
+</section>
+
+<section id="b4">
+  <div class="secnum">B.4</div>
+  <h2>架构：双服务结构</h2>
+  <p class="lead">前端用 TypeScript 生态，算法用 Python 生态。中间用一层 HTTP 接口隔离，这样算法可以独立迭代，也不拖慢前端开发。</p>
+
+  <svg width="100%" viewBox="0 0 680 250" role="img" xmlns="http://www.w3.org/2000/svg" style="margin:20px 0;">
+    <title>共桨双服务架构</title>
+    <desc>Next.js 前端应用通过 HTTP 调用 FastAPI 算法服务，两者共享 PostgreSQL 数据库，算法服务调用大模型接口。</desc>
+    <defs>
+      <marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+        <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </marker>
+    </defs>
+    <rect x="40" y="40" width="250" height="80" rx="10" fill="#0C447C" stroke="#85B7EB" stroke-width="0.5"/>
+    <text x="165" y="66" text-anchor="middle" dominant-baseline="central" font-family="var(--font-sans)" font-size="13" font-weight="500" fill="#B5D4F4">Web 应用（Next.js + TS）</text>
+    <text x="165" y="88" text-anchor="middle" dominant-baseline="central" font-family="var(--font-sans)" font-size="11.5" font-weight="400" fill="#85B7EB">三角色界面 · 看板 · 拖拽 · 图表</text>
+    <text x="165" y="105" text-anchor="middle" dominant-baseline="central" font-family="var(--font-sans)" font-size="11.5" font-weight="400" fill="#85B7EB">fork 自 saas-starter（MIT）</text>
+    <rect x="390" y="40" width="250" height="80" rx="10" fill="#085041" stroke="#5DCAA5" stroke-width="0.5"/>
+    <text x="515" y="66" text-anchor="middle" dominant-baseline="central" font-family="var(--font-sans)" font-size="13" font-weight="500" fill="#9FE1CB">算法服务（FastAPI）</text>
+    <text x="515" y="88" text-anchor="middle" dominant-baseline="central" font-family="var(--font-sans)" font-size="11.5" font-weight="400" fill="#5DCAA5">CP-SAT 分组 · 关键路径 · 归因计算</text>
+    <text x="515" y="105" text-anchor="middle" dominant-baseline="central" font-family="var(--font-sans)" font-size="11.5" font-weight="400" fill="#5DCAA5">ortools · networkx · LLM 调用</text>
+    <path d="M290 68 L388 68" fill="none" stroke="#888780" stroke-width="1.5" marker-start="url(#ar2)" marker-end="url(#ar2)"/>
+    <text x="339" y="56" text-anchor="middle" dominant-baseline="central" font-family="var(--font-sans)" font-size="11" font-weight="400" fill="#a3a39d">HTTP / JSON</text>
+    <rect x="140" y="170" width="200" height="52" rx="10" fill="#444441" stroke="#B4B2A9" stroke-width="0.5"/>
+    <text x="240" y="196" text-anchor="middle" dominant-baseline="central" font-family="var(--font-sans)" font-size="13" font-weight="500" fill="#F1EFE8">PostgreSQL</text>
+    <rect x="390" y="170" width="200" height="52" rx="10" fill="#3C3489" stroke="#AFA9EC" stroke-width="0.5"/>
+    <text x="490" y="196" text-anchor="middle" dominant-baseline="central" font-family="var(--font-sans)" font-size="13" font-weight="500" fill="#CECBF6">LLM API</text>
+    <path d="M200 120 L230 168" fill="none" stroke="#888780" stroke-width="0.5" marker-end="url(#ar2)"/>
+    <path d="M480 120 L500 168" fill="none" stroke="#888780" stroke-width="0.5" marker-end="url(#ar2)"/>
+    <path d="M290 196 L340 196" fill="none" stroke="#888780" stroke-width="0.5" marker-end="url(#ar2)"/>
+  </svg>
+
+  <table>
+    <tr><th style="width:170px">决策</th><th>选择与理由</th></tr>
+    <tr><td><strong>算法为什么独立成服务</strong></td><td>约束求解器、图算法、LLM 编排的生态都在 Python。硬塞进 Next.js 会失去 <code>ortools</code> 与 <code>networkx</code> 这两个最省力的武器</td></tr>
+    <tr><td><strong>数据库为什么共享</strong></td><td>算法服务只读画像数据、只写结果表，不做业务写入。避免双写不一致</td></tr>
+    <tr><td><strong>为什么不用消息队列</strong></td><td>课程规模（一个班 30–50 人）下同步 HTTP 足够，分组求解限时 10 秒内。<span class="hl">不要为不存在的并发量引入基础设施</span></td></tr>
+    <tr><td><strong>AI 编排为何暂不上 LangGraph</strong></td><td>M3（拆解）与 M4（重规划）都是单轮结构化输出，直接调 API 更快落地。等出现多步工具调用需求再引入</td></tr>
+  </table>
+</section>
+
+<section id="b5">
+  <div class="secnum">B.5</div>
+  <h2>三块必须自建的模块：实现要点</h2>
+
+  <h3>① 多目标分组（用约束求解器，别手写遗传算法）</h3>
+  <p>很多人第一反应是写遗传算法——<strong>不要。</strong>CP-SAT 是 Google 的工业级约束求解器，声明式建模、几行代码、能在几秒内给出可证明的最优或近优解，还自带时间上限。手写 GA 你要自己调种群大小、交叉率、变异率，跑出来的解还不如它。</p>
+  <pre><span class="c"># grouping.py — 约 150 行可跑通核心</span>
+<span class="k">from</span> ortools.sat.python <span class="k">import</span> cp_model
+
+<span class="k">def</span> solve_grouping(students, num_groups, cfg, time_limit=<span class="c">10</span>):
+    m = cp_model.CpModel()
+    x = {(s[<span class="c">"id"</span>], g): m.NewBoolVar(<span class="c">f"x_{s['id']}_{g}"</span>)
+         <span class="k">for</span> s <span class="k">in</span> students <span class="k">for</span> g <span class="k">in</span> range(num_groups)}
+
+    <span class="c"># 硬约束：每人恰好进一个组</span>
+    <span class="k">for</span> s <span class="k">in</span> students:
+        m.AddExactlyOne(x[s[<span class="c">"id"</span>], g] <span class="k">for</span> g <span class="k">in</span> range(num_groups))
+
+    <span class="c"># 硬约束：组规模上下限</span>
+    size = {g: sum(x[s[<span class="c">"id"</span>], g] <span class="k">for</span> s <span class="k">in</span> students)
+            <span class="k">for</span> g <span class="k">in</span> range(num_groups)}
+    <span class="k">for</span> g <span class="k">in</span> range(num_groups):
+        m.Add(size[g] &gt;= cfg[<span class="c">"min_size"</span>])
+        m.Add(size[g] &lt;= cfg[<span class="c">"max_size"</span>])
+
+    <span class="c"># 硬约束：不可同组配对</span>
+    <span class="k">for</span> a, b <span class="k">in</span> cfg[<span class="c">"forbidden_pairs"</span>]:
+        <span class="k">for</span> g <span class="k">in</span> range(num_groups):
+            m.AddAtMostOne([x[a, g], x[b, g]])
+
+    <span class="c"># 软目标：拉平组间实力（最小化最大值与最小值之差）</span>
+    power = {s[<span class="c">"id"</span>]: sum(s[<span class="c">"skills"</span>].values()) <span class="k">for</span> s <span class="k">in</span> students}
+    tot = {g: sum(x[s[<span class="c">"id"</span>], g] * power[s[<span class="c">"id"</span>]] <span class="k">for</span> s <span class="k">in</span> students)
+           <span class="k">for</span> g <span class="k">in</span> range(num_groups)}
+    hi = m.NewIntVar(<span class="c">0</span>, <span class="c">10</span>**<span class="c">6</span>, <span class="c">"hi"</span>)
+    lo = m.NewIntVar(<span class="c">0</span>, <span class="c">10</span>**<span class="c">6</span>, <span class="c">"lo"</span>)
+    <span class="k">for</span> g <span class="k">in</span> range(num_groups):
+        m.Add(tot[g] &lt;= hi)
+        m.Add(tot[g] &gt;= lo)
+    m.Minimize(hi - lo)
+
+    solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = time_limit
+    solver.Solve(m)
+    <span class="k">return</span> [[s[<span class="c">"id"</span>] <span class="k">for</span> s <span class="k">in</span> students <span class="k">if</span> solver.Value(x[s[<span class="c">"id"</span>], g])]
+            <span class="k">for</span> g <span class="k">in</span> range(num_groups)]</pre>
+  <p><strong>要把它变成"多目标"，用加权求和即可</strong>：把技能覆盖度、弱连接引入度、组间均衡、历史规避四项各自写成线性表达式，按权重合成单一目标。权重就是教师端那几个滑块。<span class="hl">这样"拖动组员实时看到得分变化"也容易实现——拿到解后本地重算一次四项得分即可，不需要重新求解。</span></p>
+
+  <h3>② LLM 任务拆解（核心是让它输出 DAG，不是让它"给建议"）</h3>
+  <p>关键：<strong>用结构化输出约束住格式</strong>，让模型返回可编程的数据，而不是一段好看的文字。依赖关系用 id 数组表达，前端据此画图、算关键路径。</p>
+  <pre><span class="c">// schema.ts — 约束 LLM 的输出结构</span>
+<span class="k">const</span> TaskNode = z.object({
+  id:          z.string(),
+  title:       z.string(),
+  deps:        z.array(z.string()),   <span class="c">// 依赖的任务 id → 构成 DAG</span>
+  estHours:    z.number(),
+  skills:      z.array(z.string()),   <span class="c">// 所需技能 → 与成员画像做匹配</span>
+  deliverable: z.string(),            <span class="c">// 交付物形态 → 后续溯源用</span>
+  milestone:   z.string(),
+});
+
+<span class="k">const</span> Plan = z.object({
+  tasks: z.array(TaskNode),
+  contract: z.object({                <span class="c">// 协作契约：冲突的根治手段</span>
+    glossary:   z.array(z.object({ term: z.string(), definition: z.string() })),
+    interfaces: z.array(z.string()),
+    format:     z.string(),
+  }),
+});</pre>
+  <p><strong>提示词里必须交代的三件事</strong>：一是任务的粒度（建议 2–8 小时可完成）；二是必须显式声明依赖，不允许出现孤立任务；三是生成的 <code>contract</code> 要写具体，比如统一"客流量"的口径与单位——<span class="hl">把这层写进提示词，事后 80% 的"成果冲突"根本不会发生。</span></p>
+
+  <h3>③ 交付物溯源与贡献归因（护城河，必须自己写）</h3>
+  <p>做法是"组装式交付"：<strong>成员在系统内撰写自己的部分，由系统汇编成终稿</strong>，而不是大家传附件。这样段落归属天然可查。</p>
+  <pre><span class="c">-- 核心表：段落级归属是溯源的根基</span>
+artifact_segments (
+  id, artifact_id, segment_index,
+  author_id,            <span class="c">-- 谁写的这段（由撰写记录产生，非自报）</span>
+  kind,                 <span class="c">-- paragraph / figure / table / code</span>
+  edited_by,            <span class="c">-- 谁后来改过 → 可算返工与审阅</span>
+  created_at, updated_at
+)</pre>
+  <p>归因时把三类证据加权汇总：</p>
+  <ul>
+    <li><strong>产出物证据</strong>：段落级归属统计 → 主责产出占比、协作产出占比</li>
+    <li><strong>过程证据</strong>：主责任务完成数、按期率、关键路径延期次数、返工轮次、主动补位次数</li>
+    <li><strong>同伴证据</strong>：组内互评（去极值后取中位）+ 队长评语</li>
+  </ul>
+  <p>输出<strong>贡献构成 + 区间估计 + 置信度 + 可下钻证据</strong>，不输出单一分数。<span class="hl">"不输出分数"不是保守，而是唯一能规避 AI 判分争议的设计。</span></p>
+
+  <div class="card warn">
+    <h4>搭便车预警阈值可以直接引用文献</h4>
+    <p>有实证研究给出：<strong>当最不活跃成员的贡献低于其应分担份额的 14% 时，团队大概率会感知到贡献不均。</strong>把这个 14% 做成系统阈值，答辩时可以说"阈值不是我们拍的，来自一篇实证研究"。同时该研究还发现贡献不均与团队成绩<strong>没有稳定关联</strong>——这正好是"只给证据、由教师判断"的依据。</p>
+  </div>
+</section>
+
+<section id="b6">
+  <div class="secnum">B.6</div>
+  <h2>明确不要自己写的东西</h2>
+  <p class="lead">这份清单和上面一样重要。"从 0 开发"最大的浪费，就是花时间重造这些已经非常成熟的东西。</p>
+
+  <table>
+    <tr><th style="width:200px">不要自己写</th><th>用什么</th></tr>
+    <tr><td>登录 / 会话 / JWT</td><td>starter 自带；或 <code>Auth.js</code></td></tr>
+    <tr><td>密码哈希与校验</td><td>框架内置（不要自己实现加密）</td></tr>
+    <tr><td>数据库连接与迁移</td><td>starter 自带的 ORM</td></tr>
+    <tr><td>UI 组件（按钮/表格/弹窗/表单）</td><td><code>shadcn/ui</code> 按需复制，零样式成本</td></tr>
+    <tr><td>表单校验</td><td><code>zod</code></td></tr>
+    <tr><td>拖拽排序 / 拖拽分组</td><td><code>dnd-kit</code></td></tr>
+    <tr><td>图表与得分曲线</td><td><code>recharts</code></td></tr>
+    <tr><td>甘特图</td><td><code>frappe-gantt</code></td></tr>
+    <tr><td>约束求解器</td><td><code>ortools</code>（CP-SAT）——<strong>绝对不要手写遗传算法</strong></td></tr>
+    <tr><td>图算法（拓扑排序/关键路径/连通分量）</td><td><code>networkx</code></td></tr>
+    <tr><td>数据校验与序列化</td><td><code>pydantic</code> / <code>zod</code></td></tr>
+    <tr><td>API 文档</td><td>FastAPI 自动生成，不用手写</td></tr>
+    <tr><td>部署与 HTTPS</td><td>平台托管或内网穿透，不用自己配反向代理</td></tr>
+  </table>
+</section>
+
+<section id="b7">
+  <div class="secnum">B.7</div>
+  <h2>实施路径：按"能演示"倒推排序</h2>
+  <p class="lead">顺序不是按模块重要性排，而是按<strong>"哪一步做完就能演示、就能拿分"</strong>排。每一步结束都是一个可展示的节点。</p>
+
+  <table>
+    <tr><th style="width:64px">阶段</th><th style="width:220px">目标</th><th>产出与验收标准</th></tr>
+    <tr>
+      <td><span class="pill p">P1</span></td>
+      <td>跑通骨架与三角色</td>
+      <td>fork 脚手架并启动；数据模型改造为课程/班级/小组/成员；三种角色登录后看到不同界面。<br><span class="mut">验收：用教师账号能建课并导入名单</span></td>
+    </tr>
+    <tr>
+      <td><span class="pill p">P2</span></td>
+      <td><strong>拿下分组（第一个亮点）</strong></td>
+      <td>FastAPI 算法服务 + CP-SAT 分组；教师看到三套方案与解释；拖动组员实时显示四项得分增减。<br><span class="mut">验收：现场拖动，曲线实时变化——这是答辩的第一个杀手锏</span></td>
+    </tr>
+    <tr>
+      <td><span class="pill p">P3</span></td>
+      <td>任务拆解与看板</td>
+      <td>上传作业要求 → LLM 输出任务 DAG + 协作契约 → 自动分配到人；前端看板 + 甘特。<br><span class="mut">验收：任意一份作业 PDF 能在 30 秒内拆成带依赖的任务树</span></td>
+    </tr>
+    <tr>
+      <td><span class="pill p">P4</span></td>
+      <td>进度感知与重规划</td>
+      <td>看板状态变更自动沉淀为进度信号；关键路径滞后触发预警；生成三个重规划方案及代价说明。<br><span class="mut">验收：手动把一个关键任务标为延期，系统弹出波及评估与补救方案</span></td>
+    </tr>
+    <tr>
+      <td><span class="pill p">P5</span></td>
+      <td><strong>贡献归因账本（第二个亮点）</strong></td>
+      <td>平台内撰写产出段落并汇编；生成贡献构成 + 区间 + 置信度；任一条结论可下钻到原始证据。<br><span class="mut">验收：从结论一路点回到段落级撰写记录——这是答辩的第二个杀手锏</span></td>
+    </tr>
+    <tr>
+      <td><span class="pill p">P6</span></td>
+      <td>互评、终审与打磨</td>
+      <td>同伴互评表单；教师终审与调分界面；演示数据构造；录屏与截图。<br><span class="mut">验收：完整走通一遍六步演示脚本不掉链子</span></td>
+    </tr>
+  </table>
+
+  <div class="card ok">
+    <h4>P2 和 P5 是两个必须做扎实的节点</h4>
+    <p>P2 的"拖动组员实时看到目标函数变化"和 P5 的"贡献结论下钻到原始证据"，是把抽象的"AI 规划"与"AI 归因"变成评委<strong>能亲眼看到</strong>的东西。其余部分做得普通没关系，这两处做好了就能拉开差距。</p>
+  </div>
+</section>
+
+<section id="b8">
+  <div class="secnum">B.8</div>
+  <h2>时间不够时的降级方案</h2>
+  <p class="lead">如果只剩很短时间，砍掉哪一块、保住哪一块，需要有明确的取舍规则。</p>
+
+  <table>
+    <tr><th style="width:150px">模块</th><th style="width:110px">降级策略</th><th>说明</th></tr>
+    <tr>
+      <td>分组算法</td>
+      <td><span class="pill a">可降级</span></td>
+      <td>不上 CP-SAT，直接手写"贪心 + 局部交换"。<strong>甚至可以先只优化"组间实力均衡"这一个目标</strong>，只要拖动时得分能实时变化，演示效果就成立</td>
+    </tr>
+    <tr>
+      <td>任务拆解</td>
+      <td><span class="pill t">不要砍</span></td>
+      <td>这是 AI 含量最直观的部分，一个 API 调用加一个 schema 就能出效果，性价比最高</td>
+    </tr>
+    <tr>
+      <td>进度采集</td>
+      <td><span class="pill a">可降级</span></td>
+      <td>不做自动信号沉淀，改成"成员在看板上手动更新状态"。演示时看不出差别</td>
+    </tr>
+    <tr>
+      <td>重规划</td>
+      <td><span class="pill a">可降级</span></td>
+      <td>不生成三个方案，只生成一个推荐方案 + 代价说明</td>
+    </tr>
+    <tr>
+      <td>交付物溯源</td>
+      <td><span class="pill a">可降级</span></td>
+      <td>不做真实的版本 diff，改成"提交时由系统引导标注段落归属"。<strong>产品概念完全不变，只是实现变薄</strong></td>
+    </tr>
+    <tr>
+      <td>同伴互评</td>
+      <td><span class="pill a">可降级</span></td>
+      <td>简化成一个 5 维打分表单，不做防作弊与异常检测</td>
+    </tr>
+    <tr>
+      <td>拖拽分组可视化</td>
+      <td><span class="pill r">必须保</span></td>
+      <td>这是现场演示最出效果的一处，砍了等于砍掉一半答辩表现力</td>
+    </tr>
+    <tr>
+      <td>证据下钻</td>
+      <td><span class="pill r">必须保</span></td>
+      <td>哪怕只有一条结论能点开看到证据，也要保住。它证明"可解释"不是口号</td>
+    </tr>
+  </table>
+</section>
+
+<section id="b9">
+  <div class="secnum">B.9</div>
+  <h2>如果将来要上线：许可清理清单</h2>
+  <p class="lead">现在不做，但要留好退路。以下三件事现在就按这个方式做，将来零成本切换。</p>
+  <table>
+    <tr><th style="width:56px">#</th><th style="width:230px">事项</th><th>现在怎么做</th></tr>
+    <tr>
+      <td><span class="pill p">01</span></td>
+      <td><strong>依赖来源留档</strong></td>
+      <td>建一个 <code>THIRD_PARTY.md</code>，列出每个外部依赖的名称、许可、用途与来源链接。<span class="hl">现在花 30 分钟，将来省 30 天。</span></td>
+    </tr>
+    <tr>
+      <td><span class="pill p">02</span></td>
+      <td><strong>GPL 部分隔离</strong></td>
+      <td>若参照了 gruepr 的评分函数，把相关逻辑<strong>放在独立模块里并在文件头注明来源</strong>。将来要闭源发布，只需重写这一个文件</td>
+    </tr>
+    <tr>
+      <td><span class="pill p">03</span></td>
+      <td><strong>与 CATME 做差异化</strong></td>
+      <td>它的用户协议禁止"attempt to imitate"其软件。避免逐条对照它的功能清单，产品命名、界面结构、评价维度都用自己的设计语言。<span class="hl">共桨的三类证据归因法与它是不同路径，这本身就是最好的区隔</span></td>
+    </tr>
+  </table>
+</section>
+
+<footer>
+  <p><strong>共桨 CoPaddle</strong> · 附录 B：技术选型与组装方案</p>
+  <p>许可信息核验时间 2026-09-21，来源为各仓库公开 API 与 README。实际使用前请以仓库最新声明为准。</p>
+</footer>
+
+</div>
+</body>
+</html>

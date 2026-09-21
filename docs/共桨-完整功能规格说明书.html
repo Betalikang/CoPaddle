@@ -1,0 +1,1572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>共桨 · 完整功能规格说明书 v1.0</title>
+<style>
+:root{
+  --bg:#141413; --surface:#1c1c1b; --surface2:#242423; --surface3:#2c2c2a;
+  --border:#33332f; --border2:#454540;
+  --text:#ececea; --muted:#a3a39d; --dim:#75756f;
+  --accent:#afa9ec; --accent-bg:#2a2450;
+  --teal:#5dcaa5; --teal-bg:#0d3b30;
+  --amber:#ef9f27; --amber-bg:#3d2a08;
+  --red:#f09595; --red-bg:#3d1616;
+  --blue:#85b7eb; --blue-bg:#0c447c;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14.5px;line-height:1.7;-webkit-font-smoothing:antialiased;}
+.shell{max-width:1200px;margin:0 auto;padding:0 24px;display:grid;grid-template-columns:196px minmax(0,1fr);gap:44px;}
+aside{position:sticky;top:0;align-self:start;max-height:100vh;overflow-y:auto;padding:40px 0 40px;font-size:12.5px;}
+aside .gl{font-size:11px;letter-spacing:.12em;color:var(--dim);margin:18px 0 6px;}
+aside a{display:block;color:var(--muted);text-decoration:none;padding:4px 0 4px 10px;border-left:1px solid var(--border);}
+aside a:hover{color:var(--text);border-left-color:var(--accent);}
+main{padding:0 0 140px;min-width:0;}
+header{padding:56px 0 34px;border-bottom:1px solid var(--border);}
+.tag{display:inline-block;font-size:11.5px;letter-spacing:.14em;color:var(--accent);background:var(--accent-bg);padding:5px 12px;border-radius:999px;margin-bottom:18px;}
+h1{font-size:32px;line-height:1.3;font-weight:600;margin:0 0 10px;letter-spacing:-.02em;}
+h1 .sub{display:block;font-size:15px;font-weight:400;color:var(--muted);margin-top:12px;letter-spacing:0;}
+section{padding:48px 0 6px;border-bottom:1px solid var(--border);}
+section:last-of-type{border-bottom:none;}
+.secnum{font-size:11.5px;letter-spacing:.16em;color:var(--accent);font-weight:500;}
+h2{font-size:22px;font-weight:600;margin:8px 0 6px;letter-spacing:-.015em;line-height:1.35;}
+h2 + .lead{font-size:15px;color:var(--muted);margin:0 0 24px;max-width:820px;}
+h3{font-size:15.5px;font-weight:600;margin:32px 0 8px;padding-left:10px;border-left:2px solid var(--accent);}
+h4{font-size:14px;font-weight:600;margin:22px 0 6px;}
+p{margin:0 0 14px;}
+ul,ol{margin:0 0 16px;padding-left:20px;}
+li{margin-bottom:5px;}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:13px;}
+th{text-align:left;font-weight:600;font-size:12px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border2);white-space:nowrap;}
+td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
+td.mut{color:var(--muted);}
+tr:last-child td{border-bottom:none;}
+code{font-family:var(--mono);font-size:12px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--accent);}
+pre{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:14px 16px;margin:14px 0;overflow-x:auto;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--text);}
+pre .c{color:var(--dim);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:16px 0;}
+.card.acc{border-left:2px solid var(--accent);}
+.card.ok{border-left:2px solid var(--teal);}
+.card.warn{border-left:2px solid var(--amber);}
+.card.dang{border-left:2px solid var(--red);}
+.card p:last-child,.card ul:last-child{margin-bottom:0;}
+.pill{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:999px;font-weight:500;white-space:nowrap;}
+.pill.p{background:var(--accent-bg);color:var(--accent);}
+.pill.t{background:var(--teal-bg);color:var(--teal);}
+.pill.a{background:var(--amber-bg);color:var(--amber);}
+.pill.r{background:var(--red-bg);color:var(--red);}
+.pill.b{background:var(--blue-bg);color:var(--blue);}
+.pill.g{background:var(--surface3);color:var(--muted);}
+strong{color:#fff;font-weight:600;}
+.hl{color:var(--accent);}
+.note{font-size:12.5px;color:var(--dim);margin-top:8px;}
+a.inl{color:var(--accent);text-decoration:none;}
+@media (max-width:1020px){.shell{grid-template-columns:1fr;gap:0}aside{position:static;max-height:none;padding:24px 0 0;border-bottom:1px solid var(--border);}aside a{display:inline-block;border-left:none;padding:3px 10px 3px 0}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside>
+  <div class="gl">产品与架构</div>
+  <a href="#s0">S0　总览与模块编号</a>
+  <div class="gl">数据层</div>
+  <a href="#s1">S1　数据模型（47 表）</a>
+  <div class="gl">后端</div>
+  <a href="#s2">S2　API 完整清单</a>
+  <div class="gl">前端</div>
+  <a href="#s3">S3　页面与交互清单</a>
+  <div class="gl">规则层</div>
+  <a href="#s4">S4　状态机与业务规则</a>
+  <a href="#s5">S5　权限矩阵</a>
+  <a href="#s6">S6　AI 能力规格</a>
+  <div class="gl">工程</div>
+  <a href="#s7">S7　非功能需求</a>
+  <a href="#s8">S8　工作量与排期</a>
+  <a href="#s9">S9　验收清单</a>
+</aside>
+
+<main>
+
+<header>
+  <span class="tag">共桨 CoPaddle · 完整功能规格说明书 v1.0</span>
+  <h1>AI 小组协作调度系统 · 前后端完整规格
+    <span class="sub">面向 ICAN 九月赛题「AI 产品实现」。本文档以可施工为标准：数据模型落到字段，API 落到路径与权限，页面落到元素与状态，业务规则落到阈值与公式。</span>
+  </h1>
+  <table style="margin-top:22px">
+    <tr><th style="width:110px">项目</th><th>说明</th></tr>
+    <tr><td><strong>交付范围</strong></td><td>后端 16 个模块 · 前端 4 端 52 个页面 · 47 张数据表 · 155 个对外 API + 9 个内部接口 · 2 个 LLM 调用点 · 约 182 人天（可演示版约 68 人天）</td></tr>
+    <tr><td><strong>技术选型</strong></td><td>Next.js（fork saas-starter，MIT）+ FastAPI 算法服务 + PostgreSQL，二者共享数据库</td></tr>
+    <tr><td><strong>设计基线</strong></td><td>AI 部分只用大模型做两件事；其余全部用求解器、规则与模板。详见 <a class="inl" href="#s6">S6</a></td></tr>
+    <tr><td><strong>技术选型</strong></td><td>框架、库、版本、许可与否决理由已单独成册：<strong>《共桨 · 技术选型说明书》</strong>（T0–T14）。本文档回答「做什么」，那份回答「用什么做」</td></tr>
+    <tr><td><strong>配套代码</strong></td><td><code>gongjiang-ai/</code>（AI 层已落地并跑通）；<code>共桨-AI小组协作系统-产品方案.html</code>；附录 A 开源调研；附录 B 技术选型与组装方案</td></tr>
+  </table>
+</header>
+
+<section id="s0">
+  <div class="secnum">S0</div>
+  <h2>总览与模块编号</h2>
+  <p class="lead">一句话定位：把「小组作业」从一次性分工，变成一条有据可查、可调度、可归因的协作流水线。</p>
+
+  <h3>系统分层</h3>
+  <pre>┌─────────────────────────────────────────────────────────────┐
+│  F-01 教师端 Web      F-02 队长端      F-03 队员端（小程序）   │
+├─────────────────────────────────────────────────────────────┤
+│  应用服务（Next.js App Router + Server Actions）             │
+│  B-01 认证授权   B-02 课程   B-03 名单   B-04 画像   B-05 约束 │
+│  B-06 分组编排   B-07 小组   B-08 任务   B-09 契约            │
+│  B-10 进度感知   B-11 冲突   B-12 重规划 B-13 交付物溯源      │
+│  B-14 贡献归因   B-15 互评   B-16 通知审计                    │
+├─────────────────────────────────────────────────────────────┤
+│  算法服务（FastAPI）—— 确定性计算与 LLM 调用                  │
+│  CP-SAT 分组求解 · 图算法 · 健康度 · 归因计算 · 2 个 LLM 点    │
+├─────────────────────────────────────────────────────────────┤
+│  PostgreSQL（42 表）        ·        对象存储（附件与版本）    │
+└─────────────────────────────────────────────────────────────┘</pre>
+
+  <h3>后端模块编号总表</h3>
+  <table>
+    <tr><th style="width:64px">编号</th><th style="width:150px">模块</th><th>核心职责</th><th style="width:80px">用 LLM</th><th style="width:70px">优先级</th></tr>
+    <tr><td><span class="pill p">B-01</span></td><td>认证与用户</td><td>注册、登录、会话、角色上下文切换、个人资料</td><td><span class="pill g">否</span></td><td>P0</td></tr>
+    <tr><td><span class="pill p">B-02</span></td><td>课程与设置</td><td>课程 CRUD、分组策略、四项目标权重、AI 开关</td><td><span class="pill g">否</span></td><td>P0</td></tr>
+    <tr><td><span class="pill p">B-03</span></td><td>名单与班级</td><td>选课名单、CSV/XLSX 导入、邀请、班级维度</td><td><span class="pill g">否</span></td><td>P0</td></tr>
+    <tr><td><span class="pill p">B-04</span></td><td>技能卡与画像</td><td>技能自选卡、能力向量、协作倾向、社交联系图</td><td><span class="pill g">否</span></td><td>P0</td></tr>
+    <tr><td><span class="pill p">B-05</span></td><td>约束管理</td><td>不可同组、必须同组、时间冲突</td><td><span class="pill g">否</span></td><td>P1</td></tr>
+    <tr><td><span class="pill b">B-06</span></td><td>分组编排</td><td>调度求解器、三方案、拖动预演、落库成组</td><td><span class="pill g">否</span></td><td><span class="pill b">P0 核心</span></td></tr>
+    <tr><td><span class="pill p">B-07</span></td><td>小组管理</td><td>指定队长、增删成员、解散、合并、拆分</td><td><span class="pill g">否</span></td><td>P1</td></tr>
+    <tr><td><span class="pill b">B-08</span></td><td>任务与依赖图</td><td>作业拆解、DAG、指派、状态流转、关键路径</td><td><span class="pill p">是</span></td><td><span class="pill b">P0 核心</span></td></tr>
+    <tr><td><span class="pill p">B-09</span></td><td>协作契约</td><td>术语表、接口约定、格式规范、成员确认</td><td><span class="pill g">否</span></td><td>P1</td></tr>
+    <tr><td><span class="pill p">B-10</span></td><td>进度感知</td><td>信号采集、健康度三维、预警、波及分析</td><td><span class="pill g">否</span></td><td>P1</td></tr>
+    <tr><td><span class="pill p">B-11</span></td><td>冲突处理</td><td>依赖冲突、契约冲突、语义归因、合并建议</td><td><span class="pill p">是</span></td><td>P1</td></tr>
+    <tr><td><span class="pill p">B-12</span></td><td>滚动重规划</td><td>触发判定、三方案生成、代价说明、采纳执行</td><td><span class="pill g">否</span></td><td>P1</td></tr>
+    <tr><td><span class="pill b">B-13</span></td><td>交付物与溯源</td><td>版本管理、段落级归属、汇编、终稿提交</td><td><span class="pill g">否</span></td><td><span class="pill b">P0 核心</span></td></tr>
+    <tr><td><span class="pill b">B-14</span></td><td>贡献归因与终审</td><td>三类证据加权、区间估计、证据下钻、申诉</td><td><span class="pill g">否</span></td><td><span class="pill b">P0 核心</span></td></tr>
+    <tr><td><span class="pill p">B-15</span></td><td>同伴互评</td><td>轮次、五维评分、热力图、异常检测</td><td><span class="pill g">否</span></td><td>P1</td></tr>
+    <tr><td><span class="pill p">B-16</span></td><td>通知 / 审计 / AI 日志</td><td>站内信、邮件、审计流水、AI 成本监控</td><td><span class="pill g">否</span></td><td>P2</td></tr>
+  </table>
+
+  <h3>前端端次划分</h3>
+  <table>
+    <tr><th style="width:64px">编号</th><th style="width:150px">端次</th><th>载体</th><th style="width:90px">页面数</th><th style="width:70px">优先级</th></tr>
+    <tr><td><span class="pill b">F-01</span></td><td>教师端</td><td>Web 桌面优先，宽屏仪表盘</td><td>26</td><td>P0</td></tr>
+    <tr><td><span class="pill p">F-02</span></td><td>队长端</td><td>Web + 移动自适应</td><td>11</td><td>P0</td></tr>
+    <tr><td><span class="pill t">F-03</span></td><td>队员端</td><td>微信小程序优先，Web 兜底</td><td>12</td><td>P0</td></tr>
+    <tr><td><span class="pill g">F-04</span></td><td>公共与基础设施</td><td>邀请落地页、错误页、空状态、移动适配</td><td>3+</td><td>P1</td></tr>
+  </table>
+
+  <h3>核心数据流（一条完整链路）</h3>
+  <pre>教师建课 ──▶ 导入名单 ──▶ 学生填技能卡
+                              │
+                              ▼
+                    B-04 画像计算（纯规则）
+                              │
+                              ▼
+        ┌─────────── B-06 分组编排 ───────────┐
+        │  FastAPI → CP-SAT 求解 → 三方案      │
+        │  教师拖动微调 → preview-move 实时重算 │
+        │  选定 → 落库为 groups + group_members │
+        └──────────────────┬──────────────────┘
+                           ▼
+        上传作业要求 ──▶ B-08【LLM 调用点 1】拆解
+                           │
+                 任务 DAG + 协作契约
+                           │
+                           ▼
+        成员在平台内撰写 ──▶ B-13 段落级溯源
+                           │
+              ┌────────────┴────────────┐
+              ▼                         ▼
+      B-10 进度信号沉淀          B-11【LLM 调用点 2】
+      关键路径滞后判定            语义冲突归因
+              │                         │
+              └────────────┬────────────┘
+                           ▼
+                    B-12 重规划决策包
+                           │
+                           ▼
+              B-14 贡献归因（纯计算 + 模板）
+               三类证据 → 区间 + 置信度
+                           │
+                           ▼
+                   教师终审 · 申诉通道</pre>
+
+  <h3>五条贯穿全案的设计决策</h3>
+  <table>
+    <tr><th style="width:180px">决策</th><th>内容与理由</th></tr>
+    <tr><td><strong>角色是局部的，不是全局的</strong></td><td>同一个学生可以在 A 课当队长、在 B 课当队员。因此角色存在 <code>course_memberships</code> 与 <code>group_members</code> 上，<strong>不能放在 users 表</strong>。这是最容易踩错的一处数据建模</td></tr>
+    <tr><td><strong>算法独立成服务</strong></td><td>CP-SAT、图算法、LLM 编排的生态都在 Python。硬塞进 Next.js 会丢掉 <code>ortools</code> 与 <code>networkx</code></td></tr>
+    <tr><td><strong>溯源必须由系统产生，不靠自报</strong></td><td>段落级归属由「平台内撰写」这一行为天然沉淀。若让学生自己填「我写了哪段」，搭便车者只要会填表就能规避</td></tr>
+    <tr><td><strong>贡献只输出区间，不输出分数</strong></td><td>规避 AI 判分争议。系统给决策依据，评分与调分权归教师。<a class="inl" href="#s4">S4</a> 有完整计算规则</td></tr>
+    <tr><td><strong>硬约束在拖动时实时校验</strong></td><td>教师拖动组员若破坏硬约束，界面立即标红并禁止落库。软约束则可破坏，但要实时展示得分代价</td></tr>
+  </table>
+</section>
+
+<section id="s1">
+  <div class="secnum">S1</div>
+  <h2>数据模型（47 张表）</h2>
+  <p class="lead">按十个域分组。标注 <code>PK</code> 主键、<code>UNIQ</code> 唯一、<code>FK</code> 外键、<code>JSONB</code> 结构化字段。所有表默认带 <code>created_at</code>，软删除表带 <code>deleted_at</code>。</p>
+
+  <h3>① 身份与课程（7 表）</h3>
+  <pre><span class="c"># 用户是全局的，角色是局部的 —— 一个人可以在 A 课当队长、B 课当队员</span>
+users              id PK · name · email UNIQ · student_no UNIQ · password_hash
+                   avatar_url · locale · status(active|disabled) · last_login_at
+                   IDX: email, student_no
+
+sessions           id PK · user_id FK users · token_hash UNIQ · ua · ip
+                   expires_at · revoked_at          IDX: token_hash
+
+courses            id PK · name · code · term(2026-2027-1) · teacher_id FK users
+                   description · start_at · end_at · status(draft|active|archived)
+                   cover_url · created_by · deleted_at
+                   IDX: teacher_id, status
+
+course_settings    course_id PK FK courses · group_count · min_group_size · max_group_size
+                   allow_cross_class · require_contract · require_peer_review
+                   <span class="c"># 四项目标函数权重，取值 0–2，默认见 S4</span>
+                   w_skill_cover · w_weak_tie · w_balance · w_history_avoid
+                   <span class="c"># 三类证据权重，合计 1.0</span>
+                   w_artifact · w_process · w_peer
+                   fair_share_threshold · delay_trigger_days · idle_trigger_days
+                   ai_enabled · ai_model · ai_monthly_budget_cents
+
+classes            id PK · course_id FK courses · name(数字媒体本24-3班) · major · grade
+                   advisor · member_count        UNIQ: (course_id, name)
+
+course_memberships id PK · course_id FK courses · user_id FK users
+                   role(teacher|assistant|captain|member) · class_id FK classes
+                   status(active|dropped) · joined_at
+                   UNIQ: (course_id, user_id)     IDX: role, class_id
+
+invitations        id PK · course_id FK · inviter_id FK users · email · token UNIQ
+                   role · class_id · expires_at · accepted_at · accepted_by
+                   IDX: token, email</pre>
+
+  <div class="card warn">
+    <h4>为什么角色不能放在 users 表</h4>
+    <p>这是整份规格里最容易埋雷的一处。用 <code>users.role</code> 存角色，会导致一个学生无法同时是「A 课队长 + B 课队员」。正确做法是：<strong>课程级角色存 <code>course_memberships.role</code>，小组级职责存 <code>group_members.duty</code></strong>，权限判定时两者求交。</p>
+  </div>
+
+  <h3>② 画像与约束（5 表）</h3>
+  <pre>skill_cards        id PK · course_id FK · user_id FK · submitted_at
+                   skills JSONB            <span class="c"># {"编程":4,"写作":3,"数据分析":2,"设计":1,"调研":3}</span>
+                   availability JSONB      <span class="c"># {"mon":["08:00-12:00"],"wed":["14:00-18:00"]}</span>
+                   prefer_roles JSONB      <span class="c"># ["建模","写作"]</span>
+                   prefer_teammates JSONB  <span class="c"># [user_id,...] 仅作软偏好，不保证满足</span>
+                   avoid_teammates JSONB   <span class="c"># [user_id,...] 需教师审核后转约束</span>
+                   self_note
+                   UNIQ: (course_id, user_id)
+
+member_profiles    id PK · course_id FK · user_id FK · computed_at
+                   <span class="c"># 能力向量，0–5，由技能卡与历史成绩合成</span>
+                   cap_coding · cap_writing · cap_design · cap_speech
+                   cap_data · cap_research · cap_leadership
+                   <span class="c"># 协作倾向，由历史行为统计</span>
+                   on_time_rate · avg_delay_days · rework_rate · help_count
+                   lead_count · member_count · is_first_timer
+                   <span class="c"># 来源标记，用于冷启动判定</span>
+                   source(skill_card|history|default) · confidence(0-1)
+                   UNIQ: (course_id, user_id)
+
+member_skills      id PK · profile_id FK member_profiles · skill VARCHAR(32) · level SMALLINT
+                   source(skill_card|history)      IDX: skill
+
+social_edges       id PK · course_id FK · user_a FK users · user_b FK users
+                   edge_type(same_group|same_class|co_edited|peer_rated)
+                   weight NUMERIC(4,2) · last_at
+                   UNIQ: (course_id, user_a, user_b, edge_type)
+                   <span class="c"># 用于"弱连接引入度"计算与教师端社交图可视化</span>
+
+constraints        id PK · course_id FK · type(no_same_group|must_same_group|time_conflict)
+                   member_a FK users · member_b FK users · note
+                   created_by FK users · approved_by · status(pending|active|revoked)
+                   <span class="c"># 硬约束：进入求解器；pending 状态不参与求解</span>
+                   IDX: course_id, status</pre>
+  <p class="note">说明：<code>avoid_teammates</code> 学生自行填写的回避申请，必须经教师审核转成 <code>constraints</code> 才生效。这是防止学生用回避申请排挤他人的一道闸门。</p>
+
+  <h3>③ 分组（4 表）</h3>
+  <pre>grouping_runs      id PK · course_id FK · triggered_by FK users
+                   mode(cpsat|greedy|manual) · params JSONB · status(running|ok|infeasible|timeout|error)
+                   solver_status · duration_ms · solutions_found · ai_call_log_id
+                   error_detail
+                   IDX: course_id, created_at DESC
+
+grouping_plans     id PK · run_id FK grouping_runs · label(方案A|方案B|方案C)
+                   strategy(skill_first|weaktie_first|fairness_first)
+                   total_score NUMERIC(5,2)
+                   <span class="c"># 四维原始得分，0–100</span>
+                   score_skill_cover · score_weak_tie · score_balance · score_history_avoid
+                   explanation TEXT      <span class="c"># 模板拼装生成，见 templates.py</span>
+                   contract_seed JSONB   <span class="c"># 该方案的分组理由摘要</span>
+                   is_selected BOOL · selected_at · selected_by
+
+groups             id PK · course_id FK · plan_id FK grouping_plans · name(第3组)
+                   captain_id FK users · status(forming|active|dissolved|merged)
+                   merged_into FK groups · milestone_progress NUMERIC(4,3)
+                   formed_at · dissolved_at         IDX: course_id, status
+
+group_members      id PK · group_id FK groups · user_id FK users
+                   duty(lead|contributor|reviewer)   <span class="c"># RACI 简化版</span>
+                   joined_at · left_at · leave_reason
+                   UNIQ: (group_id, user_id) WHERE left_at IS NULL
+                   IDX: user_id</pre>
+
+  <h3>④ 任务、依赖与契约（8 表）</h3>
+  <pre>task_plans         id PK · group_id FK groups · assignment_title · assignment_text TEXT
+                   assignment_file_url · llm_model · prompt_tokens · completion_tokens
+                   generated_at · validated BOOL · validate_problems JSONB
+                   <span class="c"># 一次拆解产出一个 plan，plan 下挂 tasks</span>
+                   IDX: group_id, generated_at DESC
+
+tasks              id PK · plan_id FK task_plans · group_id FK · code(T1)
+                   title · description · milestone · order_index
+                   est_hours NUMERIC(5,1) · actual_hours NUMERIC(5,1)
+                   status(todo|doing|blocked|reviewing|done|cancelled)
+                   deliverable_type(document|figure|table|code|slide|dataset)
+                   priority(low|normal|high|critical)
+                   due_at · started_at · completed_at · blocked_reason
+                   on_critical_path BOOL · created_by · deleted_at
+                   IDX: group_id, status; IDX: due_at
+                   UNIQ: (plan_id, code)
+
+task_deps          task_id FK tasks · depends_on_id FK tasks
+                   PK: (task_id, depends_on_id)
+                   <span class="c"># 有向无环图。写入前必须做环检测，见 ai.py:validate_plan</span>
+
+task_assignments   id PK · task_id FK tasks · user_id FK users
+                   raci(lead|contributor|reviewer) · assigned_by FK users
+                   assigned_at · accepted_at · workload_share NUMERIC(5,4)
+                   UNIQ: (task_id, user_id, raci)
+                   IDX: user_id
+
+task_status_events id PK · task_id FK · from_status · to_status · actor_id FK users
+                   note · evidence_url · created_at
+                   <span class="c"># 进度信号的第一手来源，B-10 从这里算延期与返工</span>
+                   IDX: task_id, created_at
+
+contracts          id PK · group_id FK groups · version SMALLINT · generated_by(g1|manual)
+                   format_spec TEXT · published_at · published_by
+                   IDX: group_id, version DESC
+
+contract_glossary  id PK · contract_id FK contracts · term · definition
+                   unit · scope · example        <span class="c"># 单位与统计范围是冲突高发区</span>
+
+contract_acceptances  contract_id FK · user_id FK · accepted_at · device
+                      PK: (contract_id, user_id)</pre>
+
+  <h3>⑤ 交付物与溯源（4 表）</h3>
+  <pre>artifacts          id PK · group_id FK · task_id FK tasks · title
+                   type(document|figure|table|code|slide|dataset)
+                   current_version_id FK artifact_versions
+                   status(draft|review|final|submitted) · is_final_deliverable BOOL
+                   created_by FK users · deleted_at
+                   IDX: group_id, status
+
+artifact_versions  id PK · artifact_id FK · version_no SMALLINT · content TEXT
+                   storage_path · file_size · checksum · diff_summary
+                   created_by FK users · created_at
+                   UNIQ: (artifact_id, version_no)
+
+<span class="c"># ★ 溯源核心表：段落级归属由"平台内撰写"行为天然产生，非学生自报</span>
+artifact_segments  id PK · version_id FK artifact_versions · seq SMALLINT
+                   kind(paragraph|heading|figure|table|code|formula)
+                   author_id FK users · content TEXT · content_hash · word_count
+                   source_task_id FK tasks
+                   revised_by FK users · revised_count SMALLINT
+                   IDX: version_id, seq; IDX: author_id
+
+<span class="c"># 每一次段落级动作都留痕，用于区分"主责产出"与"审阅返工"</span>
+segment_edits      id PK · segment_id FK artifact_segments · editor_id FK users
+                   edit_type(create|revise|review|delete)
+                   delta_chars INT · before_hash · after_hash · created_at
+                   IDX: segment_id; IDX: editor_id</pre>
+
+  <h3>⑥ 进度与健康度（3 表）</h3>
+  <pre>progress_signals   id PK · group_id FK · task_id FK · user_id FK
+                   signal_type(deliverable_submitted|status_changed|segment_edited
+                              |comment|checkin|idle_detected|peer_helped)
+                   weight NUMERIC(3,2) · payload JSONB · observed_at
+                   IDX: group_id, observed_at DESC; IDX: user_id
+
+milestones         id PK · group_id FK · name · order_index · due_at
+                   status(pending|active|done|missed) · completed_at
+                   UNIQ: (group_id, order_index)
+
+group_health_snapshots  id PK · group_id FK · snapshot_at
+                   <span class="c"># 三维健康度，0–100，越高越好</span>
+                   blocked_score · idle_score · overload_score
+                   on_track_ratio NUMERIC(4,3) · critical_delay_days NUMERIC(4,1)
+                   open_conflicts INT · unassigned_tasks INT
+                   diagnosis JSONB    <span class="c"># 触发的预警条目</span>
+                   IDX: group_id, snapshot_at DESC</pre>
+
+  <h3>⑦ 冲突与重规划（5 表）</h3>
+  <pre>conflicts          id PK · group_id FK · task_id FK · type(dependency|contract|content)
+                   severity(low|medium|high) · status(open|analyzing|resolved|dismissed)
+                   detected_by(auto|manual|captain) · detected_at
+                   title · summary · resolved_at
+                   IDX: group_id, status
+
+conflict_attributions  id PK · conflict_id FK conflicts · kind VARCHAR(24)
+                   <span class="c"># kind 取值见 schemas.py: ConflictKind</span>
+                   severity · reason TEXT · suggestion · merged_text TEXT
+                   llm_model · prompt_tokens · completion_tokens · raw_response
+                   created_at
+
+conflict_resolutions   id PK · conflict_id FK · action(merge|realign|reassign|dismiss)
+                   actor_id FK users · note · applied_payload JSONB · resolved_at
+
+replan_events      id PK · group_id FK · trigger_type(critical_delay|member_idle
+                                     |rework_overflow|deadline_changed|manual)
+                   trigger_task_id FK · trigger_payload JSONB
+                   status(pending|adopted|rejected) · created_at
+                   adopted_option_id FK replan_options · handled_by · handled_at
+                   IDX: group_id, status
+
+replan_options     id PK · event_id FK replan_events · label(方案A|方案B|方案C)
+                   action(redistribute|scope_cut|borrow_member)
+                   payload JSONB      <span class="c"># 具体的任务转移/缩减/借调清单</span>
+                   cost_summary TEXT  <span class="c"># 模板拼装的代价说明</span>
+                   est_impact_days NUMERIC(4,1) · created_at</pre>
+
+  <h3>⑧ 贡献归因（4 表）</h3>
+  <pre>evidence_items     id PK · group_id FK · user_id FK · snapshot_id FK
+                   source(artifact|process|peer) · ref_type · ref_id
+                   weight NUMERIC(4,3) · value NUMERIC(6,3) · note
+                   computed_at
+                   <span class="c"># 每一条结论都必须能追到若干条 evidence_items —— 这是"可下钻"的实现</span>
+                   IDX: snapshot_id; IDX: user_id
+
+contribution_snapshots  id PK · group_id FK · user_id FK · snapshot_at
+                   <span class="c"># 贡献构成明细</span>
+                   comp JSONB   <span class="c"># {"主责产出":34.0,"协作产出":12.0,"审阅返工":9.0,"主动补位":6.0}</span>
+                   low_pct NUMERIC(5,2) · high_pct NUMERIC(5,2)
+                   confidence(low|medium|high) · peer_median NUMERIC(3,2)
+                   on_time_count · delay_count · rework_count · review_count
+                   fair_share_ratio NUMERIC(5,3)   <span class="c"># 应分担份额占比，<0.14 触发提示</span>
+                   warning TEXT
+                   UNIQ: (group_id, user_id, snapshot_at)
+
+<span class="c"># 教师终审：系统只给区间，最终值由教师确定</span>
+attribution_reviews    id PK · snapshot_id FK · reviewer_id FK users
+                   adjusted_low · adjusted_high · final_note · is_locked BOOL
+                   reviewed_at
+
+<span class="c"># 学生申诉通道</span>
+attribution_appeals    id PK · snapshot_id FK · appellant_id FK users
+                   reason TEXT · evidence_text TEXT · attachments JSONB
+                   status(submitted|reviewing|accepted|rejected|partially_accepted)
+                   handler_id FK users · result_note · handled_at
+                   IDX: status</pre>
+
+  <h3>⑨ 同伴互评（3 表）</h3>
+  <pre>peer_review_rounds   id PK · course_id FK · name · open_at · close_at
+                     status(scheduled|open|closed|published) · is_anonymous BOOL
+                     dimensions JSONB   <span class="c"># 默认五维，可由教师自定义</span>
+                     IDX: course_id, status
+
+peer_reviews         id PK · round_id FK · group_id FK · reviewer_id FK users
+                     reviewee_id FK users · scores JSONB   <span class="c"># {"贡献":4,"沟通":5,...}</span>
+                     comment TEXT · submitted_at
+                     UNIQ: (round_id, reviewer_id, reviewee_id)
+
+peer_review_anomalies  id PK · round_id FK · group_id FK
+                     type(mutual_inflation|extreme_low|single_source|non_response)
+                     payload JSONB · severity · detected_at · note</pre>
+
+  <h3>⑩ 通知、审计与 AI 日志（4 表）</h3>
+  <pre>notifications        id PK · user_id FK · type · title · body · link
+                     channel(inapp|email|wechat) · priority(low|normal|urgent)
+                     group_id · course_id · read_at · created_at
+                     IDX: user_id, read_at
+
+notification_settings  user_id PK FK users · email_enabled BOOL · wechat_enabled BOOL
+                       mute_types JSONB · digest_mode(instant|daily)
+
+audit_logs           id PK · actor_id FK users · actor_role · action
+                     target_type · target_id · before JSONB · after JSONB
+                     ip · ua · created_at
+                     IDX: actor_id, created_at DESC; IDX: target_type, target_id
+
+<span class="c"># AI 成本与调试监控 —— 用于控制 2 个 LLM 调用点的开销</span>
+ai_call_logs         id PK · caller_id FK users · endpoint(decompose|conflict)
+                     model · prompt_tokens · completion_tokens · latency_ms
+                     status(ok|retry|failed) · error · request_hash
+                     course_id · group_id · created_at
+                     IDX: created_at DESC; IDX: endpoint</pre>
+
+  <div class="card ok">
+    <h4>三张表撑起整个产品的护城河</h4>
+    <p><code>artifact_segments</code>（段落级归属）、<code>segment_edits</code>（编辑留痕）、<code>evidence_items</code>（证据条目）—— <strong>开源生态里没有任何一个项目有这三张表</strong>，因为它们的"贡献"全部来自学生自己填的问卷。把这三张表做扎实，产品的差异化就立住了。</p>
+  </div>
+</section>
+
+<section id="s2">
+  <div class="secnum">S2</div>
+  <h2>后端 API 完整清单</h2>
+  <p class="lead">统一前缀 <code>/api</code>。权限列含义：<span class="pill p">教师</span>课程教师或助教 &nbsp;<span class="pill b">队长</span>该组队长 &nbsp;<span class="pill t">本人</span>仅资源归属者 &nbsp;<span class="pill g">组内</span>同组成员可见 &nbsp;<span class="pill r">内部</span>服务间调用，不对外暴露。</p>
+
+  <h3>B-01　认证与用户（11）</h3>
+  <table>
+    <tr><th style="width:64px">方法</th><th style="width:300px">路径</th><th>说明</th><th style="width:70px">权限</th></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/auth/register</code></td><td>注册，返回会话 Cookie</td><td>公开</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/auth/login</code></td><td>登录，签发 JWT 会话</td><td>公开</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/auth/logout</code></td><td>注销并吊销会话</td><td>本人</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/auth/me</code></td><td>当前用户 + 全部课程内角色上下文</td><td>本人</td></tr>
+    <tr><td><span class="pill a">PATCH</span></td><td><code>/api/users/me</code></td><td>改姓名、头像、学号、语言</td><td>本人</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/users/me/avatar</code></td><td>上传头像</td><td>本人</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/auth/password/change</code></td><td>修改密码</td><td>本人</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/auth/password/reset-request</code></td><td>发起重置（发送邮件）</td><td>公开</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/auth/password/reset-confirm</code></td><td>凭 token 重置</td><td>公开</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/me/courses</code></td><td>我参与的课程，含我在每门课的角色</td><td>本人</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/me/switch-context</code></td><td>切换当前课程上下文（角色随之切换）</td><td>本人</td></tr>
+  </table>
+
+  <h3>B-02　课程与设置（9）</h3>
+  <table>
+    <tr><th style="width:64px">方法</th><th style="width:300px">路径</th><th>说明</th><th style="width:70px">权限</th></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses</code></td><td>课程列表，支持 status / term 筛选与分页</td><td>本人</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses</code></td><td>建课</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id</code></td><td>课程详情</td><td>参与人</td></tr>
+    <tr><td><span class="pill a">PATCH</span></td><td><code>/api/courses/:id</code></td><td>改课程基本信息</td><td>教师</td></tr>
+    <tr><td><span class="pill r">DELETE</span></td><td><code>/api/courses/:id</code></td><td>软删除课程</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/settings</code></td><td>读分组策略、四维权重、三类证据权重、AI 开关</td><td>教师</td></tr>
+    <tr><td><span class="pill a">PATCH</span></td><td><code>/api/courses/:id/settings</code></td><td>改设置（有分组结果时改权重触发重算提示）</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses/:id/archive</code></td><td>归档；<code>/restore</code> 恢复</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses/:id/duplicate</code></td><td>复制到新学期（带设置与约束，不带学生数据）</td><td>教师</td></tr>
+  </table>
+
+  <h3>B-03　名单与班级（12）</h3>
+  <table>
+    <tr><th style="width:64px">方法</th><th style="width:300px">路径</th><th>说明</th><th style="width:70px">权限</th></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/enrollments</code></td><td>名单，支持按班级 / 状态 / 技能卡填写状态筛选</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses/:id/enrollments</code></td><td>单个添加</td><td>教师</td></tr>
+    <tr><td><span class="pill a">PATCH</span></td><td><code>/api/enrollments/:id</code></td><td>改班级 / 角色 / 状态</td><td>教师</td></tr>
+    <tr><td><span class="pill r">DELETE</span></td><td><code>/api/enrollments/:id</code></td><td>移出课程（若已有小组则走成员变更流程）</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/enrollments/import-template</code></td><td>下载导入模板（CSV）</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses/:id/enrollments/import</code></td><td>批量导入 CSV/XLSX，返回逐行校验报告</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses/:id/enrollments/import/confirm</code></td><td>确认导入（跳过或覆盖冲突行）</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/classes</code></td><td>班级列表（数字媒体本24-1/2/3 班）</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses/:id/classes</code></td><td>建班级 / 批量分配学生到班级</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses/:id/invitations</code></td><td>批量发邀请，返回可分享链接</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/invitations/:token</code></td><td>邀请落地页信息（课程名、邀请人）</td><td>公开</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/invitations/:token/accept</code></td><td>接受邀请加入课程</td><td>公开</td></tr>
+  </table>
+
+  <h3>B-04　技能卡与画像（8）</h3>
+  <table>
+    <tr><th style="width:64px">方法</th><th style="width:300px">路径</th><th>说明</th><th style="width:70px">权限</th></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/skill-cards/me</code></td><td>我的技能卡</td><td>本人</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses/:id/skill-cards/me</code></td><td>提交/更新技能卡（30 秒可填完的设计）</td><td>本人</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/skill-cards</code></td><td>全班填写进度（谁填了谁没填）</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses/:id/skill-cards/remind</code></td><td>催填，向未填学生发通知</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/profiles</code></td><td>班级画像列表：能力向量雷达 + 协作倾向标签</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/profiles/:userId</code></td><td>单人画像详情，含来源与置信度</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses/:id/profiles/recompute</code></td><td>重算画像（技能卡变更或导入历史后）</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/social-graph</code></td><td>社交联系图数据（节点 + 边），支持按 edge_type 过滤</td><td>教师</td></tr>
+  </table>
+
+  <h3>B-05　约束管理（5）</h3>
+  <table>
+    <tr><th style="width:64px">方法</th><th style="width:300px">路径</th><th>说明</th><th style="width:70px">权限</th></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/constraints</code></td><td>约束列表，含待审核的学生回避申请</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses/:id/constraints</code></td><td>新建约束</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses/:id/constraints/bulk</code></td><td>批量导入（CSV 或从学生申请批量通过）</td><td>教师</td></tr>
+    <tr><td><span class="pill a">PATCH</span></td><td><code>/api/constraints/:id</code></td><td>审核通过 / 撤销</td><td>教师</td></tr>
+    <tr><td><span class="pill r">DELETE</span></td><td><code>/api/constraints/:id</code></td><td>删除约束</td><td>教师</td></tr>
+  </table>
+
+  <h3>B-06　分组编排（13）—— 核心</h3>
+  <table>
+    <tr><th style="width:64px">方法</th><th style="width:300px">路径</th><th>说明</th><th style="width:70px">权限</th></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses/:id/grouping/run</code></td><td>触发生成分组方案，异步返回 run_id</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/grouping/runs/:id</code></td><td>查询运行状态（running/ok/infeasible/timeout）</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/grouping/runs</code></td><td>历史运行记录</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/grouping/runs/:id/plans</code></td><td>三套方案 + 四维得分 + 模板解释</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/grouping/plans/:id/preview-move</code></td><td><strong>拖动预演</strong>：传入 (userId, fromGroup, toGroup)，返回四维得分增量、是否破坏硬约束、违规原因</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/grouping/plans/:id/apply-move</code></td><td>正式应用一次拖动（写入 plan 的临时状态）</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/grouping/plans/:id/swap</code></td><td>两名成员互换组</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/grouping/plans/:id/reset</code></td><td>还原到求解器原始结果</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/grouping/plans/:id/explain</code></td><td>重新生成方案解释（权重改动后）</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/grouping/runs/:id/regenerate</code></td><td>改约束或权重后重跑</td><td>教师</td></tr>
+    <tr><td><span class="pill b">POST</span></td><td><code>/api/grouping/plans/:id/select</code></td><td><strong>选定方案并落库</strong>，生成 groups 与 group_members</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/grouping/runs/:id/export</code></td><td>导出分组结果 CSV/XLSX</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/grouping/simulate</code></td><td>假设分析：改权重看得分如何变化，不落库</td><td>教师</td></tr>
+  </table>
+
+  <div class="card acc">
+    <h4><code>preview-move</code> 是整个产品最重要的一个接口</h4>
+    <p>它是"答辩杀手锏"的技术支撑。拖动组员时前端每次放下都调它，后端<strong>不重新求解</strong>，而是拿当前方案在内存里重算四维得分并做硬约束校验，返回增量。因此延迟可以做到 50ms 以内，实现真正的"实时看到得分变化"。返回结构：<code>{ ok, violations[], deltas:{skill_cover:+6, weak_tie:-11, ...}, total_before, total_after }</code></p>
+  </div>
+
+  <h3>B-07　小组管理（11）</h3>
+  <table>
+    <tr><th style="width:64px">方法</th><th style="width:300px">路径</th><th>说明</th><th style="width:70px">权限</th></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/groups</code></td><td>全班小组列表（含健康度摘要）</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id</code></td><td>小组详情：成员、任务、健康度、契约版本</td><td>组内</td></tr>
+    <tr><td><span class="pill a">PATCH</span></td><td><code>/api/groups/:id</code></td><td>改组名、备注</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/captain</code></td><td>指定/更换队长</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/members</code></td><td>加入成员（自动校验组规模上限）</td><td>教师</td></tr>
+    <tr><td><span class="pill r">DELETE</span></td><td><code>/api/groups/:id/members/:userId</code></td><td>移出成员，需填写原因</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/dissolve</code></td><td>解散小组，成员回池</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/split</code></td><td>拆分为两组，可按任务线拆</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/merge</code></td><td>合并两组</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/reassign-duty</code></td><td>调整组内 RACI 职责</td><td>队长</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/workload</code></td><td>组内负载视图（每人任务数与工时）</td><td>组内</td></tr>
+  </table>
+
+  <h3>B-08　任务与依赖图（17）—— 核心</h3>
+  <table>
+    <tr><th style="width:64px">方法</th><th style="width:300px">路径</th><th>说明</th><th style="width:70px">权限</th></tr>
+    <tr><td><span class="pill b">POST</span></td><td><code>/api/groups/:id/task-plan/generate</code></td><td><strong>LLM 调用点 1</strong>：上传作业要求（文本或文件）→ 拆解为任务 DAG + 协作契约</td><td>队长</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/task-plan</code></td><td>当前任务计划（含校验问题列表）</td><td>组内</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/task-plan/regenerate</code></td><td>重新拆解（丢弃旧计划前需确认）</td><td>队长</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/task-plan/upload</code></td><td>上传作业要求文件（PDF/DOCX）并抽取文本</td><td>队长</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/tasks</code></td><td>任务列表，支持 status / assignee / milestone 筛选</td><td>组内</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/tasks</code></td><td>手工新增任务</td><td>队长</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/tasks/:id</code></td><td>任务详情（含依赖链与下游影响）</td><td>组内</td></tr>
+    <tr><td><span class="pill a">PATCH</span></td><td><code>/api/tasks/:id</code></td><td>改标题、工时、截止、优先级、交付物类型</td><td>队长</td></tr>
+    <tr><td><span class="pill r">DELETE</span></td><td><code>/api/tasks/:id</code></td><td>删除任务（自动清理依赖边并提示影响）</td><td>队长</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/tasks/:id/deps</code></td><td>加依赖（写入前做环检测，成环拒绝）</td><td>队长</td></tr>
+    <tr><td><span class="pill r">DELETE</span></td><td><code>/api/tasks/:id/deps/:depId</code></td><td>删依赖</td><td>队长</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/tasks/:id/assignees</code></td><td>指派主责 / 协作 / 审阅</td><td>队长</td></tr>
+    <tr><td><span class="pill r">DELETE</span></td><td><code>/api/tasks/:id/assignees/:userId</code></td><td>取消指派</td><td>队长</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/tasks/:id/status</code></td><td>状态流转，自动写 task_status_events 与 progress_signals</td><td>组内</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/tasks/:id/checkin</code></td><td>成员打卡（无产出时的轻量进度信号）</td><td>本人</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/tasks/:id/request-extension</code></td><td>申请延期，触发队长与教师通知</td><td>本人</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/graph/critical-path</code></td><td>关键路径（节点序列 + 总工时）</td><td>组内</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/graph/impact</code></td><td>波及分析：指定任务延期后受影响的下游任务</td><td>组内</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/gantt</code></td><td>甘特图数据（含依赖箭头与关键路径标记）</td><td>组内</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/me/tasks</code></td><td>「我的部分」：我的任务、依赖谁、截止时间</td><td>本人</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/tasks/:id/comments</code></td><td>任务评论；<code>GET</code> 取列表</td><td>组内</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/tasks/:id/attachments</code></td><td>上传附件</td><td>组内</td></tr>
+  </table>
+
+  <h3>B-09　协作契约（5）</h3>
+  <table>
+    <tr><th style="width:64px">方法</th><th style="width:300px">路径</th><th>说明</th><th style="width:70px">权限</th></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/contract</code></td><td>当前生效版本 + 历史版本列表</td><td>组内</td></tr>
+    <tr><td><span class="pill a">PATCH</span></td><td><code>/api/groups/:id/contract</code></td><td>编辑术语表与接口约定，生成新版本</td><td>队长</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/contract/publish</code></td><td>发布版本，通知全体成员确认</td><td>队长</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/contract/accept</code></td><td>成员确认签署</td><td>本人</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/contract/acceptances</code></td><td>确认状态（谁签了谁没签）</td><td>组内</td></tr>
+  </table>
+
+  <h3>B-10　进度感知与健康度（7）</h3>
+  <table>
+    <tr><th style="width:64px">方法</th><th style="width:300px">路径</th><th>说明</th><th style="width:70px">权限</th></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/health</code></td><td>三维健康度 + 诊断条目</td><td>组内</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/health/history</code></td><td>健康度时间序列（用于趋势图）</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/health-overview</code></td><td>全班小组热力图数据</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/blockers</code></td><td>当前阻塞项清单（被依赖卡住的任务）</td><td>组内</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/signals</code></td><td>上报进度信号（内部调用，前端不直接调）</td><td><span class="pill r">内部</span></td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses/:id/progress/remind</code></td><td>教师向滞后小组发提醒</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/alerts</code></td><td>预警中心：全部待处理预警</td><td>教师</td></tr>
+  </table>
+
+  <h3>B-11　冲突检测与归因（7）</h3>
+  <table>
+    <tr><th style="width:64px">方法</th><th style="width:300px">路径</th><th>说明</th><th style="width:70px">权限</th></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/conflicts</code></td><td>冲突列表</td><td>组内</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/conflicts/detect</code></td><td>手动触发检测（系统会定时自动跑）</td><td>队长</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/conflicts/:id</code></td><td>冲突详情：双方原文、契约依据</td><td>组内</td></tr>
+    <tr><td><span class="pill b">POST</span></td><td><code>/api/conflicts/:id/analyze</code></td><td><strong>LLM 调用点 2</strong>：语义归因，返回类型/严重度/依据/建议/合并文本</td><td>队长</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/conflicts/:id/resolve</code></td><td>就地合并，写入合并后的段落</td><td>队长</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/conflicts/:id/realign</code></td><td>退回对齐契约，通知双方与教师</td><td>队长</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/conflicts/:id/reassign</code></td><td>重指派任务给第三方</td><td>队长</td></tr>
+  </table>
+
+  <h3>B-12　滚动重规划（5）</h3>
+  <table>
+    <tr><th style="width:64px">方法</th><th style="width:300px">路径</th><th>说明</th><th style="width:70px">权限</th></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/replans</code></td><td>重规划事件列表</td><td>组内</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/replans/generate</code></td><td>生成决策包（三方案 + 代价说明）</td><td>队长</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/replans/:id</code></td><td>事件详情与三方案对比</td><td>组内</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/replans/:id/options/:optionId/adopt</code></td><td>采纳方案，自动重排任务与依赖</td><td>队长</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/replans/:id/reject</code></td><td>拒绝并填写理由（进入审计）</td><td>队长</td></tr>
+  </table>
+
+  <h3>B-13　交付物与溯源（11）—— 核心</h3>
+  <table>
+    <tr><th style="width:64px">方法</th><th style="width:300px">路径</th><th>说明</th><th style="width:70px">权限</th></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/artifacts</code></td><td>交付物列表（按任务与状态分组）</td><td>组内</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/artifacts</code></td><td>新建交付物，绑定任务与交付物类型</td><td>组内</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/artifacts/:id</code></td><td>详情 + 当前版本 + 各成员字数占比</td><td>组内</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/artifacts/:id/versions</code></td><td><strong>保存新版本</strong>：提交段落数组，服务端 diff 后写 artifact_segments 与 segment_edits</td><td>组内</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/artifacts/:id/versions</code></td><td>版本历史</td><td>组内</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/artifact-versions/:id/segments</code></td><td>段落列表（含归属人、修订次数、来源任务）</td><td>组内</td></tr>
+    <tr><td><span class="pill a">PATCH</span></td><td><code>/api/segments/:id</code></td><td>修改内容或归属（改归属需队长权限并写入审计）</td><td>队长</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/artifacts/:id/review</code></td><td>标记段落已审阅，写 segment_edits(review)</td><td>组内</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/compile</code></td><td><strong>汇编终稿</strong>：把组内交付物按模板合成一份完整文档</td><td>队长</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/deliverables</code></td><td>最终交付清单与完成状态</td><td>组内</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/deliverables/submit</code></td><td>提交终稿至教师（提交后段落归属冻结）</td><td>队长</td></tr>
+  </table>
+
+  <h3>B-14　贡献归因与终审（11）—— 核心</h3>
+  <table>
+    <tr><th style="width:64px">方法</th><th style="width:300px">路径</th><th>说明</th><th style="width:70px">权限</th></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/contributions</code></td><td>全组账本：贡献构成 + 区间 + 置信度</td><td>组内</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/groups/:id/contributions/:userId</code></td><td>单人账本</td><td>组内</td></tr>
+    <tr><td><span class="pill b">GET</span></td><td><code>/api/contributions/:snapshotId/evidence</code></td><td><strong>证据下钻</strong>：返回该结论对应的全部 evidence_items 与其原始引用（段落、状态事件、互评原文）</td><td>组内</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/groups/:id/contributions/compute</code></td><td>重算贡献快照（提交终稿后自动触发）</td><td>队长</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/contributions</code></td><td>全班贡献总览矩阵</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/contributions/:snapshotId/review</code></td><td><strong>教师终审</strong>：调整区间并填写评语，写入 attribution_reviews</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses/:id/contributions/lock</code></td><td>批量锁定终审结果</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/contributions/:snapshotId/appeal</code></td><td>学生提交申诉，附补充证据</td><td>本人</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/appeals</code></td><td>申诉列表（教师待处理）</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/appeals/:id/handle</code></td><td>受理 / 驳回 / 部分采纳，写入结果与理由</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/grade-export</code></td><td>导出成绩 CSV（贡献区间 + 教师终审值 + 任务完成率）</td><td>教师</td></tr>
+  </table>
+
+  <h3>B-15　同伴互评（10）</h3>
+  <table>
+    <tr><th style="width:64px">方法</th><th style="width:300px">路径</th><th>说明</th><th style="width:70px">权限</th></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/courses/:id/review-rounds</code></td><td>轮次列表</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/courses/:id/review-rounds</code></td><td>新建轮次（时间窗、维度、是否匿名）</td><td>教师</td></tr>
+    <tr><td><span class="pill a">PATCH</span></td><td><code>/api/review-rounds/:id</code></td><td>改时间窗与维度</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/review-rounds/:id/my-tasks</code></td><td>我需要评谁（含已提交状态）</td><td>本人</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/review-rounds/:id/submissions</code></td><td>提交评价（五维评分 + 文字评语）</td><td>本人</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/review-rounds/:id/progress</code></td><td>完成率统计</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/review-rounds/:id/heatmap</code></td><td><strong>评价热力图</strong>：一图看出谁评了谁、谁漏评</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/review-rounds/:id/anomalies</code></td><td>异常检测结果（互刷高分、极端低分、单一来源）</td><td>教师</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/review-rounds/:id/close</code></td><td>关闭轮次并锁定</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/review-rounds/:id/results</code></td><td>结果：去极值后中位数、组内排名</td><td>教师</td></tr>
+  </table>
+
+  <h3>B-16　通知、审计与系统（8）</h3>
+  <table>
+    <tr><th style="width:64px">方法</th><th style="width:300px">路径</th><th>说明</th><th style="width:70px">权限</th></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/notifications</code></td><td>通知列表（分页、按类型筛选）</td><td>本人</td></tr>
+    <tr><td><span class="pill p">POST</span></td><td><code>/api/notifications/:id/read</code></td><td>标记已读；<code>/read-all</code> 全部已读</td><td>本人</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/me/notification-settings</code></td><td>通知偏好</td><td>本人</td></tr>
+    <tr><td><span class="pill a">PATCH</span></td><td><code>/api/me/notification-settings</code></td><td>改偏好（渠道、静音类型、摘要模式）</td><td>本人</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/audit-logs</code></td><td>审计流水，按对象与时间筛选</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/ai-call-logs</code></td><td>AI 调用与成本监控</td><td>教师</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/system/health</code></td><td>健康检查（DB / 算法服务 / LLM 可达性）</td><td>公开</td></tr>
+    <tr><td><span class="pill t">GET</span></td><td><code>/api/me/data-export</code></td><td>导出系统持有的我的全部数据</td><td>本人</td></tr>
+  </table>
+
+  <h3>算法服务内部接口（9）—— 不对外暴露</h3>
+  <pre><span class="c"># 仅由 Next.js 服务端调用，走内网 + 共享密钥</span>
+POST  /internal/grouping/solve          CP-SAT 求解，返回三套方案与四维得分
+POST  /internal/grouping/score          对给定分组方案打分（供 preview-move 用，非重新求解）
+POST  /internal/grouping/validate       硬约束校验，返回违规清单
+POST  /internal/graph/critical-path     关键路径
+POST  /internal/graph/impact            波及分析
+POST  /internal/health/compute          健康度三维 + 诊断
+POST  /internal/attribution/compute     三类证据加权 → 贡献区间与置信度
+POST  /internal/ai/decompose            <span class="pill p">LLM</span> 作业拆解
+POST  /internal/ai/conflict             <span class="pill p">LLM</span> 冲突归因
+GET   /internal/healthz                 存活探针</pre>
+
+  <div class="card warn">
+    <h4>接口安全的两条底线</h4>
+    <p>① <strong>算法服务不对公网暴露</strong>，只允许 Next.js 服务端通过内网地址调用，并校验共享密钥与来源 IP。② <strong>所有权限判定在服务端完成</strong>，前端隐藏按钮只是体验优化，不能作为权限依据。特别是 <code>/api/contributions/:snapshotId/evidence</code> 与教师终审类接口，必须逐次校验「当前用户是否属于该课程 / 该小组」。</p>
+  </div>
+</section>
+
+<section id="s3">
+  <div class="secnum">S3</div>
+  <h2>前端页面与交互清单（52 页）</h2>
+  <p class="lead">每页标注：核心元素、关键交互、依赖接口、优先级。<span class="pill b">核心页</span> 标记的是答辩必须能演示的页面。</p>
+
+  <h3>F-01　教师端（26 页）</h3>
+  <table>
+    <tr><th style="width:56px">编号</th><th style="width:150px">页面</th><th>核心元素与关键交互</th><th style="width:150px">依赖接口</th><th style="width:64px">优先级</th></tr>
+    <tr><td>P-01</td><td>登录 / 注册</td><td>邮箱密码表单；错误提示；记住我；忘记密码入口</td><td class="mut">auth/*</td><td>P0</td></tr>
+    <tr><td>P-02</td><td>课程工作台</td><td>课程卡片网格（进行中 / 已归档分组）；每卡显示人数、小组数、待处理预警数；全局搜索；顶栏用户菜单与通知铃铛</td><td class="mut">GET /courses<br>GET /me/courses</td><td>P0</td></tr>
+    <tr><td>P-03</td><td>建课向导（4 步）</td><td>①基本信息 ②分组策略（组数、规模、四维权重滑块）③邀请学生（粘贴邮箱或生成链接）④完成。每步可保存草稿</td><td class="mut">POST /courses<br>PATCH /settings<br>POST /invitations</td><td>P0</td></tr>
+    <tr><td>P-04</td><td>课程总览仪表盘</td><td>顶部四张指标卡（学生数 / 技能卡填写率 / 小组数 / 待处理预警）；中部全班小组健康度热力图；底部近期活动流</td><td class="mut">GET /health-overview<br>GET /alerts</td><td>P0</td></tr>
+    <tr><td>P-05</td><td>名单管理</td><td>可编辑表格（姓名 / 学号 / 班级 / 角色 / 技能卡状态）；行内编辑；批量选择后批量分班；导入按钮 → 上传 CSV/XLSX → <strong>逐行校验报告弹窗</strong>（成功 / 跳过 / 覆盖三种处理）</td><td class="mut">enrollments/*<br>import/*</td><td>P0</td></tr>
+    <tr><td>P-06</td><td>技能卡管理</td><td>填写进度环形图 + 未填名单；一键催填；预览单个学生的技能卡内容</td><td class="mut">skill-cards/*<br>remind</td><td>P1</td></tr>
+    <tr><td>P-07</td><td>班级画像</td><td>左右分栏：左侧能力分布雷达与柱状图（按班级 / 专业维度切换）；右侧<strong>社交联系力导向图</strong>（节点可拖拽、边按 edge_type 着色、鼠标悬停高亮邻居）；顶部筛选器</td><td class="mut">profiles<br>social-graph</td><td>P1</td></tr>
+    <tr><td>P-08</td><td>约束设置</td><td>三个分区：不可同组 / 必须同组 / 时间冲突。双人选择器 + 备注；待审核的学生回避申请列表，逐条通过或驳回</td><td class="mut">constraints/*</td><td>P1</td></tr>
+    <tr><td><span class="pill b">P-09</span></td><td><strong>分组工作台</strong></td><td><strong>答辩杀手锏 1。</strong>顶部三个 Tab 切换方案 A/B/C，每个 Tab 显示四维得分的雷达图与总分；中部<strong>小组卡片网格</strong>，成员为可拖拽 chip；右侧常驻<strong>得分变化面板</strong>：拖动过程中实时显示"技能覆盖 +6 / 弱连接 −11 / 总分 87→83"，破坏硬约束时该卡片标红并显示违规原因、禁止落库；底部"还原""重新求解""选定此方案"三个动作。<br>拖拽用 <code>dnd-kit</code>，得分为 0.5s 防抖调用 <code>preview-move</code></td><td class="mut">POST grouping/run<br>GET runs/:id/plans<br>POST preview-move<br>POST apply-move<br>POST select</td><td><span class="pill b">P0</span></td></tr>
+    <tr><td>P-10</td><td>分组结果详情</td><td>单个小组的成员画像卡（能力雷达 + 协作倾向标签 + 在本次分组中承担的角色）；该组的得分贡献分解；"为什么这样分"的模板解释文案</td><td class="mut">plans/:id<br>GET /groups/:id</td><td>P1</td></tr>
+    <tr><td>P-11</td><td>小组管理</td><td>表格视图（组名 / 队长 / 人数 / 健康度 / 任务完成率）；操作菜单：改组名、指定队长、加/移成员、解散、拆分、合并。移出成员时必须填原因</td><td class="mut">groups/*</td><td>P1</td></tr>
+    <tr><td>P-12</td><td>全班任务总览</td><td>矩阵热力图：行是小组、列是里程碑，单元格颜色代表进度；点击单元格下钻到该组任务详情</td><td class="mut">GET /groups<br>health-overview</td><td>P1</td></tr>
+    <tr><td>P-13</td><td>单组任务详情</td><td>三视图切换：<strong>看板</strong>（todo/doing/blocked/reviewing/done 五列）/ <strong>甘特</strong>（含依赖箭头，关键路径加粗描边）/ <strong>DAG 图</strong>（拓扑布局，节点按状态着色）。右侧面板显示该组契约版本与签署状态</td><td class="mut">tasks<br>gantt<br>critical-path</td><td>P1</td></tr>
+    <tr><td>P-14</td><td>协作契约查看</td><td>术语表 / 接口约定 / 格式规范三个折叠区；版本切换；签署状态列表；与当前冲突的关联提示</td><td class="mut">GET contract<br>acceptances</td><td>P2</td></tr>
+    <tr><td>P-15</td><td>健康度与预警中心</td><td>按严重度排序的预警卡片列表（类型 / 小组 / 触发规则 / 建议动作）；批量忽略；每条可直接跳转到处理页</td><td class="mut">GET /alerts<br>health-overview</td><td>P1</td></tr>
+    <tr><td>P-16</td><td>预警详情（单组诊断）</td><td>三维健康度雷达 + 时间趋势折线；诊断条目逐条展开（依据的任务状态事件）；关键路径图与延误节点高亮；"一键救火"三个按钮（重分 / 补位 / 降规模）</td><td class="mut">health<br>health/history<br>blockers</td><td>P1</td></tr>
+    <tr><td>P-17</td><td>冲突中心</td><td>冲突列表（按小组与状态分组）；详情页左右对比展示两段产出原文，差异片段高亮；下方 LLM 归因结果卡（类型 / 严重度 / 依据引用 / 建议）；三个处理按钮</td><td class="mut">conflicts/*<br>POST analyze</td><td>P1</td></tr>
+    <tr><td>P-18</td><td>重规划中心</td><td>事件列表；详情页三方案并排对比卡（动作 / 具体清单 / 代价说明 / 预计影响天数）；采纳后显示变更 diff 与受影响成员通知预览</td><td class="mut">replans/*</td><td>P1</td></tr>
+    <tr><td><span class="pill b">P-19</span></td><td><strong>贡献账本</strong></td><td><strong>答辩杀手锏 2。</strong>全班矩阵总览（行学生、列小组，单元格显示贡献区间与预警标记）→ 点进单人账本：顶部三张指标卡（按期交付 / 关键路径延期 / 互评中位）；中部贡献构成条形图（主责 / 协作 / 审阅 / 补位）；底部<strong>证据链列表</strong>。<span class="hl">点任一条结论下钻 → 侧滑抽屉逐条列出 evidence_items，每条可继续跳到原始段落、状态事件或互评原文</span></td><td class="mut">GET contributions<br>GET evidence</td><td><span class="pill b">P0</span></td></tr>
+    <tr><td>P-20</td><td>教师终审</td><td>逐人调整贡献区间（双滑块）、填写评语、锁定。右上角显示"系统建议区间"与"我的最终值"对照；批量锁定时给出未处理清单确认</td><td class="mut">POST review<br>POST lock</td><td>P0</td></tr>
+    <tr><td>P-21</td><td>申诉处理</td><td>申诉列表（待处理 / 已处理）；详情页左侧学生申诉理由与补充证据，右侧系统原始证据对照；处理动作：受理 / 驳回 / 部分采纳，必须填理由</td><td class="mut">appeals/*</td><td>P1</td></tr>
+    <tr><td>P-22</td><td>互评管理</td><td>四处内容：轮次设置（时间窗 / 维度 / 匿名开关）；完成率进度条；<strong>评价热力图</strong>（行评价人、列被评人，缺评格子标灰）；异常检测结果列表</td><td class="mut">review-rounds/*</td><td>P1</td></tr>
+    <tr><td>P-23</td><td>成绩导出</td><td>勾选要导出的列（贡献区间 / 终审值 / 任务完成率 / 互评中位数）；预览前 10 行；下载 CSV / XLSX</td><td class="mut">grade-export</td><td>P1</td></tr>
+    <tr><td>P-24</td><td>课程设置</td><td>分组策略与权重（改动时提示"已有分组结果，是否重跑"）；三类证据权重（合计必须为 1.0 的实时校验）；阈值设置；AI 开关与月度预算；危险区（归档 / 删除）</td><td class="mut">PATCH settings</td><td>P1</td></tr>
+    <tr><td>P-25</td><td>审计与 AI 日志</td><td>审计流水表格（操作人 / 动作 / 对象 / 前后值 diff）；AI 调用日志（端点 / 模型 / token / 延迟 / 状态）与成本汇总图</td><td class="mut">audit-logs<br>ai-call-logs</td><td>P2</td></tr>
+    <tr><td>P-26</td><td>通知中心</td><td>全部通知列表，按类型分 Tab；点击跳转关联对象；全部已读</td><td class="mut">notifications/*</td><td>P1</td></tr>
+  </table>
+
+  <h3>F-02　队长端（11 页）</h3>
+  <table>
+    <tr><th style="width:56px">编号</th><th style="width:150px">页面</th><th>核心元素与关键交互</th><th style="width:150px">依赖接口</th><th style="width:64px">优先级</th></tr>
+    <tr><td>C-01</td><td>我的小组首页</td><td>组内健康度三维卡；我的待办（待指派任务 / 待处理冲突 / 待确认延期申请）；最近活动流</td><td class="mut">GET /groups/:id</td><td>P0</td></tr>
+    <tr><td><span class="pill b">C-02</span></td><td><strong>任务 DAG 编辑</strong></td><td>上传作业要求 → 等待拆解（进度条）→ 展示生成的任务 DAG；支持拖拽调整布局、双击编辑标题与工时、从节点拖出连线加依赖（<strong>成环时立即拒绝并高亮环</strong>）、删除任务时提示受影响的下游任务数</td><td class="mut">POST task-plan/generate<br>POST /tasks<br>POST deps</td><td><span class="pill b">P0</span></td></tr>
+    <tr><td>C-03</td><td>分工指派</td><td>任务与成员的双向矩阵视图；拖拽或点击把任务分给成员并选主责 / 协作 / 审阅；右侧实时显示每人负载条，超载标黄</td><td class="mut">POST assignees<br>GET workload</td><td>P0</td></tr>
+    <tr><td>C-04</td><td>组内看板</td><td>五列看板，卡片可拖动改状态（自动写 status 事件）；筛选按成员；阻塞卡片显示阻塞原因</td><td class="mut">tasks<br>POST status</td><td>P0</td></tr>
+    <tr><td>C-05</td><td>组内甘特</td><td>时间轴视图，依赖箭头，关键路径加粗；拖动任务条改截止日期（触发下游重算提示）</td><td class="mut">gantt</td><td>P1</td></tr>
+    <tr><td>C-06</td><td>契约确认与修改</td><td>查看生成的契约；编辑术语与接口；发布并查看谁还没签</td><td class="mut">contract/*</td><td>P1</td></tr>
+    <tr><td>C-07</td><td>冲突处理</td><td>系统标记的冲突卡；点击"分析"触发 LLM 归因；根据建议选择处理动作；处理后可查看合并结果</td><td class="mut">conflicts/*</td><td>P1</td></tr>
+    <tr><td>C-08</td><td>重规划</td><td>触发条件提示（哪个任务延期多久）；生成决策包；三方案对比与采纳</td><td class="mut">replans/*</td><td>P1</td></tr>
+    <tr><td>C-09</td><td>组员负载视图</td><td>每人当前任务数、剩余工时、延期次数、是否有阻塞；用于发现负载失衡</td><td class="mut">workload</td><td>P2</td></tr>
+    <tr><td>C-10</td><td>组长评语</td><td>对每位成员填写评语（进入同伴证据）；显示系统已收集的客观证据供参考</td><td class="mut">POST review-rounds/*/submissions</td><td>P1</td></tr>
+    <tr><td>C-11</td><td>组内公告</td><td>发公告，通知全组；历史公告列表</td><td class="mut">POST notifications</td><td>P2</td></tr>
+  </table>
+
+  <h3>F-03　队员端（12 页）· 微信小程序优先</h3>
+  <table>
+    <tr><th style="width:56px">编号</th><th style="width:150px">页面</th><th>核心元素与关键交互</th><th style="width:150px">依赖接口</th><th style="width:64px">优先级</th></tr>
+    <tr><td>M-01</td><td>技能卡填写</td><td>30 秒填完的设计：技能滑条（5 维）、可用时间网格点选、想做的角色、想合作与想回避的人（可跳过）</td><td class="mut">skill-cards/me</td><td>P0</td></tr>
+    <tr><td><span class="pill b">M-02</span></td><td><strong>我的部分</strong></td><td>任务卡片列表，每张卡明确回答三个问题：<strong>我负责什么 / 依赖谁 / 什么时候必须交</strong>。依赖未就绪时卡片显示"等待 XX 交付"并置灰</td><td class="mut">GET /me/tasks</td><td><span class="pill b">P0</span></td></tr>
+    <tr><td>M-03</td><td>任务详情与提交</td><td>任务描述、要求的交付物类型、截止时间倒计时；提交按钮 → 跳到交付物编辑器；评论与附件</td><td class="mut">GET /tasks/:id</td><td>P0</td></tr>
+    <tr><td>M-04</td><td>我的看板</td><td>只显示我参与的任务，按状态分列</td><td class="mut">GET /me/tasks</td><td>P1</td></tr>
+    <tr><td><span class="pill b">M-05</span></td><td><strong>交付物编辑器</strong></td><td><strong>溯源入口。</strong>分段落在线撰写，每段可标记类型（段落 / 图表 / 表格 / 代码）；保存时提交段落数组，服务端 diff 后自动记录归属；显示本人在本文档中的字数占比；可查看他人撰写段落（只读，标注作者）</td><td class="mut">POST versions<br>GET segments</td><td><span class="pill b">P0</span></td></tr>
+    <tr><td>M-06</td><td>进度更新</td><td>一键打卡；状态切换（开始 / 完成 / 遇到阻塞）；阻塞时填写原因</td><td class="mut">POST checkin<br>POST status</td><td>P0</td></tr>
+    <tr><td>M-07</td><td>申请延期 / 请求支援</td><td>选任务、填新日期与理由、提交 → 通知队长与教师；查看审批状态</td><td class="mut">request-extension</td><td>P1</td></tr>
+    <tr><td><span class="pill b">M-08</span></td><td><strong>我的贡献账本</strong></td><td>贡献构成条形图；区间与置信度；三条过程指标；<span class="hl">每条结论可点开看证据</span>；底部"我要申诉"入口</td><td class="mut">GET contributions/:userId<br>GET evidence</td><td><span class="pill b">P0</span></td></tr>
+    <tr><td>M-09</td><td>提交申诉</td><td>填写申诉理由、补充证据（文字 + 附件）、选择期望结果；提交后显示处理进度</td><td class="mut">POST appeal</td><td>P1</td></tr>
+    <tr><td>M-10</td><td>互评填写</td><td>按被评人逐个填：五维评分 + 文字评语；显示完成进度（2/4）；提交后不可改</td><td class="mut">review-rounds/*</td><td>P1</td></tr>
+    <tr><td>M-11</td><td>契约与小组</td><td>查看协作契约、组内成员、当前进度概览</td><td class="mut">GET contract<br>GET /groups/:id</td><td>P2</td></tr>
+    <tr><td>M-12</td><td>通知与消息</td><td>通知列表、已读、跳转；被催办的通知突出显示</td><td class="mut">notifications/*</td><td>P1</td></tr>
+  </table>
+
+  <h3>F-04　公共与基础设施</h3>
+  <table>
+    <tr><th style="width:56px">编号</th><th style="width:150px">页面</th><th>核心元素与关键交互</th><th style="width:64px">优先级</th></tr>
+    <tr><td>X-01</td><td>邀请落地页</td><td>展示课程名与邀请人；未登录则引导注册后自动加入；已加入则提示</td><td>P1</td></tr>
+    <tr><td>X-02</td><td>错误与权限页</td><td>404 / 403 / 500 / 算法服务不可用 四种状态，各带明确的下一步动作</td><td>P1</td></tr>
+    <tr><td>X-03</td><td>空状态与骨架屏</td><td>每个列表页的空状态文案要给出下一步（如"还没有分组，去生成方案"），不是干巴巴的"暂无数据"</td><td>P1</td></tr>
+  </table>
+
+  <h3>全局交互约定</h3>
+  <table>
+    <tr><th style="width:170px">约定</th><th>内容</th></tr>
+    <tr><td><strong>加载反馈</strong></td><td>分组求解（最长 10s）显示进度与"求解中"状态；LLM 拆解（最长 60s）显示分阶段提示（解析要求 → 识别任务 → 推断依赖 → 生成契约）；超过 30s 提供"稍后回来"选项</td></tr>
+    <tr><td><strong>降级提示</strong></td><td>LLM 不可用时，拆解页给出"AI 暂不可用，可手工创建任务"的入口；求解器超时时自动回退贪心算法并在结果上标注"快速模式"</td></tr>
+    <tr><td><strong>危险操作</strong></td><td>删除课程、解散小组、提交终稿、锁定终审四类操作必须二次确认，且确认弹窗要写明具体后果与不可逆性</td></tr>
+    <tr><td><strong>移动端</strong></td><td>队员端全部页面在 375px 宽度下可用；队长端表格类页面允许横向滚动；教师端不要求移动适配</td></tr>
+    <tr><td><strong>无障碍</strong></td><td>所有交互元素可键盘操作；拖拽分组提供"选择成员 → 选择目标组"的键盘替代路径；对比度符合 WCAG AA</td></tr>
+  </table>
+</section>
+
+<section id="s4">
+  <div class="secnum">S4</div>
+  <h2>状态机与业务规则</h2>
+  <p class="lead">所有阈值、权重、公式都给出默认值与取值范围。凡是照抄文献的阈值，都标注来源。</p>
+
+  <h3>4.1　实体状态机</h3>
+  <table>
+    <tr><th style="width:120px">实体</th><th style="width:300px">状态迁移</th><th>约束与副作用</th></tr>
+    <tr>
+      <td><strong>课程</strong></td>
+      <td>draft → active → archived → active</td>
+      <td>draft 可自由改设置；进入 active 后需先移除已有分组才能改组数与规模；archived 只读</td>
+    </tr>
+    <tr>
+      <td><strong>小组</strong></td>
+      <td>forming → active → (dissolved | merged)</td>
+      <td>forming 期间可自由调人；active 后调人需填原因并通知双方；dissolved 后成员回池、任务归档</td>
+    </tr>
+    <tr>
+      <td><strong>任务</strong></td>
+      <td>todo → doing → reviewing → done<br>todo/doing → blocked → doing<br>todo/doing/blocked → cancelled（需队长权限）</td>
+      <td>每次迁移写 <code>task_status_events</code> 并生成 <code>progress_signals</code>；done 后修改需队长权限并留痕</td>
+    </tr>
+    <tr>
+      <td><strong>交付物</strong></td>
+      <td>draft → review → final → submitted</td>
+      <td>submitted 后<strong>段落归属冻结</strong>，任何修改走新版本且不改变已提交快照</td>
+    </tr>
+    <tr>
+      <td><strong>冲突</strong></td>
+      <td>open → analyzing → (resolved | dismissed)</td>
+      <td>analyzing 由 LLM 调用占据，最长 60s；超时回到 open 并提示重试</td>
+    </tr>
+    <tr>
+      <td><strong>重规划事件</strong></td>
+      <td>pending → (adopted | rejected)</td>
+      <td>adopted 立即重排任务与依赖；rejected 必须填理由并进审计</td>
+    </tr>
+    <tr>
+      <td><strong>申诉</strong></td>
+      <td>submitted → reviewing → (accepted | rejected | partially_accepted)</td>
+      <td>处理必须填结果理由；部分采纳时需给出调整后的区间</td>
+    </tr>
+    <tr>
+      <td><strong>互评轮次</strong></td>
+      <td>scheduled → open → closed → published</td>
+      <td>closed 后不可提交；published 后学生可见自己的结果</td>
+    </tr>
+  </table>
+
+  <h3>4.2　分组：硬约束与四维目标函数</h3>
+  <h4>硬约束（不满足即无解，拖动时实时校验）</h4>
+  <pre>H1  组规模         min_group_size ≤ |g| ≤ max_group_size
+H2  不可同组       ∀(a,b) ∈ no_same_group : ¬∃g, a ∈ g ∧ b ∈ g
+H3  必须同组       ∀(a,b) ∈ must_same_group : ∃g, a ∈ g ∧ b ∈ g
+H4  同班限制       若 allow_cross_class = false，则组内成员 class_id 必须一致
+H5  组数           |groups| = group_count，且每组非空
+<span class="c"># 附加软校验（不阻止，仅提示）</span>
+W1  时间交集       组内成员可用时间交集为空时给出警告
+W2  性别 / 群体均衡  若启用，则单性别小组与孤立个体给出警告（不阻止）</pre>
+
+  <h4>四维软目标（0–100，越高越好；教师端用滑块调权重，范围 0–2）</h4>
+  <pre><span class="c"># 记 cap(m,d) 为成员 m 在能力维度 d 上的水平（0–5），D 为 7 个能力维度</span>
+
+<span class="c"># ── 维度 1：技能覆盖度（默认权重 1.2）──</span>
+cover(g)      = |{ d : max_{m∈g} cap(m,d) ≥ 3 }| / 7
+score_skill   = 100 × ( 0.7 × mean_g cover(g) + 0.3 × min_g cover(g) )
+<span class="c"># 取 min 是为了惩罚"有一组技能严重残缺"，而不是只看平均</span>
+
+<span class="c"># ── 维度 2：弱连接引入度（默认权重 0.8）──</span>
+strong(a,b)   = 存在 social_edges(a,b) 且 weight ≥ 0.5
+novelty(g)    = 1 − 强连接对数(g) / 总对数(g)
+score_weak    = 100 × mean_g novelty(g)
+<span class="c"># 高弱连接 ≠ 刻意打散熟人，而是避免小组退化成小圈子</span>
+
+<span class="c"># ── 维度 3：组间均衡度（默认权重 1.0）──</span>
+power(g)      = Σ_{m∈g} Σ_d cap(m,d)
+score_balance = 100 × clip( 1 − std(power) / mean(power), 0, 1 )
+<span class="c"># 防止强人抱团，也防止把落后者全堆在一组</span>
+
+<span class="c"># ── 维度 4：历史搭档规避（默认权重 1.0）──</span>
+repeat(g)     = |{ (a,b) ∈ g×g : 上一轮同组 }| / 总对数(g)
+score_hist    = 100 × ( 1 − mean_g repeat(g) )
+<span class="c"># ⚠ 伦理红线：该指标只用于"避免重复分组"，不用于标记个人。
+   不得向学生公开，每学期清零历史，防止污名化的自我实现预言。</span>
+
+<span class="c"># ── 总分 ──</span>
+total = Σ w_i × score_i / Σ w_i</pre>
+
+  <h4>三套方案的生成策略</h4>
+  <table>
+    <tr><th style="width:130px">方案</th><th style="width:170px">策略</th><th>权重预设</th></tr>
+    <tr><td><span class="pill p">方案 A</span></td><td>能力互补优先（推荐）</td><td>技能覆盖 1.5 / 弱连接 0.6 / 均衡 1.2 / 历史 1.0</td></tr>
+    <tr><td><span class="pill p">方案 B</span></td><td>弱连接优先</td><td>技能覆盖 1.0 / 弱连接 1.6 / 均衡 1.0 / 历史 0.8</td></tr>
+    <tr><td><span class="pill p">方案 C</span></td><td>公平优先</td><td>技能覆盖 1.0 / 弱连接 0.6 / 均衡 1.8 / 历史 1.2</td></tr>
+  </table>
+  <p class="note">求解器参数：CP-SAT，<code>max_time_in_seconds = 10</code>，四维目标按权重线性合成单一目标。优先返回三套可行解并按不同策略加权计算得分后排序。若无解则在 10s 内返回 <code>infeasible</code> 并指出最可能冲突的约束。</p>
+
+  <h3>4.3　拖动预演规则（答辩杀手锏的实现）</h3>
+  <pre>输入  (userId, fromGroupId, toGroupId)  或  (userA, userB) 表示互换
+
+步骤 1  硬约束校验
+        ├ 目标组 |g| + 1 > max_group_size        → 违规：超出组规模上限
+        ├ 违反 H2 / H3（同组内出现禁止或缺失必须配对） → 违规
+        └ 违反 H4（跨班）                          → 违规
+
+步骤 2  若存在违规
+        → 返回 { ok: false, violations: [...] }
+        → 前端将该卡片标红、显示违规原因、禁用"应用"按钮
+        <span class="c"># 注意：不禁止拖动本身，只禁止落库。让教师看到"为什么不行"比直接弹回更有教学价值</span>
+
+步骤 3  若无违规
+        → 在内存中重算四维得分（O(n)，不调用求解器）
+        → 返回 { ok: true, deltas: {skill_cover:+6, weak_tie:−11, ...},
+                 total_before, total_after }
+
+性能要求  单次 preview-move ≤ 50ms，前端 500ms 防抖
+关键点    绝不重新求解。重新求解需要秒级时间，无法支撑"实时看到变化"的体验</pre>
+
+  <h3>4.4　进度感知与健康度</h3>
+  <pre><span class="c"># ── 延误判定（纯规则）──</span>
+任务延误      now > due_at AND status NOT IN (done, cancelled)
+关键路径延误  max( now − due_at ) over { 关键路径上未完成且已过期的任务 }
+关键路径      任务 DAG 上 est_hours 之和最大的一条链
+
+<span class="c"># ── 三维健康度（0–100，越高越好）──</span>
+阻塞定义      status = blocked，或 前驱任务未完成且其 due_at 已过期
+blocked_score  = 100 × ( 1 − 阻塞任务数 / max(1, 未完成任务数) )
+
+失联定义      近 idle_trigger_days 天（默认 3）无任何 progress_signals
+idle_score     = 100 × ( 1 − 失联成员数 / 组内人数 )
+
+过载定义      剩余工时 > 距截止剩余天数 × 6 小时/天
+overload_score = 100 × ( 1 − 过载成员数 / 组内人数 )
+
+综合健康度     = 0.4 × blocked_score + 0.3 × idle_score + 0.3 × overload_score
+              <span class="c"># 阻塞权重最高：它最容易连锁波及下游</span></pre>
+
+  <h3>4.5　重规划触发规则</h3>
+  <table>
+    <tr><th style="width:150px">触发类型</th><th style="width:240px">触发条件</th><th>默认阈值</th></tr>
+    <tr><td>关键路径延误</td><td>关键路径上存在未完成且已过期的任务</td><td>延误 ≥ <code>delay_trigger_days</code>（默认 2 天）</td></tr>
+    <tr><td>成员失联</td><td>成员无任何信号，且其有未完成任务</td><td>≥ <code>idle_trigger_days</code>（默认 3 天）</td></tr>
+    <tr><td>返工超限</td><td>同一任务的状态从 reviewing 退回 doing</td><td>≥ 3 次</td></tr>
+    <tr><td>截止变更</td><td>教师修改课程或作业截止日期</td><td>立即触发</td></tr>
+    <tr><td>手动触发</td><td>队长或教师主动发起</td><td>—</td></tr>
+  </table>
+
+  <h4>三方案的生成规则（全部为纯算法，不使用大模型）</h4>
+  <table>
+    <tr><th style="width:150px">方案</th><th style="width:110px">动作</th><th>算法</th></tr>
+    <tr>
+      <td>重新分配</td><td>redistribute</td>
+      <td>把延误任务按 <code>deliverable_type</code> 拆成可并行子块；对每个子块按 <code>技能匹配度 × 空闲度</code> 排序候选成员，取最优者转移。<span class="hl">只转移，不新增任务，保证总量不变</span></td>
+    </tr>
+    <tr>
+      <td>缩减范围</td><td>scope_cut</td>
+      <td>按 <code>交付物类型权重 × 课程评分占比</code> 从低到高排序，标出可砍项及砍掉后的预期影响。<strong>必须由教师确认</strong>，队长无权单独决定</td>
+    </tr>
+    <tr>
+      <td>组间补位</td><td>borrow_member</td>
+      <td>从健康度 &gt; 80 且负载 &lt; 60% 的其他小组中，找技能匹配的成员临时借调。<strong>需要教师授权</strong>，且会同时通知两个小组的队长</td>
+    </tr>
+  </table>
+  <p>每个方案都生成<strong>代价说明</strong>（模板拼装，非 LLM）：谁的工作量增加多少小时、哪个里程碑受影响、预计影响天数上限、对最终评分的影响区间。</p>
+
+  <h3>4.6　冲突检测规则</h3>
+  <table>
+    <tr><th style="width:120px">类型</th><th style="width:100px">检测方式</th><th>规则</th></tr>
+    <tr>
+      <td><strong>依赖冲突</strong><br><span class="mut">（最高频）</span></td>
+      <td><span class="pill t">图算法</span></td>
+      <td>任务 A 的 <code>due_at</code> 变更或状态变为 blocked/delayed，且存在 B 满足 <code>A ∈ B.deps</code> 且 B 未完成 → 生成冲突，并计算波及的任务集合与预计顺延天数</td>
+    </tr>
+    <tr>
+      <td><strong>契约冲突</strong></td>
+      <td><span class="pill t">规则匹配</span></td>
+      <td>① 同一术语在 <code>contract_glossary</code> 有定义，但产出段落中出现了不同定义或单位；② 交接物的字段名与 <code>contract_interfaces</code> 不符</td>
+    </tr>
+    <tr>
+      <td><strong>语义冲突</strong></td>
+      <td><span class="pill p">LLM 调用点 2</span></td>
+      <td><strong>先规则筛选，再调模型</strong>（这条很重要，否则会过度调用）：候选段落对需同时满足 —— 属于同一 artifact、作者不同、覆盖同一任务范围、文本相似度落在 0.30–0.85 之间。<br><span class="mut">相似度 &lt; 0.30 视为无关；&gt; 0.85 视为重复（走"内容重复"分支，不需要模型判断）。只有中间这段才真正需要语义理解。</span></td>
+    </tr>
+  </table>
+
+  <h3>4.7　贡献归因计算规则（核心）</h3>
+  <p>三类证据加权，权重来自 <code>course_settings</code>，默认 <strong>产出物 0.5 / 过程 0.3 / 同伴 0.2</strong>，三者之和必须为 1.0。所有计算<strong>不使用大模型</strong>。</p>
+
+  <h4>证据 A · 产出物（artifact）</h4>
+  <pre>对成员 m：
+  w_main(m) = Σ { seg.word_count : seg.author_id = m 且 seg.kind ∈ {paragraph, heading} }
+  w_coop(m) = Σ { seg.word_count : seg.revised_by = m 且 seg.author_id ≠ m }
+
+  w_total(m) = w_main(m) + 0.5 × w_coop(m)
+  <span class="c"># 协作为主责的一半权重：审阅修改的分量应低于原创产出</span>
+
+  A(m) = 100 × w_total(m) / Σ_m w_total(m)</pre>
+
+  <h4>证据 B · 过程（process）</h4>
+  <pre>on_time_rate  = 按期完成的主责任务数 / 主责任务总数
+cp_credit     = 完成的关键路径任务数 / 关键路径任务总数
+rework_penalty= 1 − min( 1, 本人主责任务的总返工次数 / (2 × 主责任务数) )
+help_credit   = min( 1, 主动补位次数 / 3 )   <span class="c"># 补位 = 承接他人放弃的任务</span>
+
+P_raw(m) = 0.35×on_time_rate + 0.30×cp_credit + 0.20×rework_penalty + 0.15×help_credit
+P(m)     = 100 × P_raw(m) / Σ_m P_raw(m)</pre>
+
+  <h4>证据 C · 同伴（peer）</h4>
+  <pre>peer_median(m) = 去掉最高最低各一个后的中位数（评价人数 ≥ 4 时）
+                 <span class="c"># 人数 < 4 时直接取中位数，不做去极值</span>
+Peer_raw(m) = ( peer_median(m) − 1 ) / 4        <span class="c"># 5 分制映射到 0–1</span>
+Peer(m)     = 100 × Peer_raw(m) / Σ_m Peer_raw(m)
+
+若本轮无互评数据（轮次未开或未提交）：
+  → 该维度整体缺席，其权重按 0.5 : 0.3 的比例重新分配给产出物与过程
+  → 并在账本上标注"缺同伴证据，区间已放宽"</pre>
+
+  <h4>合成：点估计 + 区间估计 + 置信度</h4>
+  <pre>point(m) = w_a × A(m) + w_p × P(m) + w_peer × Peer(m)
+
+<span class="c"># ── 区间宽度由证据充分度决定，这是"诚实表达不确定性"的实现 ──</span>
+evidence_coverage = min( 本人段落字数 / 组内平均段落字数,
+                         主责任务完成数 / 组内平均主责任务数 , 1 )
+peer_agreement    = peer_median 的 1 − 变异系数（互评一致性）
+
+uncertainty = 6 × ( 1 − evidence_coverage ) × ( 1 − peer_agreement )   <span class="c"># 百分点</span>
+low  = point − uncertainty
+high = min( point + uncertainty, point + 8 )     <span class="c"># 上限封顶，避免区间过宽失去意义</span>
+
+<span class="c"># ── 置信度分档 ──</span>
+evidence_coverage ≥ 0.7 且 peer_agreement ≥ 0.7  →  高
+evidence_coverage ≥ 0.4 且 peer_agreement ≥ 0.4  →  中
+其他                                              →  低
+
+<span class="c"># ── 搭便车提示（阈值来自实证研究，可在答辩时说明来源）──</span>
+fair_share_ratio = point(m) / ( 100 / 组内人数 )
+fair_share_ratio < 0.14  →  生成提示文案
+<span class="c"># 提示文案必须同时说明：该研究也表明贡献不均与团队成绩无稳定关联，
+   因此仅作提示，不构成扣分依据。</span>
+
+<span class="c"># ── 最终判定 ──</span>
+系统输出：区间 + 置信度 + 可下钻证据 + 提示
+教师终审：填写 adjusted_low / adjusted_high / final_note，写入 attribution_reviews
+系统永不输出单一分数，也永不自动生成成绩。</pre>
+
+  <div class="card dang">
+    <h4>为什么坚决不输出分数</h4>
+    <p>一旦系统给出「你 61 分」，就会出现三种后果：学生质疑算法、教师放弃使用、学生开始优化"让系统觉得我在干活"而不是真的干活。<strong>输出区间 + 证据，把终审权留给教师，是这个模块唯一可持续的设计。</strong>这条不是保守，而是产品能不能被真正采用的分界线。</p>
+  </div>
+
+  <h3>4.8　互评异常检测规则</h3>
+  <table>
+    <tr><th style="width:150px">异常类型</th><th>判定规则</th></tr>
+    <tr><td>互刷高分</td><td>A→B 与 B→A 双方评分同时 ≥ 4.5，且两人对其他成员评分的均值 ≤ 3.5</td></tr>
+    <tr><td>极端低分</td><td>对某人的评分比组内其他人给该人的中位数低 ≥ 2 分，且未填写文字评语</td></tr>
+    <tr><td>单一来源</td><td>某人收到的有效评价只有 1 份（其余人未评）</td></tr>
+    <tr><td>未响应</td><td>轮次关闭时仍有未提交的评价</td></tr>
+  </table>
+  <p class="note">所有异常<strong>只提示，不自动改分</strong>。检测结果进入教师端供参考，教师可据此决定是否排除某些评价。</p>
+
+  <h3>4.9　通知触发规则</h3>
+  <table>
+    <tr><th style="width:200px">事件</th><th style="width:160px">收件人</th><th style="width:90px">渠道</th><th style="width:80px">优先级</th></tr>
+    <tr><td>收到课程邀请</td><td>被邀请人</td><td>邮件</td><td>普通</td></tr>
+    <tr><td>技能卡待填（建课后 24h）</td><td>未填学生</td><td>站内 + 微信</td><td>普通</td></tr>
+    <tr><td>分组方案已生成待审核</td><td>教师</td><td>站内</td><td>普通</td></tr>
+    <tr><td>被指定为队长</td><td>该学生</td><td>站内 + 微信</td><td>紧急</td></tr>
+    <tr><td>被指派新任务</td><td>被指派成员</td><td>站内 + 微信</td><td>普通</td></tr>
+    <tr><td>任务今日到期且未完成</td><td>主责成员</td><td>站内 + 微信</td><td>紧急</td></tr>
+    <tr><td>我的前置任务已完成</td><td>下游任务主责</td><td>站内</td><td>普通</td></tr>
+    <tr><td>延期申请待审批</td><td>队长 + 教师</td><td>站内</td><td>普通</td></tr>
+    <tr><td>契约发布待确认</td><td>全体组员</td><td>站内</td><td>普通</td></tr>
+    <tr><td>检测到冲突</td><td>冲突双方 + 队长</td><td>站内 + 微信</td><td>紧急</td></tr>
+    <tr><td>关键路径延误预警</td><td>队长 + 教师</td><td>站内 + 邮件</td><td>紧急</td></tr>
+    <tr><td>成员失联</td><td>队长 + 教师</td><td>站内</td><td>普通</td></tr>
+    <tr><td>重规划方案待决策</td><td>队长（涉教师授权的知会教师）</td><td>站内 + 微信</td><td>紧急</td></tr>
+    <tr><td>贡献账本已生成</td><td>全体组员</td><td>站内</td><td>普通</td></tr>
+    <tr><td>教师终审完成</td><td>该组全体成员</td><td>站内 + 邮件</td><td>普通</td></tr>
+    <tr><td>申诉已处理</td><td>申诉人</td><td>站内 + 邮件</td><td>普通</td></tr>
+    <tr><td>互评轮次开启 / 即将关闭</td><td>需参与的学生</td><td>站内 + 微信</td><td>普通 / 紧急</td></tr>
+    <tr><td>小组被解散或合并</td><td>受影响成员</td><td>站内 + 微信</td><td>紧急</td></tr>
+    <tr><td>课程归档</td><td>全体参与人</td><td>站内</td><td>普通</td></tr>
+  </table>
+
+  <h3>4.10　降级与兜底规则</h3>
+  <table>
+    <tr><th style="width:180px">故障场景</th><th>降级策略</th></tr>
+    <tr><td>LLM 调用失败（重试后）</td><td>拆解页提供"手工创建任务"入口，并保留作业要求原文供人工参考；冲突归因页显示"自动分析不可用，请人工判断"并仍展示双方原文对比</td></tr>
+    <tr><td>求解器超时（10s）</td><td>回退贪心 + 局部交换算法，结果标注"快速模式"，并提示"未达到最优，可重试"</td></tr>
+    <tr><td>求解器无解</td><td>返回最可能冲突的约束清单（按约束可满足性分析排序），引导教师放宽；不生成任何方案</td></tr>
+    <tr><td>互评数据缺失</td><td>贡献计算自动重新分配权重，账本标注"缺同伴证据，区间已放宽"</td></tr>
+    <tr><td>算法服务不可达</td><td>分组 / 贡献 / 图计算相关页面显示明确错误与重试按钮；<strong>不影响任务看板、交付物编辑等基础功能</strong></td></tr>
+    <tr><td>学生不使用平台撰写</td><td>提供"导入已有文档"通道：粘贴文本后由系统按空行切分为段落，引导学生逐段标注归属。<span class="hl">这是溯源数据能否采到的关键退路</span></td></tr>
+  </table>
+</section>
+
+<section id="s5">
+  <div class="secnum">S5</div>
+  <h2>权限矩阵</h2>
+  <p class="lead">四种有效角色：<strong>教师</strong>（课程教师）、<strong>助教</strong>（教师授权，权限等同教师但不可删除课程与终审）、<strong>队长</strong>（组内，由教师指定）、<strong>队员</strong>。权限判定取「课程角色 ∩ 小组角色」。</p>
+
+  <table>
+    <tr>
+      <th style="width:210px">功能</th>
+      <th style="width:70px">教师</th>
+      <th style="width:70px">助教</th>
+      <th style="width:70px">队长</th>
+      <th style="width:70px">队员</th>
+      <th>备注</th>
+    </tr>
+    <tr><td colspan="6" style="background:var(--surface2);font-weight:600;font-size:12px">课程与名单</td></tr>
+    <tr><td>建课 / 删课 / 归档</td><td>✅</td><td>归档✅<br>删课❌</td><td>❌</td><td>❌</td><td class="mut">删除课程为不可逆操作，仅教师</td></tr>
+    <tr><td>修改课程设置与权重</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td class="mut">已分组后改权重需重跑</td></tr>
+    <tr><td>导入 / 编辑名单</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td></td></tr>
+    <tr><td>发送邀请</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td></td></tr>
+    <tr><td>查看全班名单</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td class="mut">队员只能看到本组成员</td></tr>
+    <tr><td colspan="6" style="background:var(--surface2);font-weight:600;font-size:12px">画像与约束</td></tr>
+    <tr><td>填写自己的技能卡</td><td>—</td><td>—</td><td>✅</td><td>✅</td><td></td></tr>
+    <tr><td>查看全班画像</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td class="mut">画像含协作倾向，属敏感数据</td></tr>
+    <tr><td>查看社交联系图</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td class="mut">仅教师可见，避免人际关系被公开评价</td></tr>
+    <tr><td>管理约束</td><td>✅</td><td>✅</td><td>❌</td><td>提交回避申请</td><td class="mut">学生申请需教师审核才生效</td></tr>
+    <tr><td colspan="6" style="background:var(--surface2);font-weight:600;font-size:12px">分组</td></tr>
+    <tr><td>触发生成分组</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td></td></tr>
+    <tr><td>拖动微调与选定方案</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td><strong>核心权限，仅教师侧</strong></td></tr>
+    <tr><td>指定 / 更换队长</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td></td></tr>
+    <tr><td>解散 / 拆分 / 合并小组</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td class="mut">影响面大，仅教师</td></tr>
+    <tr><td>查看本组成员的画像</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td class="mut">仅能力向量，不含协作倾向与他人评价</td></tr>
+    <tr><td colspan="6" style="background:var(--surface2);font-weight:600;font-size:12px">任务与契约</td></tr>
+    <tr><td>上传作业要求并触发拆解</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td><td></td></tr>
+    <tr><td>增删改任务与依赖</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td><td class="mut">队员可提议，需队长确认</td></tr>
+    <tr><td>指派任务负责人</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td><td></td></tr>
+    <tr><td>变更任务状态</td><td>✅</td><td>✅</td><td>✅</td><td>仅本人主责的任务</td><td></td></tr>
+    <tr><td>编辑协作契约</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td><td></td></tr>
+    <tr><td colspan="6" style="background:var(--surface2);font-weight:600;font-size:12px">交付物与溯源</td></tr>
+    <tr><td>创建交付物</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td></td></tr>
+    <tr><td>撰写 / 修改段落</td><td>—</td><td>—</td><td>✅</td><td>✅</td><td class="mut">仅限本人有权限的交付物</td></tr>
+    <tr><td>修改段落归属</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td><td class="mut">必须写入审计日志</td></tr>
+    <tr><td>汇编终稿 / 提交</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td><td></td></tr>
+    <tr><td colspan="6" style="background:var(--surface2);font-weight:600;font-size:12px">贡献归因</td></tr>
+    <tr><td>查看本组账本</td><td>✅</td><td>✅</td><td>✅</td><td>查看自己 + 组内公开指标</td><td class="mut">他人区间默认不可见，可配置</td></tr>
+    <tr><td>查看证据明细</td><td>✅</td><td>✅</td><td>✅</td><td>仅自己的证据</td><td class="mut">防止互相翻旧账</td></tr>
+    <tr><td><strong>终审调分</strong></td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td class="mut">助教不可终审，避免权责不清</td></tr>
+    <tr><td>提交申诉</td><td>—</td><td>—</td><td>✅</td><td>✅</td><td class="mut">仅针对本人账本</td></tr>
+    <tr><td>处理申诉</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td></td></tr>
+    <tr><td colspan="6" style="background:var(--surface2);font-weight:600;font-size:12px">冲突、重规划、互评</td></tr>
+    <tr><td>触发冲突分析 / 处理冲突</td><td>✅</td><td>✅</td><td>✅</td><td>查看涉及自己的冲突</td><td></td></tr>
+    <tr><td>发起重规划</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td><td></td></tr>
+    <tr><td>采纳"缩减范围"/"组间补位"</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td class="mut">涉及课程要求变更，仅教师</td></tr>
+    <tr><td>采纳"重新分配"</td><td>✅</td><td>✅</td><td>✅</td><td>❌</td><td></td></tr>
+    <tr><td>设置互评轮次 / 查看异常</td><td>✅</td><td>✅</td><td>❌</td><td>❌</td><td></td></tr>
+    <tr><td>填写互评</td><td>—</td><td>—</td><td>✅</td><td>✅</td><td></td></tr>
+    <tr><td colspan="6" style="background:var(--surface2);font-weight:600;font-size:12px">系统</td></tr>
+    <tr><td>查看审计日志 / AI 成本</td><td>✅</td><td>❌</td><td>❌</td><td>❌</td><td></td></tr>
+    <tr><td>导出自己的全部数据</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td></td></tr>
+  </table>
+
+  <h3>数据可见性三条特殊规则</h3>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">
+    <div class="card">
+      <h4>协作倾向不外泄</h4>
+      <p><code>member_profiles</code> 中的 <code>on_time_rate</code>、<code>avg_delay_days</code>、<code>rework_rate</code> 属于敏感字段。<strong>学生只能看到自己的，组员之间互相看不到</strong>，教师可看全班。这是防止标签化的重要设计。</p>
+    </div>
+    <div class="card">
+      <h4>历史指标不公开</h4>
+      <p><code>score_history_avoid</code> 相关的"历史搭档重复"数据<strong>只用于分组算法内部</strong>，不向任何角色展示具体某人被规避了几次。</p>
+    </div>
+    <div class="card">
+      <h4>互评匿名可控</h4>
+      <p>轮次可设 <code>is_anonymous</code>。匿名时教师也只看聚合结果；非匿名时学生能看到谁评了自己（但看不到自己被单独评了几分，只有教师能看明细）。</p>
+    </div>
+  </div>
+</section>
+
+<section id="s6">
+  <div class="secnum">S6</div>
+  <h2>AI 能力规格</h2>
+  <p class="lead">结论重申：六个模块中<strong>只有 2 个需要大模型</strong>。其余用求解器、图算法、规则与模板。配套代码已在 <code>gongjiang-ai/</code> 落地并跑通。</p>
+
+  <h3>6.1　大模型调用点 1：作业要求 → 任务 DAG + 协作契约</h3>
+  <table>
+    <tr><th style="width:110px">项目</th><th>规格</th></tr>
+    <tr><td><strong>触发时机</strong></td><td>队长或教师上传作业要求（文本粘贴 / PDF / DOCX）后点击"生成任务计划"</td></tr>
+    <tr><td><strong>输入</strong></td><td>作业要求原文（截断至 12000 字）+ 小组人数 + 课程名 + 剩余天数</td></tr>
+    <tr><td><strong>输出结构</strong></td><td><code>TaskPlan { tasks: TaskNode[], contract: Contract }</code>，见 <code>schemas.py</code></td></tr>
+    <tr><td><strong>提示词要点</strong></td><td>① 粒度 2–8 小时，总数 ≤ 12；② <strong>必须显式声明依赖，不允许孤立任务</strong>；③ id 编号规范且 deps 必须真实存在；④ 交付物形态要具体；⑤ <strong>同时产出一份含术语、口径、单位、交接格式的协作契约</strong>——这是抑制冲突的根治手段</td></tr>
+    <tr><td><strong>后置校验</strong></td><td>纯规则：重复 id、悬空依赖、成环。<code>ai.py:validate_plan()</code> 已实现。校验失败的条目在队长端<strong>高亮标出并要求人工修正</strong>，不静默丢弃</td></tr>
+    <tr><td><strong>参数</strong></td><td><code>temperature = 0.2</code>（低温度保证结构稳定）；<code>response_format = json_object</code>；超时 90s</td></tr>
+    <tr><td><strong>失败处理</strong></td><td>重试 1 次；仍失败则提示"AI 暂不可用"，提供手工创建任务入口，并保留原文供参考</td></tr>
+    <tr><td><strong>调用频率</strong></td><td>每组每次作业 1 次，失败重试最多 1 次。<span class="hl">一个 50 人 × 8 组的课程，一学期约 8–16 次调用</span></td></tr>
+  </table>
+
+  <h3>6.2　大模型调用点 2：语义冲突归因</h3>
+  <table>
+    <tr><th style="width:110px">项目</th><th>规格</th></tr>
+    <tr><td><strong>触发时机</strong></td><td>规则层筛出候选段落对后，由队长或教师确认发起（<strong>不自动批量调用</strong>）</td></tr>
+    <tr><td><strong>前置筛选</strong></td><td>同一 artifact · 作者不同 · 覆盖同一任务范围 · 文本相似度 ∈ [0.30, 0.85]。<span class="hl">这一步把绝大多数无关文本挡在模型之外，是控制成本的关键</span></td></tr>
+    <tr><td><strong>输入</strong></td><td>两段产出（各截断 4000 字）+ 协作契约中的术语与口径约定 + 双方姓名</td></tr>
+    <tr><td><strong>输出结构</strong></td><td><code>ConflictAttribution { kind, severity, reason, suggestion, merged_text }</code>，见 <code>schemas.py</code></td></tr>
+    <tr><td><strong>kind 取值</strong></td><td>口径不一致 / 接口不匹配 / 结论实质矛盾 / 内容重复 / 无冲突</td></tr>
+    <tr><td><strong>提示词要点</strong></td><td>① <strong>reason 必须引用双方原文片段</strong>，不允许空泛评价；② 传入已生成的协作契约作为判定依据——这让归因有了客观锚点，而不是模型的主观感觉；③ 严重度按"对最终交付物的破坏程度"判定</td></tr>
+    <tr><td><strong>失败处理</strong></td><td>重试 1 次；失败则降级为"人工判断"，界面仍展示双方原文对比与契约条款</td></tr>
+    <tr><td><strong>调用频率</strong></td><td>每次冲突 1 次。实际课程中冲突数量有限，<span class="hl">整个学期通常在 20 次以内</span></td></tr>
+  </table>
+
+  <h3>6.3　非大模型的 AI 能力（确定性的"智能"）</h3>
+  <table>
+    <tr><th style="width:190px">能力</th><th style="width:150px">实现方式</th><th>为什么不用大模型</th></tr>
+    <tr><td>多目标最优分组</td><td>约束求解器 OR-Tools CP-SAT</td><td>模型无法保证满足硬约束，也无法给出可证明的解。<span class="hl">求解器能，且更快更准</span></td></tr>
+    <tr><td>拖动实时得分反馈</td><td>内存中重算四维得分</td><td>毫秒级要求，任何模型调用都做不到</td></tr>
+    <tr><td>关键路径 / 波及分析</td><td>图算法（拓扑排序 + 最长路径）</td><td>确定性图论问题，有唯一正确解</td></tr>
+    <tr><td>健康度三维</td><td>阈值规则</td><td>指标定义完全确定，模型只会引入不稳定</td></tr>
+    <tr><td>重规划三方案</td><td>排序贪心</td><td>规则明确（技能匹配 × 空闲度），可解释性要求高</td></tr>
+    <tr><td>依赖冲突检测</td><td>图遍历</td><td>纯结构问题</td></tr>
+    <tr><td>贡献归因计算</td><td>加权公式 + 区间估计</td><td><strong>数值由公式算出，模型没有增量信息</strong>；且必须可复现、可指向公式</td></tr>
+    <tr><td>分组方案解释</td><td>模板拼装</td><td>模型会为既定数字编造理由。<code>templates.py:explain_grouping()</code></td></tr>
+    <tr><td>贡献说明与搭便车提示</td><td>模板拼装</td><td>同上。<code>templates.py:explain_contribution()</code> / <code>check_fair_share()</code></td></tr>
+    <tr><td>互评异常检测</td><td>统计规则</td><td>规则可枚举，不需要语义理解</td></tr>
+  </table>
+
+  <div class="card ok">
+    <h4>这条边界怎么在答辩时讲</h4>
+    <p>如果评委问"你们的 AI 含量在哪"，答案是三段式：<br>
+    <strong>「我们用大模型做两件事——读懂作业要求，判断两段产出是否矛盾。这两件事都需要理解人写的文字，是模型不可替代的。</strong><br>
+    <strong>分组用约束求解器，因为它能保证满足硬约束并给出可证明的最优解，这是模型做不到的。</strong><br>
+    <strong>归因和解释全部用公式与模板，因为数值是我们算出来的，让模型去解释只会编造理由。」</strong><br>
+    <span class="hl">主动划出这条边界，比标榜"全流程 AI 驱动"更能体现工程成熟度。</span></p>
+  </div>
+
+  <h3>6.4　成本估算</h3>
+  <table>
+    <tr><th style="width:170px">项目</th><th>估算</th></tr>
+    <tr><td>单次拆解</td><td>输入约 3–5k tokens，输出约 2–3k tokens</td></tr>
+    <tr><td>单次冲突归因</td><td>输入约 2–3k tokens，输出约 0.5k tokens</td></tr>
+    <tr><td>一个 50 人课程的学期总量</td><td>约 8–16 次拆解 + ≤ 20 次冲突归因 ≈ 60–120k tokens</td></tr>
+    <tr><td><strong>成本结论</strong></td><td><strong>这几乎可以忽略不计。</strong>产品的主要成本在存储与计算，不在大模型。<span class="hl">这个结论本身就能在答辩时回应"AI 产品商业化可行性"的质疑</span></td></tr>
+    <tr><td>监控</td><td><code>ai_call_logs</code> 表记录每次调用的 token、延迟、状态；课程设置中可设月度预算上限，超限后自动关闭 AI 功能并提示</td></tr>
+  </table>
+</section>
+
+<section id="s7">
+  <div class="secnum">S7</div>
+  <h2>非功能需求</h2>
+
+  <h3>7.1　性能指标</h3>
+  <table>
+    <tr><th style="width:230px">指标</th><th style="width:130px">目标</th><th>说明</th></tr>
+    <tr><td>CP-SAT 分组求解</td><td>≤ 10s</td><td>50 人 8 组规模；超时回退贪心</td></tr>
+    <tr><td><code>preview-move</code> 拖动预演</td><td>≤ 50ms</td><td>内存重算，前端 500ms 防抖</td></tr>
+    <tr><td>普通读接口 P95</td><td>≤ 300ms</td><td>列表类接口必须分页，默认 20 条</td></tr>
+    <tr><td>普通写接口 P95</td><td>≤ 500ms</td><td>不含附件上传</td></tr>
+    <tr><td>关键路径 / 波及分析</td><td>≤ 200ms</td><td>任务数 ≤ 200 时</td></tr>
+    <tr><td>贡献归因全组计算</td><td>≤ 2s</td><td>一次提交终稿后触发一次，可异步</td></tr>
+    <tr><td>LLM 拆解</td><td>≤ 60s</td><td>超 30s 前端给出"稍后回来"选项</td></tr>
+    <tr><td>页面首屏（教师端）</td><td>≤ 2s</td><td>4G 网络下</td></tr>
+    <tr><td>队员端首屏（小程序）</td><td>≤ 1.5s</td><td>弱网下不得白屏，必须有骨架屏</td></tr>
+  </table>
+
+  <h3>7.2　规模假设（设计容量）</h3>
+  <table>
+    <tr><th style="width:200px">维度</th><th style="width:130px">设计容量</th><th>说明</th></tr>
+    <tr><td>单课程学生数</td><td>≤ 300</td><td>超出后分组求解需分块</td></tr>
+    <tr><td>单课程小组数</td><td>≤ 50</td><td></td></tr>
+    <tr><td>单小组人数</td><td>3–8</td><td>求解器硬约束范围</td></tr>
+    <tr><td>单小组任务数</td><td>≤ 30</td><td>LLM 拆解上限 12，人工可扩展</td></tr>
+    <tr><td>单交付物段落数</td><td>≤ 2000</td><td>段落级 diff 的性能边界</td></tr>
+    <tr><td>单用户并发课程数</td><td>≤ 10</td><td></td></tr>
+    <tr><td>同时在线</td><td>≤ 500</td><td>单实例部署满足</td></tr>
+  </table>
+
+  <h3>7.3　安全要求</h3>
+  <table>
+    <tr><th style="width:190px">项目</th><th>要求</th></tr>
+    <tr><td>会话管理</td><td>JWT 存 HttpOnly Cookie；<code>SameSite=Lax</code>；有效期 7 天，活跃自动续期；注销立即吊销</td></tr>
+    <tr><td>密码</td><td>bcrypt 或 argon2，成本因子 ≥ 10；不存储明文；重置 token 一次性、30 分钟过期</td></tr>
+    <tr><td>权限校验</td><td><strong>所有判定在服务端</strong>；前端隐藏按钮仅为体验优化；每个接口逐次校验课程归属与小组归属</td></tr>
+    <tr><td>算法服务隔离</td><td>不对公网暴露；内网调用 + 共享密钥校验；来源 IP 白名单</td></tr>
+    <tr><td>输入校验</td><td>所有写接口用 zod / pydantic 严格校验；文件上传限制类型与大小（≤ 20MB），并做真实类型检测而非仅看扩展名</td></tr>
+    <tr><td>注入防护</td><td>ORM 参数化查询，禁止字符串拼接 SQL；富文本渲染必须转义</td></tr>
+    <tr><td>速率限制</td><td>登录 5 次/分钟；LLM 触发接口每课程每小时 ≤ 20 次；通用接口 100 次/分钟</td></tr>
+    <tr><td>审计</td><td>调分、改归属、删任务、解散小组、锁定终审五类操作必须写 <code>audit_logs</code>，含前后值</td></tr>
+  </table>
+
+  <h3>7.4　隐私与合规</h3>
+  <div class="card warn">
+    <h4>本产品采集学生行为数据，必须守住四条</h4>
+    <ul>
+      <li><strong>最小必要</strong>：只采集达成功能所必需的数据。不采集与协作无关的行为（如鼠标轨迹、页面停留时长）。</li>
+      <li><strong>可开关</strong>：协作行为信号（编辑痕迹、打卡）提供开关，学生可关闭，关闭后该维度证据缺失并在账本上标注"证据不足"，而不是直接判低分。</li>
+      <li><strong>可查看</strong>：提供"系统知道我什么"页面（<code>/api/me/data-export</code>），学生可导出系统持有的全部个人数据。</li>
+      <li><strong>不外泄</strong>：协作倾向与历史指标不向学生互见，教师可见但不导出到成绩单。社交联系图仅教师可见。</li>
+    </ul>
+  </div>
+
+  <h3>7.5　可维护性与可测试性</h3>
+  <table>
+    <tr><th style="width:190px">项目</th><th>要求</th></tr>
+    <tr><td>类型安全</td><td>TypeScript 严格模式；Python 全量类型标注 + mypy</td></tr>
+    <tr><td>单元测试</td><td>算法服务覆盖率 ≥ 80%（CP-SAT 求解、图算法、归因公式、模板输出）</td></tr>
+    <tr><td>接口测试</td><td>全部 API 有集成测试，覆盖正常路径 + 权限拒绝路径</td></tr>
+    <tr><td>黄金数据集</td><td>构造 3 组固定输入（30 人画像 + 作业要求），断言分组得分与贡献区间的稳定输出，防止算法回归</td></tr>
+    <tr><td>依赖留档</td><td>维护 <code>THIRD_PARTY.md</code>，记录每个外部依赖的名称、许可、用途、来源</td></tr>
+    <tr><td>环境变量</td><td>全部通过 <code>.env</code> 注入；不硬编码密钥；提供 <code>.env.example</code></td></tr>
+  </table>
+
+  <h3>7.6　可访问性与兼容性</h3>
+  <table>
+    <tr><th style="width:190px">项目</th><th>要求</th></tr>
+    <tr><td>键盘操作</td><td>所有交互元素可 Tab 到达；拖拽分组提供"选成员 → 选目标组"的键盘替代路径</td></tr>
+    <tr><td>对比度</td><td>正文对比度 ≥ 4.5:1，符合 WCAG AA</td></tr>
+    <tr><td>屏幕阅读器</td><td>表单控件有 label；图标按钮有 aria-label；图表提供等价的数据表格</td></tr>
+    <tr><td>浏览器</td><td>Chrome / Edge / Safari 最近两个大版本；不支持 IE</td></tr>
+    <tr><td>移动端</td><td>队员端适配 375px 起；队长端适配 768px 起</td></tr>
+    <tr><td>离线降级</td><td>队员端弱网时任务列表可读缓存数据，写操作排队重试</td></tr>
+  </table>
+</section>
+
+<section id="s8">
+  <div class="secnum">S8</div>
+  <h2>工作量估算与排期</h2>
+  <p class="lead">按人天估算，<strong>取偏保守口径</strong>（含自测与联调，不含返工）。合计约 182 人天完成全部功能，其中约 68 人天可达「可演示」状态。</p>
+
+  <h3>8.1　后端模块工作量</h3>
+  <table>
+    <tr><th style="width:64px">编号</th><th style="width:150px">模块</th><th style="width:70px">人天</th><th style="width:80px">演示必要性</th><th>说明</th></tr>
+    <tr><td>B-01</td><td>认证与用户</td><td>3</td><td><span class="pill r">必需</span></td><td class="mut">fork 脚手架可压缩至 1 人天</td></tr>
+    <tr><td>B-02</td><td>课程与设置</td><td>3</td><td><span class="pill r">必需</span></td><td></td></tr>
+    <tr><td>B-03</td><td>名单与班级</td><td>5</td><td><span class="pill r">必需</span></td><td class="mut">含 CSV 导入与逐行校验</td></tr>
+    <tr><td>B-04</td><td>技能卡与画像</td><td>4</td><td><span class="pill r">必需</span></td><td class="mut">画像计算纯规则</td></tr>
+    <tr><td>B-05</td><td>约束管理</td><td>2</td><td><span class="pill a">可选</span></td><td class="mut">可先用固定约束演示</td></tr>
+    <tr><td><strong>B-06</strong></td><td><strong>分组编排</strong></td><td><strong>8</strong></td><td><span class="pill r">必需</span></td><td class="mut">含 preview-move 实时重算</td></tr>
+    <tr><td>B-07</td><td>小组管理</td><td>4</td><td><span class="pill a">可选</span></td><td></td></tr>
+    <tr><td><strong>B-08</strong></td><td><strong>任务与依赖图</strong></td><td><strong>10</strong></td><td><span class="pill r">必需</span></td><td class="mut">含 LLM 调用点 1 与图算法</td></tr>
+    <tr><td>B-09</td><td>协作契约</td><td>3</td><td><span class="pill a">可选</span></td><td class="mut">有则显著加分</td></tr>
+    <tr><td>B-10</td><td>进度感知与健康度</td><td>6</td><td><span class="pill a">可选</span></td><td class="mut">可降级为手动更新状态</td></tr>
+    <tr><td>B-11</td><td>冲突处理</td><td>5</td><td><span class="pill a">可选</span></td><td class="mut">含 LLM 调用点 2</td></tr>
+    <tr><td>B-12</td><td>滚动重规划</td><td>5</td><td><span class="pill a">可选</span></td><td></td></tr>
+    <tr><td><strong>B-13</strong></td><td><strong>交付物与溯源</strong></td><td><strong>9</strong></td><td><span class="pill r">必需</span></td><td class="mut">护城河，建议不降级实现</td></tr>
+    <tr><td><strong>B-14</strong></td><td><strong>贡献归因与终审</strong></td><td><strong>8</strong></td><td><span class="pill r">必需</span></td><td class="mut">含证据下钻与申诉</td></tr>
+    <tr><td>B-15</td><td>同伴互评</td><td>5</td><td><span class="pill a">可选</span></td><td></td></tr>
+    <tr><td>B-16</td><td>通知 / 审计 / AI 日志</td><td>4</td><td><span class="pill g">可省</span></td><td class="mut">演示可不做通知推送</td></tr>
+    <tr><td>—</td><td>算法服务（FastAPI）</td><td>10</td><td><span class="pill r">必需</span></td><td class="mut">CP-SAT + 图算法 + 归因 + 2 个 LLM 点<br><strong>AI 层已提前落地，可抵扣 4 人天</strong></td></tr>
+    <tr><td>—</td><td>数据库与基础设施</td><td>5</td><td><span class="pill r">必需</span></td><td class="mut">建表、迁移、种子数据、部署脚本</td></tr>
+    <tr><td colspan="2"><strong>后端小计</strong></td><td><strong>99</strong></td><td colspan="2" class="mut">其中演示必需项约 52 人天</td></tr>
+  </table>
+
+  <h3>8.2　前端工作量</h3>
+  <table>
+    <tr><th style="width:64px">编号</th><th style="width:150px">端次</th><th style="width:70px">人天</th><th style="width:80px">演示必要性</th><th>说明</th></tr>
+    <tr><td><strong>F-01</strong></td><td><strong>教师端（26 页）</strong></td><td><strong>30</strong></td><td><span class="pill r">必需</span></td><td class="mut">核心是 P-09 分组工作台与 P-19 贡献账本，两页占约 12 人天</td></tr>
+    <tr><td>F-02</td><td>队长端（11 页）</td><td>12</td><td><span class="pill a">部分必需</span></td><td class="mut">C-02 任务 DAG 编辑是重点</td></tr>
+    <tr><td>F-03</td><td>队员端（12 页）</td><td>14</td><td><span class="pill a">部分必需</span></td><td class="mut">M-02 我的部分、M-05 交付物编辑器、M-08 账本</td></tr>
+    <tr><td>F-04</td><td>公共与基础设施</td><td>4</td><td><span class="pill r">必需</span></td><td class="mut">组件库封装、错误页、移动适配</td></tr>
+    <tr><td colspan="2"><strong>前端小计</strong></td><td><strong>60</strong></td><td colspan="2" class="mut">其中演示必需项约 32 人天</td></tr>
+  </table>
+
+  <h3>8.3　测试、文档与交付</h3>
+  <table>
+    <tr><th style="width:190px">项目</th><th style="width:70px">人天</th><th>说明</th></tr>
+    <tr><td>单元测试与集成测试</td><td>10</td><td class="mut">算法服务覆盖率 ≥ 80%，API 全路径覆盖</td></tr>
+    <tr><td>端到端联调与打磨</td><td>6</td><td class="mut">六步演示脚本跑通不掉链子</td></tr>
+    <tr><td>演示数据构造</td><td>3</td><td class="mut">30 人画像 + 一份真实作业要求 + 预置的冲突与延期场景</td></tr>
+    <tr><td>文档与 PPT</td><td>4</td><td class="mut">方案书已基本完成，此处为 PPT 与录屏</td></tr>
+    <tr><td colspan="1"><strong>小计</strong></td><td><strong>23</strong></td><td class="mut"></td></tr>
+  </table>
+
+  <div class="card acc">
+    <h4>总计</h4>
+    <p><strong>完整版：99 + 60 + 23 = 182 人天</strong><br>
+    <strong>可演示版（仅 P0 项）：52 + 32 + 12 ≈ 96 人天，再用现成脚手架与组件库压缩约 30%，实际约 68 人天</strong><br>
+    若 3 人协作、每人每天投入 3 小时，可演示版约需 <strong>7–8 周</strong>；完整版约需 <strong>18–20 周</strong>。<span class="hl">建议先冲可演示版，把 P-09 与 P-19 两页做扎实，其余按时间余量补。</span></p>
+  </div>
+
+  <h3>8.4　分期排期建议</h3>
+  <table>
+    <tr><th style="width:64px">阶段</th><th style="width:170px">目标</th><th style="width:230px">交付模块</th><th style="width:70px">人天</th><th>验收节点</th></tr>
+    <tr>
+      <td><span class="pill p">S1</span></td><td>骨架与身份</td>
+      <td>B-01, B-02, B-03, F-04<br>基础设施</td><td>18</td>
+      <td class="mut">教师能建课、导入名单，三角色登录看到不同界面</td>
+    </tr>
+    <tr>
+      <td><span class="pill b">S2</span></td><td><strong>拿下分组</strong></td>
+      <td>B-04, B-06, F-01 的 P-03/04/05/07/09</td><td>22</td>
+      <td class="mut"><strong>拖动组员实时看得分变化，破坏硬约束时标红</strong>——答辩杀手锏 1 到位</td>
+    </tr>
+    <tr>
+      <td><span class="pill p">S3</span></td><td>任务与契约</td>
+      <td>B-08, B-09, F-02, F-03 的 M-01~M-05</td><td>24</td>
+      <td class="mut">上传作业 PDF 能生成任务 DAG 与契约，队员看到"我的部分"</td>
+    </tr>
+    <tr>
+      <td><span class="pill b">S4</span></td><td><strong>溯源与归因</strong></td>
+      <td>B-13, B-14, F-01 的 P-19/20</td><td>26</td>
+      <td class="mut"><strong>贡献结论可下钻到段落级证据</strong>——答辩杀手锏 2 到位</td>
+    </tr>
+    <tr>
+      <td><span class="pill g">S5</span></td><td>调度闭环</td>
+      <td>B-07, B-10, B-11, B-12, F-01 的 P-15~P-18</td><td>24</td>
+      <td class="mut">模拟延期 → 预警 → 重规划决策包 → 采纳</td>
+    </tr>
+    <tr>
+      <td><span class="pill g">S6</span></td><td>补齐与打磨</td>
+      <td>B-05, B-15, B-16, 其余页面</td><td>22</td>
+      <td class="mut">六步演示脚本完整跑通</td>
+    </tr>
+    <tr>
+      <td><span class="pill g">S7</span></td><td>测试与交付</td>
+      <td>测试、演示数据、PPT、录屏</td><td>23</td>
+      <td class="mut">提交材料定稿</td>
+    </tr>
+  </table>
+  <p class="note">若时间只够到 S4，产品已经可以完整演示「分组 → 拆解 → 交付 → 归因」这条主链路，且两个杀手锏都已到位。<strong>S5 的调度闭环是加分项，不是及格线。</strong></p>
+</section>
+
+<section id="s9">
+  <div class="secnum">S9</div>
+  <h2>验收清单</h2>
+  <p class="lead">每条都是可执行、可观察的断言，不是"功能正常"这类空话。</p>
+
+  <h3>9.1　分组模块</h3>
+  <table>
+    <tr><th style="width:40px">✓</th><th>验收断言</th></tr>
+    <tr><td>☐</td><td>导入 30 人名单 + 填写技能卡后，点击生成分组，20 秒内返回三套方案</td></tr>
+    <tr><td>☐</td><td>每套方案都显示四维得分雷达图、总分、以及一段中文解释（来自模板）</td></tr>
+    <tr><td>☐</td><td>拖动任一组员到另一组，得分面板在 1 秒内更新：显示各维度增减量与总分变化</td></tr>
+    <tr><td>☐</td><td>若拖动导致某组超过人数上限，该组卡片立即标红并显示"超出组规模上限"，"选定方案"按钮禁用</td></tr>
+    <tr><td>☐</td><td>设置一条"不可同组"约束后重新求解，两人不出现在同一组</td></tr>
+    <tr><td>☐</td><td>故意设置矛盾约束（三人都必须同组但组人数上限为 2），系统返回无解并指出冲突约束，不生成任何方案</td></tr>
+    <tr><td>☐</td><td>选定方案后，小组与成员关系正确落库，学生登录能看到自己所在的小组</td></tr>
+  </table>
+
+  <h3>9.2　任务与依赖图</h3>
+  <table>
+    <tr><th style="width:40px">✓</th><th>验收断言</th></tr>
+    <tr><td>☐</td><td>粘贴一份真实作业要求，60 秒内生成 8–12 个任务，每个任务有工时、技能、交付物类型、里程碑</td></tr>
+    <tr><td>☐</td><td>生成结果中<strong>不存在悬空依赖与成环</strong>；若模型确实产出了，界面高亮标出并提示人工修正</td></tr>
+    <tr><td>☐</td><td>同时生成一份协作契约，术语表至少 2 条且含单位或口径定义</td></tr>
+    <tr><td>☐</td><td>手动给两个任务加依赖，若构成环，接口拒绝并返回环上的任务列表</td></tr>
+    <tr><td>☐</td><td>关键路径计算结果与实际最长链一致（可人工核对）</td></tr>
+    <tr><td>☐</td><td>把关键路径上某任务标记为延期，波及分析正确列出全部下游任务</td></tr>
+    <tr><td>☐</td><td>队员端"我的部分"正确显示：我的任务、依赖谁、截止时间，且依赖未就绪的任务显示为等待状态</td></tr>
+  </table>
+
+  <h3>9.3　交付物溯源与贡献归因</h3>
+  <table>
+    <tr><th style="width:40px">✓</th><th>验收断言</th></tr>
+    <tr><td>☐</td><td>两名学生分别在平台内撰写不同段落，保存后段落归属正确记录到 <code>artifact_segments</code></td></tr>
+    <tr><td>☐</td><td>第三名学生修改了他人撰写的一段文字，该段落 <code>revised_by</code> 更新，且 <code>segment_edits</code> 新增一条 revise 记录</td></tr>
+    <tr><td>☐</td><td>汇编终稿后，贡献账本中"主责产出"占比与段落字数统计一致（可人工核算）</td></tr>
+    <tr><td>☐</td><td>任一成员的贡献区间满足 <code>low ≤ point ≤ high</code>，且 <code>high − low ≤ 8</code></td></tr>
+    <tr><td>☐</td><td>把互评轮次设为未开放，重算贡献后，账本显示"缺同伴证据，区间已放宽"且区间明显变宽</td></tr>
+    <tr><td>☐</td><td>构造一个贡献为组内应分担份额 10% 的成员，账本出现搭便车提示，且提示文案包含"不构成扣分依据"的说明</td></tr>
+    <tr><td>☐</td><td><strong>点任一条结论，都能下钻到具体证据条目，每条证据能继续跳到原始段落 / 状态事件 / 互评原文</strong></td></tr>
+    <tr><td>☐</td><td>系统界面任何位置都不出现单一分数；教师终审前账本标注"待教师确认"</td></tr>
+    <tr><td>☐</td><td>学生提交申诉后，教师端可见；教师处理后学生收到通知并可查看结果理由</td></tr>
+  </table>
+
+  <h3>9.4　冲突、进度与重规划</h3>
+  <table>
+    <tr><th style="width:40px">✓</th><th>验收断言</th></tr>
+    <tr><td>☐</td><td>让任务 A 延期，且 B 依赖 A，系统自动生成一条依赖冲突，并列出受波及任务</td></tr>
+    <tr><td>☐</td><td>构造两段口径矛盾的文本（一段说"高峰在早 7-9 点"，一段说"重点在晚高峰"），触发归因后返回类型为"结论实质矛盾"，且 reason 中<strong>引用了双方原文片段</strong></td></tr>
+    <tr><td>☐</td><td>构造两段相似度 0.9 的重复文本，系统走"内容重复"分支，<strong>不调用大模型</strong></td></tr>
+    <tr><td>☐</td><td>构造两段相似度 0.1 的无关文本，不生成冲突</td></tr>
+    <tr><td>☐</td><td>关键路径延误超过阈值后，健康度下降且预警中心出现条目</td></tr>
+    <tr><td>☐</td><td>某成员 3 天无任何信号，失联分项下降，该成员出现在阻塞清单</td></tr>
+    <tr><td>☐</td><td>触发重规划后生成三个方案，每个都有具体清单与代价说明（含工时变化与影响天数）</td></tr>
+    <tr><td>☐</td><td>采纳"重新分配"后，任务负责人变更，任务总量不变（不新增不丢失）</td></tr>
+    <tr><td>☐</td><td>队长尝试采纳"缩减范围"，系统拒绝并提示需教师授权</td></tr>
+  </table>
+
+  <h3>9.5　权限与安全</h3>
+  <table>
+    <tr><th style="width:40px">✓</th><th>验收断言</th></tr>
+    <tr><td>☐</td><td>用队员账号直接请求教师端接口（如触发分组、教师终审），返回 403</td></tr>
+    <tr><td>☐</td><td>队员请求他人贡献证据明细，返回 403；请求自己的证据正常</td></tr>
+    <tr><td>☐</td><td>学生在 A 课是队长、在 B 课是队员，切换课程上下文后权限正确切换</td></tr>
+    <tr><td>☐</td><td>算法服务端口对公网不可达，仅内网可访问</td></tr>
+    <tr><td>☐</td><td>调分、改段落归属、删任务、解散小组四类操作在 <code>audit_logs</code> 中留有含前后值的记录</td></tr>
+    <tr><td>☐</td><td>连续 6 次错误登录被限流</td></tr>
+    <tr><td>☐</td><td>学生可以导出系统持有的自己的全部数据</td></tr>
+  </table>
+
+  <h3>9.6　降级与鲁棒性</h3>
+  <table>
+    <tr><th style="width:40px">✓</th><th>验收断言</th></tr>
+    <tr><td>☐</td><td>断网或填错 API Key 时，拆解页显示"AI 暂不可用"并提供手工创建任务入口，页面不崩溃</td></tr>
+    <tr><td>☐</td><td>把求解器时间上限改为 0.1 秒强制超时，系统回退贪心算法并在结果上标注"快速模式"</td></tr>
+    <tr><td>☐</td><td>算法服务停掉后，任务看板与交付物编辑仍可正常使用</td></tr>
+    <tr><td>☐</td><td>上传一个 30MB 文件被拒绝并给出明确提示</td></tr>
+    <tr><td>☐</td><td>队员端在 375px 宽度下所有页面无横向滚动条、无文字截断</td></tr>
+  </table>
+
+  <h3>9.7　演示脚本（六步，必须全程不掉链子）</h3>
+  <pre>01  教师登录 → 打开已建课程 → 名单页看到 30 名学生与技能卡填写率          <span class="c">20s</span>
+02  打开分组工作台 → 三方案对比 → <span class="c">拖动两名组员</span>，现场展示得分实时变化
+    → 故意拖到超员，展示标红与禁止落库 → 还原 → 选定方案 A              <span class="c">90s</span>
+03  队长端上传作业要求 PDF → 60 秒内生成任务 DAG 与协作契约
+    → 展示依赖箭头与关键路径加粗                                       <span class="c">60s</span>
+04  队员端打开"我的部分"，展示"我负责什么 / 依赖谁 / 何时必须交"
+    → 打开交付物编辑器，撰写一段并保存                                   <span class="c">40s</span>
+05  把关键路径上一任务标记延期 → 健康度下降 → 预警出现
+    → 触发重规划 → 三方案与代价说明 → 采纳方案 A                        <span class="c">50s</span>
+06  <span class="c">★</span> 打开贡献账本 → 贡献构成与区间 → <span class="c">点一条结论下钻到段落级证据</span>
+    → 展示搭便车提示文案 → 切到教师端终审界面                           <span class="c">70s</span>
+                                                        <span class="c">合计约 5 分 30 秒</span></pre>
+  <p class="note">第 02 步与第 06 步加粗的两处是整个演示的高潮。其余步骤做得平实即可，这两处必须打磨到丝滑。</p>
+</section>
+
+</main>
+</div>
+</body>
+</html>

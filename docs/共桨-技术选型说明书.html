@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>共桨 · 技术选型说明书 v1.0</title>
+<style>
+:root{
+  --bg:#141413; --surface:#1c1c1b; --surface2:#242423; --surface3:#2c2c2a;
+  --border:#33332f; --border2:#454540;
+  --text:#ececea; --muted:#a3a39d; --dim:#75756f;
+  --accent:#afa9ec; --accent-bg:#2a2450;
+  --teal:#5dcaa5; --teal-bg:#0d3b30;
+  --amber:#ef9f27; --amber-bg:#3d2a08;
+  --red:#f09595; --red-bg:#3d1616;
+  --blue:#85b7eb; --blue-bg:#0c447c;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14.5px;line-height:1.7;-webkit-font-smoothing:antialiased;}
+.shell{max-width:1200px;margin:0 auto;padding:0 24px;display:grid;grid-template-columns:190px minmax(0,1fr);gap:44px;}
+aside{position:sticky;top:0;align-self:start;max-height:100vh;overflow-y:auto;padding:40px 0 40px;font-size:12.5px;}
+aside .gl{font-size:11px;letter-spacing:.12em;color:var(--dim);margin:18px 0 6px;}
+aside a{display:block;color:var(--muted);text-decoration:none;padding:4px 0 4px 10px;border-left:1px solid var(--border);}
+aside a:hover{color:var(--text);border-left-color:var(--accent);}
+main{padding:0 0 140px;min-width:0;}
+header{padding:56px 0 34px;border-bottom:1px solid var(--border);}
+.tag{display:inline-block;font-size:11.5px;letter-spacing:.14em;color:var(--accent);background:var(--accent-bg);padding:5px 12px;border-radius:999px;margin-bottom:18px;}
+h1{font-size:31px;line-height:1.3;font-weight:600;margin:0 0 10px;letter-spacing:-.02em;}
+h1 .sub{display:block;font-size:15px;font-weight:400;color:var(--muted);margin-top:12px;letter-spacing:0;}
+section{padding:46px 0 6px;border-bottom:1px solid var(--border);}
+section:last-of-type{border-bottom:none;}
+.secnum{font-size:11.5px;letter-spacing:.16em;color:var(--accent);font-weight:500;}
+h2{font-size:21px;font-weight:600;margin:8px 0 6px;letter-spacing:-.015em;line-height:1.35;}
+h2 + .lead{font-size:14.5px;color:var(--muted);margin:0 0 22px;max-width:820px;}
+h3{font-size:15px;font-weight:600;margin:30px 0 8px;padding-left:10px;border-left:2px solid var(--accent);}
+h4{font-size:13.5px;font-weight:600;margin:20px 0 6px;}
+p{margin:0 0 14px;}
+ul,ol{margin:0 0 16px;padding-left:20px;}
+li{margin-bottom:5px;}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:12.5px;}
+th{text-align:left;font-weight:600;font-size:11.5px;color:var(--muted);padding:8px 9px;border-bottom:1px solid var(--border2);white-space:nowrap;}
+td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:top;}
+td.mut{color:var(--muted);}
+tr:last-child td{border-bottom:none;}
+code{font-family:var(--mono);font-size:11.5px;background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;color:var(--accent);}
+pre{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:14px 16px;margin:14px 0;overflow-x:auto;font-family:var(--mono);font-size:11.5px;line-height:1.65;color:var(--text);}
+pre .c{color:var(--dim);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:16px 0;}
+.card.acc{border-left:2px solid var(--accent);}
+.card.ok{border-left:2px solid var(--teal);}
+.card.warn{border-left:2px solid var(--amber);}
+.card.dang{border-left:2px solid var(--red);}
+.card p:last-child,.card ul:last-child{margin-bottom:0;}
+.pill{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:999px;font-weight:500;white-space:nowrap;}
+.pill.p{background:var(--accent-bg);color:var(--accent);}
+.pill.t{background:var(--teal-bg);color:var(--teal);}
+.pill.a{background:var(--amber-bg);color:var(--amber);}
+.pill.r{background:var(--red-bg);color:var(--red);}
+.pill.b{background:var(--blue-bg);color:var(--blue);}
+.pill.g{background:var(--surface3);color:var(--muted);}
+strong{color:#fff;font-weight:600;}
+.hl{color:var(--accent);}
+.note{font-size:12.5px;color:var(--dim);margin-top:8px;}
+a.inl{color:var(--accent);text-decoration:none;}
+@media (max-width:1020px){.shell{grid-template-columns:1fr;gap:0}aside{position:static;max-height:none;padding:24px 0 0;border-bottom:1px solid var(--border);}aside a{display:inline-block;border-left:none;padding:3px 10px 3px 0}}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside>
+  <div class="gl">总纲</div>
+  <a href="#t0">T0　选型总表</a>
+  <a href="#t1">T1　五条决策原则</a>
+  <div class="gl">分层选型</div>
+  <a href="#t2">T2　前端</a>
+  <a href="#t3">T3　后端</a>
+  <a href="#t4">T4　算法服务</a>
+  <a href="#t5">T5　数据库与存储</a>
+  <a href="#t6">T6　AI 与模型</a>
+  <a href="#t7">T7　移动端载体</a>
+  <div class="gl">工程</div>
+  <a href="#t8">T8　基础设施与部署</a>
+  <a href="#t9">T9　开发工具链</a>
+  <a href="#t10">T10　不用什么</a>
+  <a href="#t11">T11　许可清单</a>
+  <a href="#t12">T12　版本锁定</a>
+  <a href="#t13">T13　环境搭建</a>
+  <a href="#t14">T14　可替换与锁定</a>
+</aside>
+
+<main>
+
+<header>
+  <span class="tag">共桨 CoPaddle · 技术选型说明书 v1.0</span>
+  <h1>用什么做：全部技术决策与理由
+    <span class="sub">规格书回答「做什么」，本文档回答「用什么做」。每一项都给出选定、备选与否决理由——<strong>答辩时被追问「为什么选这个」，答案在这里。</strong></span>
+  </h1>
+  <table style="margin-top:20px">
+    <tr><th style="width:110px">项目</th><th>说明</th></tr>
+    <tr><td><strong>约束前提</strong></td><td>仅用于学习，不商用、不对外开放上线；本地或内网运行；团队为 React / TypeScript / Python 背景</td></tr>
+    <tr><td><strong>选型基调</strong></td><td><strong>够用即止，反向克制。</strong>只在必须的地方引入依赖，其余一律用标准能力。全文有 12 条「明确不用」</td></tr>
+    <tr><td><strong>配套文档</strong></td><td>《完整功能规格说明书》《产品方案》《附录 A 开源调研》《附录 B 技术选型与组装方案》</td></tr>
+    <tr><td><strong>配套代码</strong></td><td><code>gongjiang-ai/</code>（AI 层已跑通，技术栈与此处一致）</td></tr>
+  </table>
+</header>
+
+<section id="t0">
+  <div class="secnum">T0</div>
+  <h2>选型总表</h2>
+  <p class="lead">一眼看完整个技术栈。许可列已核验，<span class="pill r">AGPL</span> 与 <span class="pill a">无声明</span> 两类需要特别注意。</p>
+
+  <table>
+    <tr><th style="width:110px">层次</th><th style="width:250px">选定</th><th style="width:90px">许可</th><th>一句话理由</th></tr>
+    <tr><td colspan="4" style="background:var(--surface2);font-weight:600;font-size:11.5px">前端</td></tr>
+    <tr><td>框架</td><td><code>Next.js</code>（App Router）</td><td><span class="pill t">MIT</span></td><td class="mut">fork 基座自带，一次决定前后端与路由</td></tr>
+    <tr><td>语言</td><td><code>TypeScript</code> 严格模式</td><td><span class="pill t">Apache-2.0</span></td><td class="mut">155 个接口，没有类型约束必失控</td></tr>
+    <tr><td>样式</td><td><code>Tailwind CSS</code></td><td><span class="pill t">MIT</span></td><td class="mut">与 shadcn/ui 天然配套</td></tr>
+    <tr><td>组件库</td><td><code>shadcn/ui</code></td><td><span class="pill t">MIT</span></td><td class="mut">复制式而非依赖式，可自由改造</td></tr>
+    <tr><td>服务端状态</td><td><code>TanStack Query</code></td><td><span class="pill t">MIT</span></td><td class="mut">缓存、失效、乐观更新开箱即用</td></tr>
+    <tr><td>客户端状态</td><td><code>Zustand</code></td><td><span class="pill t">MIT</span></td><td class="mut">团队既有技术栈；只需管理少数全局态</td></tr>
+    <tr><td>表单与校验</td><td><code>react-hook-form</code> + <code>zod</code></td><td><span class="pill t">MIT</span></td><td class="mut">zod 前后端共用同一份 schema</td></tr>
+    <tr><td>拖拽</td><td><code>dnd-kit</code></td><td><span class="pill t">MIT</span></td><td class="mut">分组工作台的核心；可访问性支持好</td></tr>
+    <tr><td>统计图表</td><td><code>Recharts</code></td><td><span class="pill t">MIT</span></td><td class="mut">雷达图、条形图、折线图够用</td></tr>
+    <tr><td>任务 DAG 图</td><td><code>React Flow</code></td><td><span class="pill t">MIT</span></td><td class="mut">专门画节点图，自带拖拽/连线/布局</td></tr>
+    <tr><td>甘特图</td><td><code>frappe-gantt</code></td><td><span class="pill t">MIT</span></td><td class="mut">轻量，够画依赖箭头与关键路径</td></tr>
+    <tr><td>关系网络图</td><td><code>Cytoscape.js</code></td><td><span class="pill t">MIT</span></td><td class="mut">班级社交图的力导向布局与交互最成熟</td></tr>
+    <tr><td>数据表格</td><td><code>TanStack Table</code></td><td><span class="pill t">MIT</span></td><td class="mut">名单、贡献矩阵需要排序筛选分页</td></tr>
+    <tr><td>其它</td><td><code>date-fns</code> · <code>lucide-react</code> · <code>sonner</code></td><td><span class="pill t">MIT/ISC</span></td><td class="mut">日期、图标、轻提示，均无更优替代</td></tr>
+    <tr><td colspan="4" style="background:var(--surface2);font-weight:600;font-size:11.5px">后端（应用层）</td></tr>
+    <tr><td>运行时</td><td><code>Node.js</code> 22 LTS</td><td><span class="pill t">MIT</span></td><td class="mut">Next.js 官方推荐，LTS 稳定</td></tr>
+    <tr><td>接口层</td><td>Next.js Route Handlers + Server Actions</td><td><span class="pill t">MIT</span></td><td class="mut">不额外起服务，减少一跳运维</td></tr>
+    <tr><td>ORM</td><td><code>Drizzle ORM</code> + Drizzle Kit</td><td><span class="pill t">Apache-2.0</span></td><td class="mut">fork 基座已集成；SQL 风格、类型推导强</td></tr>
+    <tr><td>鉴权</td><td><code>jose</code>（JWT）+ HttpOnly Cookie</td><td><span class="pill t">MIT</span></td><td class="mut">基座自带，且我们需要自己控制角色逻辑</td></tr>
+    <tr><td>数据校验</td><td><code>zod</code></td><td><span class="pill t">MIT</span></td><td class="mut">与前端共用 schema，一处定义两处生效</td></tr>
+    <tr><td colspan="4" style="background:var(--surface2);font-weight:600;font-size:11.5px">算法服务</td></tr>
+    <tr><td>框架</td><td><code>FastAPI</code> + <code>uvicorn</code></td><td><span class="pill t">MIT</span></td><td class="mut">自带 OpenAPI 文档，异步性能足够</td></tr>
+    <tr><td>数据校验</td><td><code>pydantic</code> v2</td><td><span class="pill t">MIT</span></td><td class="mut">LLM 结构化输出的解析与兜底</td></tr>
+    <tr><td>约束求解</td><td><code>OR-Tools</code>（CP-SAT）</td><td><span class="pill t">Apache-2.0</span></td><td class="mut"><strong>核心</strong>：工业级，声明式建模，可证明最优</td></tr>
+    <tr><td>图算法</td><td><code>networkx</code></td><td><span class="pill t">BSD-3</span></td><td class="mut">关键路径、环检测、连通分量</td></tr>
+    <tr><td>文本相似度</td><td><code>rapidfuzz</code> + <code>jieba</code></td><td><span class="pill t">MIT</span></td><td class="mut">冲突检测的前置筛选，替模型挡掉大部分调用</td></tr>
+    <tr><td>定时任务</td><td><code>APScheduler</code></td><td><span class="pill t">MIT</span></td><td class="mut">健康度快照、失联检测，避免另起 worker</td></tr>
+    <tr><td>文档解析</td><td><code>python-docx</code> + <code>pdfplumber</code></td><td><span class="pill t">MIT</span></td><td class="mut">避开 pymupdf 的 AGPL 许可</td></tr>
+    <tr><td>数据库访问</td><td><code>psycopg</code> 3 + 手写 SQL</td><td><span class="pill t">LGPL-3</span></td><td class="mut">算法侧只读画像、写结果表，不需要第二套 ORM</td></tr>
+    <tr><td colspan="4" style="background:var(--surface2);font-weight:600;font-size:11.5px">数据与 AI</td></tr>
+    <tr><td>数据库</td><td><code>PostgreSQL</code> 16</td><td><span class="pill t">PostgreSQL</span></td><td class="mut">47 张表、JSONB、事务齐全；无更优替代</td></tr>
+    <tr><td>对象存储</td><td>本地磁盘目录</td><td>—</td><td class="mut">学习项目无需 MinIO/S3</td></tr>
+    <tr><td>大模型</td><td><code>DeepSeek</code>（deepseek-chat）</td><td>—</td><td class="mut">中文强、便宜、OpenAI 兼容；已有 key</td></tr>
+    <tr><td>调用方式</td><td><code>openai</code> SDK + JSON 模式</td><td><span class="pill t">Apache-2.0</span></td><td class="mut">换服务商只改 base_url</td></tr>
+    <tr><td colspan="4" style="background:var(--surface2);font-weight:600;font-size:11.5px">工程</td></tr>
+    <tr><td>包管理</td><td><code>pnpm</code>（前端）· <code>uv</code>（Python）</td><td><span class="pill t">MIT/Apache</span></td><td class="mut">团队既有 pnpm；uv 装包与解析依赖快一个数量级</td></tr>
+    <tr><td>代码检查</td><td><code>ESLint</code> + <code>Prettier</code> · <code>ruff</code> + <code>mypy</code></td><td><span class="pill t">MIT</span></td><td class="mut">ruff 已在团队既有项目中验证</td></tr>
+    <tr><td>测试</td><td><code>Vitest</code> · <code>pytest</code></td><td><span class="pill t">MIT</span></td><td class="mut">算法服务覆盖率要求 ≥ 80%</td></tr>
+    <tr><td>容器化</td><td><code>Docker Compose</code></td><td><span class="pill t">Apache-2.0</span></td><td class="mut">三个容器：db / web / algo，一键起</td></tr>
+    <tr><td>反向代理</td><td><code>Caddy</code></td><td><span class="pill t">Apache-2.0</span></td><td class="mut">两行配置自动 HTTPS，比 nginx 省事</td></tr>
+  </table>
+</section>
+
+<section id="t1">
+  <div class="secnum">T1</div>
+  <h2>五条决策原则</h2>
+  <p class="lead">选型不是在挑最好的技术，是在挑最不容易出错的技术。这五条决定了后面所有取舍。</p>
+
+  <table>
+    <tr><th style="width:60px">#</th><th style="width:190px">原则</th><th>具体含义与后果</th></tr>
+    <tr>
+      <td><span class="pill p">01</span></td>
+      <td><strong>跟着基座走，不跟喜好走</strong></td>
+      <td>已经决定 fork <code>nextjs/saas-starter</code>（MIT，16.1k star），那么它用什么就用什么。<strong>不为了个人偏好把 Drizzle 换成 Prisma</strong>——替换成本远大于收益，而且会失去基座后续的更新能力</td>
+    </tr>
+    <tr>
+      <td><span class="pill p">02</span></td>
+      <td><strong>只有两个运行时</strong></td>
+      <td>Node 管业务，Python 管算法。除此之外不加第三个语言、不加第三个服务。<span class="hl">每多一个运行时，部署、调试、联调的成本都要翻，而收益往往只是"写法更优雅"</span></td>
+    </tr>
+    <tr>
+      <td><span class="pill p">03</span></td>
+      <td><strong>能力向下取，不向上要</strong></td>
+      <td>能用数据库解决的问题不用中间件，能用规则解决的问题不用模型，能用标准库解决的问题不用依赖。<strong>全文 12 条「明确不用」是这条原则的具体产物</strong></td>
+    </tr>
+    <tr>
+      <td><span class="pill p">04</span></td>
+      <td><strong>许可先看，能力后看</strong></td>
+      <td>同为可选时，优先选 MIT / Apache-2.0。<span class="hl">这一条直接改掉了两个决策：PDF 解析从 pymupdf（AGPL）换成 pdfplumber（MIT）；分组算法宁可自己写也不引入 gruepr（GPL-3.0）的代码</span></td>
+    </tr>
+    <tr>
+      <td><span class="pill p">05</span></td>
+      <td><strong>每个选择都要能讲出否决理由</strong></td>
+      <td>说不清"为什么不选另一个"的选择，通常意味着其实没想清楚。本文档每一项都强制填写备选与否决理由。<strong>答辩现场被问「为什么不用 XX」，这就是现成的答案</strong></td>
+    </tr>
+  </table>
+</section>
+
+<section id="t2">
+  <div class="secnum">T2</div>
+  <h2>前端选型</h2>
+  <p class="lead">52 个页面、4 个端次、需要三种专业图形。前端是整个项目工作量最大的部分（60 人天），所以每一项都优先选"少写代码"的方案。</p>
+
+  <h3>框架与语言</h3>
+  <table>
+    <tr><th style="width:120px">项</th><th style="width:210px">选定</th><th style="width:190px">备选</th><th>否决理由</th></tr>
+    <tr>
+      <td>框架</td><td><code>Next.js</code>（App Router）</td><td>Vite + React（纯 SPA）</td>
+      <td>基座是 Next。且 155 个接口中有大量"读数据渲染"的场景，Server Component 能省掉一层数据获取代码。纯 SPA 需要自己搭路由、数据层、鉴权中间件</td>
+    </tr>
+    <tr>
+      <td>渲染策略</td><td>默认 Server Component<br>交互密集页用 Client Component</td><td>全量客户端渲染</td>
+      <td>教师端仪表盘与贡献矩阵都是重数据页，全客户端渲染会让首屏明显变慢</td>
+    </tr>
+    <tr>
+      <td>语言</td><td>TypeScript（<code>strict: true</code>）</td><td>JavaScript</td>
+      <td>155 个接口 + 47 张表的类型，没有编译期检查，联调阶段会大量消耗在排查字段名拼写上</td>
+    </tr>
+    <tr>
+      <td>包管理</td><td><code>pnpm</code></td><td>npm / yarn</td>
+      <td>团队既有技术栈；且 pnpm 的硬链接机制磁盘占用显著更低</td>
+    </tr>
+  </table>
+
+  <h3>样式与组件</h3>
+  <table>
+    <tr><th style="width:120px">项</th><th style="width:210px">选定</th><th style="width:190px">备选</th><th>否决理由</th></tr>
+    <tr>
+      <td>样式</td><td><code>Tailwind CSS</code></td><td>CSS Modules / styled-components</td>
+      <td>与 shadcn/ui 是配套生态；且运行时无样式计算开销</td>
+    </tr>
+    <tr>
+      <td>组件库</td><td><code>shadcn/ui</code></td><td>Ant Design / MUI</td>
+      <td><strong>关键差别是"复制进仓库"而非"装成依赖"。</strong>Ant Design 这类组件库改一个组件样式要跟它的 CSS 优先级搏斗；shadcn 的组件就是你自己的代码，随便改。而且许可干净（MIT）</td>
+    </tr>
+    <tr>
+      <td>图标</td><td><code>lucide-react</code></td><td>Font Awesome / iconfont</td>
+      <td>shadcn/ui 默认搭配；树摇友好，不会打包整个图标集</td>
+    </tr>
+    <tr>
+      <td>轻提示</td><td><code>sonner</code></td><td>react-hot-toast</td>
+      <td>sonner 与 shadcn 主题变量联动更顺</td>
+    </tr>
+  </table>
+
+  <h3>状态管理</h3>
+  <div class="card warn">
+    <h4>分两层，不要混用</h4>
+    <p><strong>服务端状态</strong>（接口数据）用 <code>TanStack Query</code>——缓存、失效、重试、乐观更新它全包了。<strong>客户端状态</strong>（当前课程上下文、拖拽中的临时状态、面板开合）用 <code>Zustand</code>。<br>最常见的错误是把接口数据也塞进 Zustand，然后手写缓存失效逻辑——那是重造一个更差的 Query。这条分界线一开始就划清，后面能省大量时间。</p>
+  </div>
+
+  <h3>三种专业图形（各有专用库，不要自己画）</h3>
+  <table>
+    <tr><th style="width:130px">用途</th><th style="width:180px">选定</th><th style="width:180px">备选</th><th>否决理由</th></tr>
+    <tr>
+      <td>任务 DAG 可视化与编辑</td>
+      <td><code>React Flow</code></td><td>D3 手绘 / Mermaid 渲染</td>
+      <td><strong>D3 只提供绘图原语，节点拖拽、连线、缩放、框选、小地图全要自己实现</strong>——这是几百行的坑。Mermaid 只能渲染静态图，不能编辑。React Flow 专门解决这类需求，且 MIT</td>
+    </tr>
+    <tr>
+      <td>甘特图</td>
+      <td><code>frappe-gantt</code></td><td>gantt-task-react / DHTMLX</td>
+      <td>需求只是"时间轴 + 依赖箭头 + 关键路径高亮"，frappe-gantt 是最轻的够用方案。DHTMLX 商业授权，gantt-task-react 维护不够活跃</td>
+    </tr>
+    <tr>
+      <td>班级社交关系图</td>
+      <td><code>Cytoscape.js</code></td><td>vis-network / react-force-graph</td>
+      <td>三者都能做，选 Cytoscape 是因为它的布局算法与交互（框选、悬停高亮邻居、导出图片）最成熟。<span class="mut">vis-network 是 gruepr 的选择，但我们不想引入它的 AGPL/GPL 依赖链</span></td>
+    </tr>
+    <tr>
+      <td>统计图表</td>
+      <td><code>Recharts</code></td><td>ECharts / Chart.js</td>
+      <td>需要雷达图（四维得分）、条形图（贡献构成）、折线图（健康度趋势）。ECharts 功能更全但体积大且配置冗长；Recharts 的 React 组件式 API 与项目风格一致</td>
+    </tr>
+    <tr>
+      <td>数据表格</td>
+      <td><code>TanStack Table</code></td><td>AG Grid</td>
+      <td>名单管理、贡献矩阵需要排序/筛选/分页/行内编辑。AG Grid 的企业版才有的功能我们不需要，社区版反而限制多</td>
+    </tr>
+  </table>
+
+  <h3>表单与校验</h3>
+  <table>
+    <tr><th style="width:120px">项</th><th style="width:210px">选定</th><th style="width:190px">备选</th><th>否决理由</th></tr>
+    <tr>
+      <td>表单</td><td><code>react-hook-form</code></td><td>受控组件手写 / Formik</td>
+      <td>技能卡、约束设置、契约编辑、互评表单都是多字段表单。手写受控状态会写出大量样板；Formik 性能与维护活跃度均不如前者</td>
+    </tr>
+    <tr>
+      <td>校验</td><td><code>zod</code></td><td>yup / joi</td>
+      <td><strong>关键优势是 TypeScript 类型推导</strong>——定义一次 schema 就同时得到运行时校验与静态类型，前后端共用同一份定义</td>
+    </tr>
+  </table>
+
+  <h3>拖拽（分组工作台的核心）</h3>
+  <table>
+    <tr><th style="width:120px">项</th><th style="width:210px">选定</th><th style="width:190px">备选</th><th>否决理由</th></tr>
+    <tr>
+      <td>拖拽库</td><td><code>dnd-kit</code></td><td>react-beautiful-dnd</td>
+      <td><strong>react-beautiful-dnd 已停止维护</strong>（作者转向商业产品），且官方仅支持 React 18 以下。dnd-kit 活跃维护、支持 React 19、<span class="hl">内置键盘拖拽与屏幕阅读器支持</span>——后者正好满足规格书里"必须提供键盘替代路径"的无障碍要求</td>
+    </tr>
+  </table>
+
+  <div class="card ok">
+    <h4>一个提前定好的实现约定</h4>
+    <p>分组工作台的拖动<strong>不在拖动过程中请求接口</strong>，而是：拖动中本地做初步校验并即时反馈 → 松手后调用一次 <code>preview-move</code> → 拿到服务端权威结果后再更新面板。<br>这样既保证操作跟手，又保证得分数据以服务端为准。<span class="hl">本地校验只用于给即时反馈，不作为最终判定。</span></p>
+  </div>
+</section>
+
+<section id="t3">
+  <div class="secnum">T3</div>
+  <h2>后端选型（应用层）</h2>
+  <p class="lead">应用层寄生在 Next.js 里，不额外起服务。这是"只有两个运行时"原则的直接体现。</p>
+
+  <table>
+    <tr><th style="width:130px">项</th><th style="width:230px">选定</th><th style="width:180px">备选</th><th>否决理由</th></tr>
+    <tr>
+      <td>接口层</td><td>Next.js Route Handlers<br>+ Server Actions</td>
+      <td>独立的 NestJS / Express 服务</td>
+      <td>独立后端要多维护一个进程、一套鉴权中间件、一份类型定义，还要处理跨域。<strong>在只有两个运行时的约束下，这是纯粹的额外成本</strong>。Server Actions 处理表单提交尤其省代码</td>
+    </tr>
+    <tr>
+      <td>ORM</td><td><code>Drizzle ORM</code></td>
+      <td>Prisma</td>
+      <td>基座已集成 Drizzle。<strong>换 Prisma 意味着重写 schema、重做迁移历史、改掉所有查询</strong>。此外 Drizzle 更接近 SQL，写复杂聚合（贡献矩阵的多人统计）时更灵活，也不会有 Prisma 客户端那层运行时开销</td>
+    </tr>
+    <tr>
+      <td>迁移</td><td><code>Drizzle Kit</code></td>
+      <td>手写 SQL 迁移脚本</td>
+      <td>47 张表的演进，手写迁移必然会漏字段、漏索引。<span class="hl">迁移统一由 Drizzle Kit 管理，Python 侧不参与建表</span>——避免两套迁移互相打架</td>
+    </tr>
+    <tr>
+      <td>鉴权</td><td><code>jose</code> + HttpOnly Cookie</td><td>NextAuth / Auth.js</td>
+      <td>基座已自带轻量会话方案。<strong>更重要的原因是我们需要完全控制角色逻辑</strong>——三种角色、且角色是"课程级"而非全局的（见规格书 S1 的警示），NextAuth 的模型不容易塞进去。自己写反而更简单可控</td>
+    </tr>
+    <tr>
+      <td>密码哈希</td><td>框架内置的 bcrypt/argon2</td><td>自己实现</td>
+      <td>这条不需要讨论。<strong>任何情况都不要自己实现密码学</strong></td>
+    </tr>
+    <tr>
+      <td>权限</td><td>自建中间件（课程归属 + 小组归属双校验）</td><td>CASL / Casbin</td>
+      <td>权限模型很简单（四角色 × 资源归属），两张表的联合查询就能判断。引入权限框架反而要额外学一套 DSL</td>
+    </tr>
+    <tr>
+      <td>后台任务</td><td><code>APScheduler</code>（放在算法服务里）</td><td>BullMQ + Redis</td>
+      <td><strong>为一个 300 人的课程引入 Redis 是过度设计。</strong>需要定时的只有三件事：健康度快照、失联检测、重规划触发判定，都在 Python 侧，用 APScheduler 就够了。分组求解 ≤10s，用数据库状态表 <code>grouping_runs.status</code> 就能表达，不需要队列</td>
+    </tr>
+    <tr>
+      <td>接口文档</td><td>OpenAPI（FastAPI 自动生成）+ 手写 REST 说明</td><td>GraphQL</td>
+      <td>前端有 52 个页面但接口形态高度规整（列表/详情/动作）。<strong>GraphQL 的价值在于"前端自由组合字段"，而我们的字段组合在开发期就确定了</strong>，引入它只会增加缓存与鉴权的复杂度</td>
+    </tr>
+    <tr>
+      <td>日志</td><td><code>pino</code>（结构化 JSON）</td><td>console.log</td>
+      <td>需要按请求追踪（尤其是 LLM 调用链路），结构化日志才可检索</td>
+    </tr>
+  </table>
+</section>
+
+<section id="t4">
+  <div class="secnum">T4</div>
+  <h2>算法服务选型</h2>
+  <p class="lead">这是整个产品技术含量最高的部分，也是唯一必须用 Python 的理由。约 10 人天，其中 AI 层已完成 4 人天的量。</p>
+
+  <table>
+    <tr><th style="width:130px">项</th><th style="width:230px">选定</th><th style="width:180px">备选</th><th>否决理由</th></tr>
+    <tr>
+      <td>Web 框架</td><td><code>FastAPI</code> + <code>uvicorn</code></td><td>Flask / Django REST</td>
+      <td>FastAPI 自带 pydantic 校验与 OpenAPI 文档，异步原生。<strong>而 pydantic 恰好是 LLM 结构化输出解析的必需依赖</strong>——选它等于顺手拿到了校验层</td>
+    </tr>
+    <tr>
+      <td><strong>约束求解</strong></td><td><code>OR-Tools</code> CP-SAT</td><td>手写遗传算法 / PuLP / 模拟退火</td>
+      <td><strong>这是最值得花时间解释的一个选择。</strong>遗传算法要自己调种群大小、交叉率、变异率、迭代次数，且<strong>无法保证满足硬约束</strong>——可能跑出"两人被分到同一组"的非法解。CP-SAT 是声明式建模：把约束写出来，它保证解合法，还能给出可证明的最优或近优解，自带时间上限。100 行以内能跑通，手写 GA 至少 400 行且效果更差</td>
+    </tr>
+    <tr>
+      <td>图算法</td><td><code>networkx</code></td><td>手写 DFS/BFS</td>
+      <td>关键路径、环检测、连通分量本身不难，但 networkx 提供现成实现且经过充分测试。<span class="mut">不过要注意：<code>templates.py</code> 里的关键路径目前是手写的（约 20 行），因为它是"最长路径"而非 networkx 的默认最短路径，手写反而更直观。两者保留，按场景选用</span></td>
+    </tr>
+    <tr>
+      <td>文本相似度</td><td><code>rapidfuzz</code> + <code>jieba</code></td><td>difflib（标准库）</td>
+      <td>冲突检测的前置筛选用。difflib 零依赖但速度慢、且没有针对中文的优化。<strong>这一步的性能直接决定了 LLM 的调用量</strong>，值得引入依赖。jieba 用于中文分词后再算相似度，比纯字符级准确</td>
+    </tr>
+    <tr>
+      <td>文档解析</td><td><code>python-docx</code> + <code>pdfplumber</code></td><td><code>pymupdf</code></td>
+      <td><strong>许可驱动的决策。</strong>pymupdf 是 <span class="pill r">AGPL-3.0</span>，速度快、中文提取效果好，但 AGPL 对未来上线是实质限制。pdfplumber（MIT，基于 pdfminer.six）速度慢一些但完全够用。<br><span class="hl">另一个更实用的建议：优先引导教师上传 DOCX 或直接粘贴文本。教师布置作业绝大多数用 Word，python-docx 处理中文没有任何问题，完全绕开 PDF 的坑</span></td>
+    </tr>
+    <tr>
+      <td>定时任务</td><td><code>APScheduler</code></td><td>系统 cron + 脚本</td>
+      <td>APScheduler 与 FastAPI 同进程，能直接复用数据库连接与配置，不用额外维护 crontab</td>
+    </tr>
+    <tr>
+      <td>数据库访问</td><td><code>psycopg</code> 3 + 手写 SQL</td><td>SQLAlchemy ORM / 第二套 Drizzle</td>
+      <td>算法服务只做两件事：<strong>读画像与任务数据、写计算结果表</strong>。查询数量少且固定，手写 SQL 最直观。<strong>引入第二套 ORM 意味着同一张表有两处定义，早晚会不同步</strong></td>
+    </tr>
+    <tr>
+      <td>数值计算</td><td><code>numpy</code></td><td>纯 Python</td>
+      <td>贡献归因涉及矩阵式的多人多指标计算，numpy 写起来更短也更不容易错</td>
+    </tr>
+    <tr>
+      <td>测试</td><td><code>pytest</code> + <code>pytest-cov</code></td><td>unittest</td>
+      <td>覆盖率要求 ≥ 80%，pytest 的 fixture 机制对"构造 30 人画像数据"这类场景更省事</td>
+    </tr>
+    <tr>
+      <td>依赖管理</td><td><code>uv</code></td><td>venv + pip / Poetry</td>
+      <td>uv 的解析与安装速度快一个数量级，且同时管理虚拟环境与锁文件。<span class="mut">若团队更习惯传统方式，venv + pip + requirements.txt 也完全可以，不影响架构（<code>gongjiang-ai/</code> 目前就是这样）</span></td>
+    </tr>
+  </table>
+
+  <div class="card acc">
+    <h4>算法服务的接口约定</h4>
+    <pre><span class="c"># 只暴露 9 个内部接口，全部 POST + JSON，不做 RESTful 语义</span>
+POST /internal/grouping/solve          触发求解，返回三套方案
+POST /internal/grouping/score          <span class="c">给定方案打分（preview-move 用，不重新求解）</span>
+POST /internal/grouping/validate       硬约束校验
+POST /internal/graph/critical-path     关键路径
+POST /internal/graph/impact            波及分析
+POST /internal/health/compute          健康度三维
+POST /internal/attribution/compute     贡献归因
+POST /internal/ai/decompose            <span class="c">LLM 调用点 1</span>
+POST /internal/ai/conflict             <span class="c">LLM 调用点 2</span>
+
+<span class="c"># 隔离要求：不暴露公网 · 内网调用 · 共享密钥头 · 来源 IP 白名单</span></pre>
+  </div>
+</section>
+
+<section id="t5">
+  <div class="secnum">T5</div>
+  <h2>数据库与存储</h2>
+
+  <table>
+    <tr><th style="width:130px">项</th><th style="width:230px">选定</th><th style="width:180px">备选</th><th>否决理由</th></tr>
+    <tr>
+      <td>主数据库</td><td><code>PostgreSQL</code> 16</td><td>MySQL / SQLite / MongoDB</td>
+      <td>47 张表里有大量 JSONB 字段（画像、得分、贡献构成、AI 原始响应），<strong>PostgreSQL 的 JSONB 可索引可查询，MySQL 的 JSON 型远不如它成熟</strong>。SQLite 不支持并发写，不适合多用户；MongoDB 处理我们这种强关系型数据（课程→小组→任务→依赖→段落）会很别扭</td>
+    </tr>
+    <tr>
+      <td>向量扩展</td><td><strong>不需要</strong></td><td>pgvector</td>
+      <td><span class="hl">这是本产品一个重要的简化点。</span>我们不做检索增强，因为 AI 的两个调用点都是"给定一段文本做理解"，而不是"从大量文档里找相关片段"。画像数据是结构化的，直接查询即可。<strong>不引入向量库，少一个组件、少一层不确定性</strong></td>
+    </tr>
+    <tr>
+      <td>缓存层</td><td><strong>不需要</strong></td><td>Redis</td>
+      <td>设计容量 500 并发在线、单课程 300 人。<strong>PostgreSQL 完全扛得住，且我们的查询都有索引</strong>。需要缓存的地方（如班级画像）用 Next.js 的请求级缓存即可。为了"以后可能要"引入 Redis 是最典型的过度设计</td>
+    </tr>
+    <tr>
+      <td>对象存储</td><td>本地磁盘目录<br><code>./storage/uploads</code></td><td>MinIO / 阿里云 OSS / S3</td>
+      <td>学习项目、不对外开放、单机运行。<strong>自建 MinIO 要额外维护一个服务与一套 SDK 对接</strong>。本地磁盘加一个明确的目录结构就够了。代码里把存储抽象成一个接口，将来要换只改一个实现类</td>
+    </tr>
+    <tr>
+      <td>全文检索</td><td>PostgreSQL 内置全文索引</td><td>Elasticsearch</td>
+      <td>需要搜索的只有任务标题、契约术语、通知。ES 是另一个进程、另一套数据同步逻辑。<strong>PostgreSQL 的 <code>tsvector</code> 加中文分词插件完全够用，甚至先只做 <code>ILIKE</code> 也够</strong></td>
+    </tr>
+    <tr>
+      <td>备份策略</td><td><code>pg_dump</code> 每日 + 演示前手动快照</td><td>流式复制 / PITR</td>
+      <td>学习项目不需要高可用。但<strong>演示前必须手动快照</strong>——演示数据是精心构造的，弄丢了要重造一遍</td>
+    </tr>
+  </table>
+
+  <div class="card warn">
+    <h4>本地磁盘存储的一个必做约束</h4>
+    <p>文件上传必须做三件事：<strong>① 真实类型检测</strong>（读文件头魔数，不能只看扩展名）；<strong>② 限制大小 ≤ 20MB</strong>；<strong>③ 存储路径不使用用户提供的文件名</strong>，而是用 <code>uuid</code> 加原扩展名，并把原名存在数据库里。<span class="hl">第三条是防路径穿越的最低成本做法</span>。</p>
+  </div>
+</section>
+
+<section id="t6">
+  <div class="secnum">T6</div>
+  <h2>AI 与模型</h2>
+  <p class="lead">规格书 S6 已定「只用大模型做两件事」。这里只回答一件事：用哪个模型、怎么调。</p>
+
+  <h3>模型选择</h3>
+  <table>
+    <tr><th style="width:130px">项</th><th style="width:230px">选定</th><th style="width:180px">备选</th><th>否决理由</th></tr>
+    <tr>
+      <td>主力模型</td><td><code>DeepSeek</code><br>（<code>deepseek-chat</code>）</td><td>GPT-4o-mini / Qwen / GLM</td>
+      <td>三个理由：<strong>① 中文理解强</strong>——我们的输入是中文作业要求，输出是中文任务名与契约术语；<strong>② 便宜</strong>——一学期 100 次调用成本可忽略；<strong>③ 已有可用 key</strong>。GPT-4o-mini 中文略弱且需外网；Qwen / GLM 也很好，可作为备用</td>
+    </tr>
+    <tr>
+      <td>调用方式</td><td><code>openai</code> SDK<br>+ <code>response_format: json_object</code></td><td>各家原生 SDK / LangChain</td>
+      <td>OpenAI 兼容协议已经事实上成为标准。<strong>用 openai SDK 意味着换服务商只改一个 <code>base_url</code></strong>，这是最低的锁定成本。LangChain 见 T10</td>
+    </tr>
+    <tr>
+      <td>参数</td><td><code>temperature = 0.2</code><br><code>timeout = 90s</code></td><td>默认值 / 高温度</td>
+      <td>拆解类任务要求结构稳定，温度必须压低。<strong>高温度会让同一个作业要求两次拆出完全不同的任务图</strong>，这在教学场景是不可接受的</td>
+    </tr>
+    <tr>
+      <td>结构化输出</td><td>JSON 模式 + pydantic 二次校验</td><td>纯提示词约束格式</td>
+      <td>只靠提示词要求"输出 JSON"，总有概率返回带解释文字或 Markdown 包裹的结果。JSON 模式 + <code>model_validate_json</code> 双重保险，<code>llm.py</code> 里还做了剥围栏的兜底</td>
+    </tr>
+    <tr>
+      <td>重试策略</td><td>失败重试 1 次 → 失败则降级</td><td>指数退避多次重试</td>
+      <td>这是"辅助功能"而非"核心链路"。<strong>重试 3 次让用户等 4 分钟，不如第 2 次失败就告诉他"AI 暂不可用，可手工创建"</strong>。用户的时间比模型的成功率更重要</td>
+    </tr>
+  </table>
+
+  <div class="card dang">
+    <h4>关于本地部署大模型：明确不建议</h4>
+    <p>本机有 RTX 4070 Laptop（8GB 显存），确实能跑本地模型——<strong>但这个项目不该跑</strong>。四个理由：</p>
+    <ul>
+      <li><strong>质量差距明显。</strong>8GB 显存只能跑 7B 级别的量化模型，做"把中文作业要求拆成带依赖的任务图"这类复杂结构化任务，输出质量与 API 模型差距很大，而任务拆解恰恰是产品的核心演示点。</li>
+      <li><strong>成本不成立。</strong>一学期约 100 次调用，总 token 量在 10 万级，API 成本可以忽略。省下的钱远小于搭一套 Ollama + 模型管理的时间。</li>
+      <li><strong>增加部署复杂度。</strong>本来两个运行时（Node + Python）就够，本地推理要再加 Ollama 服务、模型文件管理、显存占用与前端开发的资源竞争。</li>
+      <li><strong>演示风险。</strong>答辩现场如果本地服务起不来或显存被占，演示直接卡住。API 调用的失败概率低得多，且有降级路径。</li>
+    </ul>
+    <p><strong>结论：显卡留着跑别的，AI 部分直接调 API。</strong>这个判断在答辩时也可以讲——它体现的是"按需选型"而不是"有资源就用"。</p>
+  </div>
+
+  <h3>成本复核</h3>
+  <table>
+    <tr><th style="width:190px">项目</th><th>估算</th></tr>
+    <tr><td>单次作业拆解</td><td>输入 3–5k tokens，输出 2–3k tokens</td></tr>
+    <tr><td>单次冲突归因</td><td>输入 2–3k tokens，输出 0.5k tokens</td></tr>
+    <tr><td>单课程一学期总量</td><td>8–16 次拆解 + ≤ 20 次冲突归因 ≈ 60–120k tokens</td></tr>
+    <tr><td><strong>结论</strong></td><td><strong>成本可忽略不计。</strong>产品的主要资源消耗在数据库与前端渲染，不在大模型。这一点可以在答辩时用来回应"AI 产品商业化可行性"的追问</td></tr>
+    <tr><td>成本控制</td><td><code>ai_call_logs</code> 表记录每次调用的 token、延迟、状态；课程设置中可设月度预算上限，超限自动关闭 AI 功能并提示</td></tr>
+  </table>
+</section>
+
+<section id="t7">
+  <div class="secnum">T7</div>
+  <h2>移动端载体</h2>
+  <p class="lead">这一节包含一个容易踩的坑，能帮你省掉几天无用功。</p>
+
+  <table>
+    <tr><th style="width:140px">项</th><th style="width:220px">选定</th><th style="width:190px">备选</th><th>否决理由</th></tr>
+    <tr>
+      <td><strong>队员端载体</strong></td><td><strong>响应式 H5</strong><br>（Next.js 同一套代码，移动优先断点）</td><td>微信小程序（原生 / Taro / uni-app）</td>
+      <td><strong>见下方警示卡。</strong>核心障碍不是技术，是资质</td>
+    </tr>
+    <tr>
+      <td>多端方案</td><td>暂不引入</td><td><code>Taro</code> / <code>uni-app</code></td>
+      <td>Taro 能把 React 代码编译到小程序，听起来很合适。<strong>但只要不做小程序，它就只是纯粹的构建层复杂度</strong>。等到确实需要小程序时再引入也不迟</td>
+    </tr>
+    <tr>
+      <td>移动适配</td><td>Tailwind 断点 + 移动优先布局</td><td>单独的移动端页面</td>
+      <td>队员端 12 个页面与教师端有部分重叠（任务详情、契约查看）。<strong>同一套组件用响应式适配，比维护两份页面省一半工作量</strong></td>
+    </tr>
+    <tr>
+      <td>弱网处理</td><td>TanStack Query 缓存 + 骨架屏</td><td>Service Worker 离线缓存</td>
+      <td>只需"弱网时任务列表可读、写操作排队重试"。Service Worker 的缓存失效策略复杂度远超收益</td>
+    </tr>
+  </table>
+
+  <div class="card dang">
+    <h4>为什么队员端不要一开始就做微信小程序</h4>
+    <p><strong>小程序发布需要企业主体资质。</strong>个人主体小程序在教育类目下有功能限制（无法使用部分需要资质的接口），且正式发布需要主体认证与类目审核。一个用于学习和参赛的项目，卡在资质环节上会白耗很多时间。</p>
+    <p>更关键的是：<strong>即使注册成功，你也无法把小程序分享给全班同学使用</strong>（需要审核通过并发布），而 H5 只要内网可达就能用。</p>
+    <p><strong>建议路径：</strong>① 先做响应式 H5，用手机浏览器即可完整走通队员端流程；② 如果答辩现场需要"扫一扫"的演示效果，用一个二维码指向内网 H5 地址即可；③ 只有在明确要对外上线时才引入小程序。<span class="hl">产品形态不受影响，省下的时间可以投入到分组工作台和贡献账本这两个真正的加分点上。</span></p>
+  </div>
+</section>
+
+<section id="t8">
+  <div class="secnum">T8</div>
+  <h2>基础设施与部署</h2>
+
+  <h3>容器编排</h3>
+  <table>
+    <tr><th style="width:130px">项</th><th style="width:230px">选定</th><th style="width:180px">备选</th><th>否决理由</th></tr>
+    <tr>
+      <td>编排方式</td><td><code>Docker Compose</code><br>三个服务</td><td>K8s / Swarm / 直接跑进程</td>
+      <td>K8s 与 Swarm 对单机三服务是纯粹的负担。<strong>直接跑进程虽然可行，但 PostgreSQL 版本、Python 依赖、Node 版本三者容易互相污染</strong>，容器化能一次性解决环境一致性</td>
+    </tr>
+    <tr>
+      <td>服务划分</td><td><code>db</code> · <code>web</code> · <code>algo</code></td><td>把算法功能并入 web</td>
+      <td>语言不同（Node vs Python），无法合并。<span class="mut">若嫌麻烦，开发期可只容器化 db，web 与 algo 直接在本机跑——这是推荐的实际做法</span></td>
+    </tr>
+    <tr>
+      <td>反向代理</td><td><code>Caddy</code></td><td>Nginx</td>
+      <td>Caddy 两行配置自动申请与续期 HTTPS，配置文件比 nginx 短一个数量级。<span class="mut">若内网纯 HTTP 访问，甚至可以不装反代，直连 <code>localhost:3000</code></span></td>
+    </tr>
+    <tr>
+      <td>CI/CD</td><td>暂不引入<br>（本地 <code>git pull</code> + 脚本部署）</td><td>GitHub Actions</td>
+      <td>学习项目、单人演示环境，配流水线的时间超过收益。<strong>但保留一条底线：测试必须在本地跑通才能提交</strong></td>
+    </tr>
+  </table>
+
+  <h3>运行环境</h3>
+  <table>
+    <tr><th style="width:130px">项</th><th>方案</th></tr>
+    <tr><td><strong>开发环境</strong></td><td>Windows 本机：Node 22 LTS + Python 3.13 + Docker Desktop（只跑 PostgreSQL）。<span class="hl">推荐做法：开发期只容器化数据库，web 与 algo 直接本机运行，改代码即时生效</span></td></tr>
+    <tr><td><strong>演示环境</strong></td><td><strong>首选本机。</strong>答辩现场或录屏演示，用本机跑全部服务最可控，不依赖网络与服务器状态</td></tr>
+    <tr><td><strong>远程环境（可选）</strong></td><td>自有京东云 Ubuntu 24.04 服务器。<strong>但必须先解决端口冲突</strong>——见下方警示</td></tr>
+  </table>
+
+  <div class="card warn">
+    <h4>若要用自有服务器，先处理端口冲突</h4>
+    <p>该服务器上已运行 Docker 化的 MySQL / PHP / nginx 栈，承载两个历史 H5 游戏项目。已知占用：<code>:80</code>（nephrolens-web）、<code>:3306</code>（talk-mysql 容器，数据卷 talk_mysql_data）。</p>
+    <p><strong>建议的自用端口分配（避开全部现有占用）：</strong></p>
+    <pre>web        8080   <span class="c"># Next.js，避免占用 80</span>
+algo       8000   <span class="c"># FastAPI，仅内网监听 127.0.0.1</span>
+postgres   5433   <span class="c"># 避免与 talk-mysql 的 3306 冲突</span>
+<span class="c"># 另建议：为共桨单独建一个 compose project 名与数据卷，避免误删既有容器与卷</span></pre>
+    <p class="note">若只做学习与演示，<strong>更省事的做法是不动服务器</strong>——本机足够。服务器上的生产环境有既有业务，改动风险与收益不成比例。</p>
+  </div>
+
+  <h3>环境变量约定</h3>
+  <pre><span class="c"># web（Next.js）</span>
+DATABASE_URL=postgresql://user:pass@localhost:5433/gongjiang
+AUTH_SECRET=&lt;随机 32 字节&gt;
+ALGO_SERVICE_URL=http://127.0.0.1:8000
+ALGO_SHARED_SECRET=&lt;随机字符串&gt;
+
+<span class="c"># algo（FastAPI）</span>
+DATABASE_URL=postgresql://user:pass@localhost:5433/gongjiang
+ALGO_SHARED_SECRET=&lt;与 web 一致&gt;
+LLM_API_KEY=sk-xxx
+LLM_BASE_URL=https://api.deepseek.com
+LLM_MODEL=deepseek-chat
+LLM_TIMEOUT=90
+LLM_TEMPERATURE=0.2
+STORAGE_DIR=./storage/uploads</pre>
+  <p class="note">全部通过 <code>.env</code> 注入，仓库中只保留 <code>.env.example</code>。<strong>任何密钥不得硬编码，也不得提交到 git。</strong></p>
+</section>
+
+<section id="t9">
+  <div class="secnum">T9</div>
+  <h2>开发工具链</h2>
+
+  <table>
+    <tr><th style="width:140px">项</th><th style="width:250px">选定</th><th>说明与否决理由</th></tr>
+    <tr><td>包管理（前端）</td><td><code>pnpm</code></td><td class="mut">团队既有技术栈；硬链接节省磁盘；<code>pnpm-lock.yaml</code> 保证依赖版本一致</td></tr>
+    <tr><td>包管理（Python）</td><td><code>uv</code></td><td class="mut">解析与安装速度快一个数量级，同时管理虚拟环境。<strong>备选 venv + pip + requirements.txt 完全可用</strong>（AI 层目前就是这种形式）</td></tr>
+    <tr><td>前端检查</td><td><code>ESLint</code> + <code>Prettier</code></td><td class="mut">Next.js 自带 ESLint 配置，开箱可用；Prettier 统一格式，避免无意义 diff</td></tr>
+    <tr><td>Python 检查</td><td><code>ruff</code> + <code>mypy</code></td><td class="mut">ruff 同时做 lint 与 format，替代 flake8 + isort + black 三件套，速度快两个数量级。<strong>团队既有项目已验证</strong></td></tr>
+    <tr><td>提交前钩子</td><td><code>husky</code> + <code>lint-staged</code></td><td class="mut">只对暂存文件跑检查，保证提交的代码格式一致。<span class="mut">若嫌麻烦可省，但引入成本很低</span></td></tr>
+    <tr><td>前端单元测试</td><td><code>Vitest</code></td><td class="mut">与 Vite/Next 生态兼容，配置比 Jest 简单。<strong>只测纯逻辑与工具函数，不追求组件快照覆盖率</strong></td></tr>
+    <tr><td>Python 测试</td><td><code>pytest</code> + <code>pytest-cov</code></td><td class="mut"><strong>算法服务要求覆盖率 ≥ 80%</strong>——CP-SAT 求解、图算法、归因公式、模板输出必须全测，这是产品质量的底线</td></tr>
+    <tr><td>端到端测试</td><td>暂不引入<br>（备选 <code>Playwright</code>）</td><td class="mut">E2E 维护成本高、脆弱。<strong>用一份「六步演示脚本」的人工验收清单替代</strong>（见规格书 S9.7），效果接近成本更低</td></tr>
+    <tr><td>接口调试</td><td><code>Bruno</code> 或 <code>curl</code></td><td class="mut">Bruno 的请求集合可提交到 git（不像 Postman 需要云账号）。<span class="mut">FastAPI 自带的 <code>/docs</code> 也能满足大部分调试需求</span></td></tr>
+    <tr><td>编辑器配置</td><td>统一 <code>.vscode/settings.json</code></td><td class="mut">保存时自动格式化、指定 Python 解释器路径。<strong>避免因缩进与导入顺序产生无意义冲突</strong></td></tr>
+    <tr><td>黄金数据集</td><td>自建固定测试数据</td><td class="mut">构造 3 组固定输入（30 人画像 + 作业要求），断言分组得分与贡献区间的稳定输出。<span class="hl">这是防止算法在迭代中悄悄跑偏的唯一手段</span></td></tr>
+  </table>
+</section>
+
+<section id="t10">
+  <div class="secnum">T10</div>
+  <h2>明确不用的技术（12 条）</h2>
+  <p class="lead">这一节和上面的选型同样重要。<strong>「不做什么」决定了项目能不能按期完成。</strong>每一条都给出不适用的具体理由，而不是笼统的"没必要"。</p>
+
+  <table>
+    <tr><th style="width:56px">#</th><th style="width:200px">不用</th><th>具体理由</th></tr>
+    <tr>
+      <td><span class="pill r">01</span></td><td><code>LangChain</code> / <code>LangGraph</code></td>
+      <td>全项目只有 2 个 LLM 调用点，都是"单轮请求 + 结构化输出"。<strong>框架解决的是多轮编排、链式调用、状态管理、工具选择——这些问题我们一个都没有。</strong>引入它意味着多一层抽象、多一份版本升级风险、多一个调试盲区，换来的是"代码看起来更规范"。<span class="hl">直接用 SDK 的代码是 60 行，包一层框架变成 200 行加一份文档</span></td>
+    </tr>
+    <tr>
+      <td><span class="pill r">02</span></td><td>向量数据库 / RAG</td>
+      <td>两个调用点的输入都是"一段确定的文本"（作业要求原文、两段产出对比），不需要从知识库里检索。画像数据是结构化的，直接查表。<strong>RAG 解决的是"上下文放不下"和"需要外部知识"，我们两个问题都不存在</strong></td>
+    </tr>
+    <tr>
+      <td><span class="pill r">03</span></td><td>多智能体（Agent）框架</td>
+      <td>产品里没有"让 AI 自主决定下一步做什么"的场景。所有流程都是确定性的：上传 → 拆解 → 展示 → 人工确认。<strong>让 AI 自主规划只会引入不可预测性，而教学场景最不需要的就是不可预测</strong>。（值得一提的是：共桨本身的功能是"给人类小组装一套调度层"，这和 Agent 框架解决的问题方向相反）</td>
+    </tr>
+    <tr>
+      <td><span class="pill r">04</span></td><td><code>Redis</code></td>
+      <td>设计容量 500 并发在线。PostgreSQL 加索引完全扛得住，所有查询都有明确的索引设计。<strong>缓存只用于"读多写少且计算昂贵"的场景</strong>，我们最贵的一次计算（分组求解）本身只有 10 秒且有状态表跟踪，不需要缓存</td>
+    </tr>
+    <tr>
+      <td><span class="pill r">05</span></td><td>消息队列（Kafka / RabbitMQ / BullMQ）</td>
+      <td>唯一的异步需求是"分组求解不等 10 秒"，用一张 <code>grouping_runs.status</code> 表 + 前端轮询就能解决。<strong>为一张状态表引入一个中间件，是把简单问题复杂化的典型</strong></td>
+    </tr>
+    <tr>
+      <td><span class="pill r">06</span></td><td>微服务架构</td>
+      <td>两个服务（web + algo）已经是按"语言边界"拆分的结果，这是必要的最小拆分。<strong>再往下拆（把认证、分组、归因拆成独立服务）只会带来分布式事务、链路追踪、跨服务鉴权三类新问题</strong>，而收益是零</td>
+    </tr>
+    <tr>
+      <td><span class="pill r">07</span></td><td>GraphQL</td>
+      <td>价值在于"前端自由组合字段"，但我们的字段组合在开发期就固定了。<strong>引入它要额外处理查询复杂度限制、缓存、鉴权粒度三个问题</strong>，换来的灵活我们用不上</td>
+    </tr>
+    <tr>
+      <td><span class="pill r">08</span></td><td><code>Prisma</code>（若基座用 Drizzle）</td>
+      <td>基座已集成 Drizzle。<strong>换 ORM 意味着重写 schema、重建迁移历史、改掉全部查询代码</strong>，是一次纯粹的返工，且会失去跟随基座更新的能力</td>
+    </tr>
+    <tr>
+      <td><span class="pill r">09</span></td><td><code>NextAuth</code> / <code>Auth.js</code></td>
+      <td>基座已有轻量会话方案。<strong>更关键的是我们的角色是"课程级"的（同一学生不同课不同角色），NextAuth 的会话模型不容易表达这种结构</strong>，自己写反而简单</td>
+    </tr>
+    <tr>
+      <td><span class="pill r">10</span></td><td>本地部署大模型（Ollama / vLLM）</td>
+      <td>详见 <a class="inl" href="#t6">T6</a>。一句话：<strong>8GB 显存只能跑 7B 量化模型，做复杂结构化任务的质量差距明显，而 API 成本可忽略；同时会给答辩现场引入"本地服务起不来"的风险</strong></td>
+    </tr>
+    <tr>
+      <td><span class="pill r">11</span></td><td>K8s / Docker Swarm</td>
+      <td>三个容器跑在一台机器上。<strong>K8s 的学习成本与运维复杂度，对单机三服务是纯负债</strong>。Docker Compose 一个文件搞定</td>
+    </tr>
+    <tr>
+      <td><span class="pill r">12</span></td><td>Electron / 原生 App</td>
+      <td>教师端是桌面宽屏，Web 就是最合适的载体；队员端用响应式 H5。<strong>打包成 App 只是给用户增加一次下载安装的摩擦，不解决任何实际问题</strong></td>
+    </tr>
+  </table>
+
+  <div class="card ok">
+    <h4>这 12 条怎么在答辩时转化成优势</h4>
+    <p>如果评委问"技术上最有挑战的地方是什么"，一个有力的回答是：<strong>「最难的不是加什么，是不加什么。」</strong>然后举 PDF 解析这个例子——我们本来用 pymupdf 效果更好，但它是 AGPL，所以换成 pdfplumber；再举分组算法的例子——没有直接抄现成的开源实现，而是用 OR-Tools 重新建模。<span class="hl">主动划边界的团队，比堆技术的团队更可信。</span></p>
+  </div>
+</section>
+
+<section id="t11">
+  <div class="secnum">T11</div>
+  <h2>许可清单（THIRD_PARTY）</h2>
+  <p class="lead">项目根目录应维护一份 <code>THIRD_PARTY.md</code>。现在花 30 分钟，将来要上线时省 30 天。</p>
+
+  <h3>许可风险分级</h3>
+  <table>
+    <tr><th style="width:120px">等级</th><th style="width:190px">许可类型</th><th>本项目中的实例与处理</th></tr>
+    <tr>
+      <td><span class="pill t">绿 · 零负担</span></td><td>MIT / Apache-2.0 / BSD / ISC</td>
+      <td>本项目绝大多数依赖。保留版权声明即可，可自由使用、修改、商用、闭源。<strong>选型原则 T1-04 的成果</strong></td>
+    </tr>
+    <tr>
+      <td><span class="pill a">黄 · 需隔离</span></td><td>LGPL-3.0</td>
+      <td><code>psycopg</code>。作为库链接使用，不修改其源码即无额外义务。<strong>处理：不修改源码，按原样使用</strong></td>
+    </tr>
+    <tr>
+      <td><span class="pill r">红 · 已规避</span></td><td>AGPL-3.0</td>
+      <td><code>pymupdf</code>（PDF 解析）。<strong>AGPL 的传染性对"提供网络服务"场景最严格</strong>——即使不分发代码，只要对外提供服务也须开源。<strong>处理：已换成 pdfplumber（MIT）</strong></td>
+    </tr>
+    <tr>
+      <td><span class="pill r">红 · 已规避</span></td><td>GPL-3.0</td>
+      <td><code>gruepr</code>（分组算法参考）。<strong>处理：只借鉴其评分函数的设计思路，不引入任何代码。算法用 OR-Tools 重新建模实现</strong></td>
+    </tr>
+    <tr>
+      <td><span class="pill r">红 · 不可用</span></td><td>无许可声明</td>
+      <td><code>trackdev</code>、<code>PeerEval</code>、<code>UTDallasEPICS/Teambuilder</code>。法律上属"保留全部权利"。<strong>处理：只读设计思路与数据模型，代码全部自写</strong></td>
+    </tr>
+  </table>
+
+  <h3>THIRD_PARTY.md 模板</h3>
+  <pre># 第三方依赖清单
+
+| 名称 | 版本 | 许可 | 用途 | 来源 |
+|---|---|---|---|---|
+| next | 15.x | MIT | Web 框架 | github.com/vercel/next.js |
+| drizzle-orm | 0.3x | Apache-2.0 | ORM | github.com/drizzle-team/drizzle-orm |
+| ortools | 9.x | Apache-2.0 | 约束求解 | github.com/google/or-tools |
+| networkx | 3.x | BSD-3-Clause | 图算法 | github.com/networkx/networkx |
+| pdfplumber | 0.11.x | MIT | PDF 文本抽取 | github.com/jsvine/pdfplumber |
+| psycopg | 3.x | LGPL-3.0 | PostgreSQL 驱动 | github.com/psycopg/psycopg |
+| ... | | | | |
+
+## 设计参考（未使用其代码）
+
+| 项目 | 许可 | 借鉴内容 |
+|---|---|---|
+| gruepr | GPL-3.0 | 多目标分组的评分函数设计思路 |
+| CATME | 闭源商业 | 团队协作评价的方法论对标 |
+| PeerEval | 无声明 | 课程—班级—小组的层级数据模型设计 |
+
+## 声明
+
+本项目为学习用途，不商用、不对外开放上线。
+若未来公开发布，需重新核验上述依赖的最新许可状态。</pre>
+</section>
+
+<section id="t12">
+  <div class="secnum">T12</div>
+  <h2>版本锁定</h2>
+  <p class="lead">下表为选型时点的稳定版本。<strong>实际安装时以当时最新的稳定版为准</strong>，但一定要锁定次版本号，并提交锁文件。</p>
+
+  <table>
+    <tr><th style="width:130px">层次</th><th style="width:280px">依赖</th><th style="width:110px">参考版本</th><th>锁定方式</th></tr>
+    <tr><td rowspan="9">前端</td><td><code>next</code></td><td>15.x 或更新</td><td rowspan="9"><code>pnpm-lock.yaml</code></td></tr>
+    <tr><td><code>react</code> / <code>react-dom</code></td><td>随 Next 版本</td></tr>
+    <tr><td><code>typescript</code></td><td>5.x</td></tr>
+    <tr><td><code>tailwindcss</code></td><td>4.x</td></tr>
+    <tr><td><code>@tanstack/react-query</code></td><td>5.x</td></tr>
+    <tr><td><code>@tanstack/react-table</code></td><td>8.x</td></tr>
+    <tr><td><code>@dnd-kit/core</code></td><td>6.x</td></tr>
+    <tr><td><code>reactflow</code></td><td>12.x</td></tr>
+    <tr><td><code>recharts</code> · <code>cytoscape</code> · <code>frappe-gantt</code></td><td>2.x / 3.x / 1.x</td></tr>
+    <tr><td rowspan="5">后端</td><td><code>node</code></td><td>22 LTS</td><td rowspan="5"><code>.nvmrc</code> + lock 文件</td></tr>
+    <tr><td><code>drizzle-orm</code> / <code>drizzle-kit</code></td><td>0.3x / 0.2x</td></tr>
+    <tr><td><code>zod</code></td><td>3.x</td></tr>
+    <tr><td><code>jose</code></td><td>5.x</td></tr>
+    <tr><td><code>pino</code></td><td>9.x</td></tr>
+    <tr><td rowspan="7">算法服务</td><td><code>python</code></td><td>3.12 或 3.13</td><td rowspan="7"><code>uv.lock</code> 或 <code>requirements.txt</code>（含固定版本号）</td></tr>
+    <tr><td><code>fastapi</code> / <code>uvicorn</code></td><td>0.115+ / 0.32+</td></tr>
+    <tr><td><code>pydantic</code></td><td>2.x</td></tr>
+    <tr><td><code>ortools</code></td><td>9.x</td></tr>
+    <tr><td><code>networkx</code></td><td>3.x</td></tr>
+    <tr><td><code>rapidfuzz</code> · <code>jieba</code></td><td>3.x / 0.42.x</td></tr>
+    <tr><td><code>openai</code></td><td>1.x</td></tr>
+    <tr><td>数据库</td><td><code>postgres</code></td><td>16</td><td>Docker 镜像固定 <code>postgres:16-alpine</code></td></tr>
+  </table>
+
+  <div class="card warn">
+    <h4>三条版本纪律</h4>
+    <ul>
+      <li><strong>锁文件必须提交到 git。</strong>否则不同机器装出不同版本，"在我电脑上是好的"会反复发生。</li>
+      <li><strong>不追最新。</strong>次版本号锁死（如 <code>next@15.1.x</code> 而不是 <code>next@latest</code>）。<span class="hl">在比赛周期内升级框架版本是纯粹的风险投入</span>。</li>
+      <li><strong>大版本升级单独开分支。</strong>不要和功能开发混在一次提交里，否则出问题无法定位。</li>
+    </ul>
+  </div>
+</section>
+
+<section id="t13">
+  <div class="secnum">T13</div>
+  <h2>本地环境搭建</h2>
+  <p class="lead">从零到能跑的分步命令。<span class="hl">开发期只容器化数据库</span>，web 与 algo 直接本机跑，改代码即时生效。</p>
+
+  <h3>一、前置准备</h3>
+  <pre><span class="c"># 确认版本</span>
+node -v          <span class="c"># 需 22.x</span>
+python --version <span class="c"># 需 3.12 或 3.13</span>
+docker --version
+pnpm -v</pre>
+  <p class="note">Windows 用户注意：中文用户名会导致部分 Python 工具在路径处理上出问题。若遇到奇怪的路径报错，优先怀疑这一点。</p>
+
+  <h3>二、启动数据库</h3>
+  <pre>docker run -d --name gongjiang-db \
+  -e POSTGRES_USER=gongjiang \
+  -e POSTGRES_PASSWORD=gongjiang \
+  -e POSTGRES_DB=gongjiang \
+  -p 5433:5432 \
+  -v gongjiang_pgdata:/var/lib/postgresql/data \
+  postgres:16-alpine
+
+<span class="c"># 用 5433 而非 3306/5432，避免与本机既有服务冲突</span>
+<span class="c"># 卷名单独命名，避免误删其他项目的数据库卷</span></pre>
+
+  <h3>三、Web 应用</h3>
+  <pre><span class="c"># 若从零开始：克隆基座</span>
+git clone https://github.com/nextjs/saas-starter.git gongjiang
+cd gongjiang
+pnpm install
+
+<span class="c"># 配置环境变量</span>
+cp .env.example .env
+<span class="c"># 编辑 .env：填 DATABASE_URL、AUTH_SECRET、ALGO_SERVICE_URL、ALGO_SHARED_SECRET</span>
+
+<span class="c"># 建表与迁移（由 Drizzle Kit 统一管理）</span>
+pnpm drizzle-kit generate
+pnpm drizzle-kit migrate
+
+<span class="c"># 灌入演示数据</span>
+pnpm seed          <span class="c"># 30 人画像 + 一份作业要求 + 预置冲突与延期场景</span>
+
+pnpm dev           <span class="c"># http://localhost:3000</span></pre>
+
+  <h3>四、算法服务</h3>
+  <pre>cd algo
+
+<span class="c"># 方式 A：uv（推荐，快）</span>
+uv venv
+uv pip install -r requirements.txt
+
+<span class="c"># 方式 B：venv + pip（保守，等价）</span>
+python -m venv .venv
+.venv/Scripts/activate      <span class="c"># Windows</span>
+<span class="c"># source .venv/bin/activate  # macOS / Linux</span>
+pip install -r requirements.txt
+
+<span class="c"># 配置 LLM</span>
+cp .env.example .env        <span class="c"># 填 LLM_API_KEY</span>
+
+<span class="c"># 自检：不调大模型，验证模板与图算法</span>
+python demo.py --offline
+
+<span class="c"># 启动服务</span>
+uvicorn main:app --host 127.0.0.1 --port 8000 --reload</pre>
+
+  <h3>五、验证清单</h3>
+  <table>
+    <tr><th style="width:40px">✓</th><th style="width:280px">检查项</th><th>预期</th></tr>
+    <tr><td>☐</td><td><code>docker ps</code></td><td>gongjiang-db 处于 Up 状态，端口映射 5433</td></tr>
+    <tr><td>☐</td><td><code>psql</code> 或客户端连数据库</td><td>能连上，<code>\dt</code> 看到 47 张表</td></tr>
+    <tr><td>☐</td><td>访问 <code>localhost:3000</code></td><td>登录页正常渲染</td></tr>
+    <tr><td>☐</td><td>访问 <code>127.0.0.1:8000/docs</code></td><td>FastAPI 文档页显示 9 个内部接口</td></tr>
+    <tr><td>☐</td><td><code>python demo.py --offline</code></td><td>输出关键路径、分组解释、搭便车提示，全程不调大模型</td></tr>
+    <tr><td>☐</td><td><code>python demo.py</code>（带 key）</td><td>成功调用大模型并输出任务 DAG 与冲突归因</td></tr>
+    <tr><td>☐</td><td>教师端拖一次组员</td><td>得分面板实时变化，破坏硬约束时标红</td></tr>
+    <tr><td>☐</td><td><code>pnpm test</code> / <code>pytest</code></td><td>全部通过</td></tr>
+  </table>
+</section>
+
+<section id="t14">
+  <div class="secnum">T14</div>
+  <h2>可替换与锁定</h2>
+  <p class="lead">哪些决定将来想换就能换，哪些换了要伤筋动骨。提前分清这两类，能避免在错误的地方纠结。</p>
+
+  <table>
+    <tr><th style="width:190px">技术</th><th style="width:100px">可替换性</th><th>更换代价与建议</th></tr>
+    <tr>
+      <td><strong>大模型服务商</strong></td>
+      <td><span class="pill t">极高</span></td>
+      <td>只改 <code>base_url</code> 与模型名，业务代码零改动。<strong>这正是选 OpenAI 兼容协议的价值。</strong>已在 <code>llm.py</code> 中通过环境变量隔离</td>
+    </tr>
+    <tr>
+      <td>PDF 解析库</td>
+      <td><span class="pill t">极高</span></td>
+      <td>只要抽出纯文本，换任何库都不影响下游。若将来确定不上线，可换回 pymupdf 提升速度</td>
+    </tr>
+    <tr>
+      <td>图表与图形库</td>
+      <td><span class="pill t">高</span></td>
+      <td>Recharts / Cytoscape / React Flow 都是纯展示层，输入数据来自接口。<strong>换库只改渲染组件，不动数据层</strong></td>
+    </tr>
+    <tr>
+      <td>拖拽库</td>
+      <td><span class="pill a">中</span></td>
+      <td>只影响分组工作台与看板两个页面，但交互逻辑需要重写。约 2–3 人天</td>
+    </tr>
+    <tr>
+      <td>对象存储</td>
+      <td><span class="pill a">中</span></td>
+      <td>本地磁盘 → S3/OSS 需要抽一层存储接口。<strong>建议一开始就把文件读写封装成 <code>storage.save()</code> / <code>storage.read()</code></strong>，这样将来换只改一个实现类</td>
+    </tr>
+    <tr>
+      <td>ORM</td>
+      <td><span class="pill r">低</span></td>
+      <td>Drizzle → Prisma 要重写全部 schema 与查询。<strong>这是绑定在基座上的决定，选定时就已锁定</strong></td>
+    </tr>
+    <tr>
+      <td>Web 框架</td>
+      <td><span class="pill r">低</span></td>
+      <td>等同于重写整个前端。<strong>没有更换的可能，也不必考虑</strong></td>
+    </tr>
+    <tr>
+      <td>数据库</td>
+      <td><span class="pill r">低</span></td>
+      <td>JSONB 字段与全文索引都用了 PostgreSQL 独有能力。<strong>换 MySQL 需要改动多处</strong></td>
+    </tr>
+    <tr>
+      <td><strong>约束求解器</strong></td>
+      <td><span class="pill a">中</span></td>
+      <td>CP-SAT → 手写启发式算法：可以降级替换（规格书 S4.10 已有降级方案），但会失去"保证满足硬约束"这一核心保证。<strong>不建议替换</strong></td>
+    </tr>
+    <tr>
+      <td>移动端载体</td>
+      <td><span class="pill t">高</span></td>
+      <td>响应式 H5 → Taro 小程序，页面代码大部分可复用（同为 React）。<strong>这正是先做 H5 的原因：它是通向小程序的最短路径</strong></td>
+    </tr>
+  </table>
+
+  <div class="card ok">
+    <h4>一句话总结</h4>
+    <p>本项目的技术选择可以分成两组：<strong>「基座锁定组」</strong>（Next.js、Drizzle、PostgreSQL——跟着 fork 走，不纠结）和<strong>「能力可换组」</strong>（模型、解析库、图表、存储——都通过接口或环境变量隔离，随时可换）。<span class="hl">把纠结的时间花在分组工作台和贡献账本这两个真正的加分点上。</span></p>
+  </div>
+
+  <div class="card acc">
+    <h4>答辩时可能被问的三个技术问题，答案都在本文档里</h4>
+    <ul>
+      <li><strong>「为什么用约束求解器而不是遗传算法？」</strong> → T4：CP-SAT 保证满足硬约束且给出可证明的最优解，手写 GA 至少 400 行且无法保证解合法。</li>
+      <li><strong>「为什么 AI 只用在大模型两个地方？」</strong> → T1-03 与规格书 S6：能算的不要问模型。数值由公式算出，模型只会为既定数字编造理由。</li>
+      <li><strong>「有显卡为什么不用本地模型？」</strong> → T6：8GB 显存只能跑 7B 量化模型，做复杂结构化任务质量差距明显；而 API 一学期成本可忽略，还避免了现场演示时本地服务起不来的风险。</li>
+    </ul>
+  </div>
+</section>
+
+</main>
+</div>
+</body>
+</html>

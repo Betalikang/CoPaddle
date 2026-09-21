@@ -1,0 +1,26 @@
+# 共桨 CoPaddle · 开发期容器编排
+# 按《技术选型说明书》T8/T13：开发期只容器化数据库，web 与 algo 直接本机运行。
+# 端口用 5433（避开本机既有服务）；卷名带 gongjiang 前缀（避免误删其他项目数据卷）。
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: gongjiang-db
+    environment:
+      POSTGRES_USER: gongjiang
+      POSTGRES_PASSWORD: gongjiang
+      POSTGRES_DB: gongjiang
+    ports:
+      - "5433:5432"
+    volumes:
+      - gongjiang_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gongjiang -d gongjiang"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+# 将来若需全容器化（T8 三容器方案），再补 web / algo 两个服务；
+# algo 仅内网监听 127.0.0.1:8000，不暴露公网。
+volumes:
+  gongjiang_pgdata:

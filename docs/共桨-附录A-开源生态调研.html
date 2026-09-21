@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>共桨 · 开源生态调研（附录）</title>
+<style>
+:root{
+  --bg:#141413; --surface:#1c1c1b; --surface2:#242423;
+  --border:#33332f; --border2:#454540;
+  --text:#ececea; --muted:#a3a39d; --dim:#75756f;
+  --accent:#afa9ec; --accent-bg:#2a2450;
+  --teal:#5dcaa5; --teal-bg:#0d3b30;
+  --amber:#ef9f27; --amber-bg:#3d2a08;
+  --red:#f09595; --red-bg:#3d1616;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:15px;line-height:1.75;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:960px;margin:0 auto;padding:0 28px 120px;}
+header{padding:64px 0 40px;border-bottom:1px solid var(--border);}
+.tag{display:inline-block;font-size:12px;letter-spacing:.14em;color:var(--accent);background:var(--accent-bg);padding:5px 12px;border-radius:999px;margin-bottom:20px;}
+h1{font-size:34px;line-height:1.3;font-weight:600;margin:0 0 12px;letter-spacing:-.02em;}
+h1 .sub{display:block;font-size:16px;font-weight:400;color:var(--muted);margin-top:12px;letter-spacing:0;}
+section{padding:52px 0 8px;border-bottom:1px solid var(--border);}
+section:last-of-type{border-bottom:none;}
+.secnum{font-size:12px;letter-spacing:.16em;color:var(--accent);font-weight:500;}
+h2{font-size:23px;font-weight:600;margin:10px 0 8px;letter-spacing:-.015em;line-height:1.35;}
+h2 + .lead{font-size:15.5px;color:var(--muted);margin:0 0 26px;max-width:780px;}
+h3{font-size:16px;font-weight:600;margin:32px 0 8px;}
+p{margin:0 0 16px;}
+ul{margin:0 0 18px;padding-left:22px;}
+li{margin-bottom:6px;}
+table{width:100%;border-collapse:collapse;margin:20px 0;font-size:13.5px;}
+th{text-align:left;font-weight:600;font-size:12.5px;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--border2);white-space:nowrap;}
+td{padding:11px 12px;border-bottom:1px solid var(--border);vertical-align:top;}
+td.mut{color:var(--muted);}
+tr:last-child td{border-bottom:none;}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:1px 6px;color:var(--accent);}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin:20px 0;}
+.card.acc{border-left:2px solid var(--accent);}
+.card.ok{border-left:2px solid var(--teal);}
+.card.warn{border-left:2px solid var(--amber);}
+.card.dang{border-left:2px solid var(--red);}
+.card h4{font-size:14px;font-weight:600;margin:0 0 8px;}
+.card p:last-child{margin-bottom:0;}
+.pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;font-weight:500;white-space:nowrap;}
+.pill.p{background:var(--accent-bg);color:var(--accent);}
+.pill.t{background:var(--teal-bg);color:var(--teal);}
+.pill.a{background:var(--amber-bg);color:var(--amber);}
+.pill.r{background:var(--red-bg);color:var(--red);}
+.repo{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;color:var(--accent);word-break:break-all;}
+.star{color:var(--amber);font-weight:500;}
+strong{color:#fff;font-weight:600;}
+.hl{color:var(--accent);}
+.note{font-size:13px;color:var(--dim);margin-top:10px;}
+footer{padding:44px 0 0;font-size:13px;color:var(--dim);border-top:1px solid var(--border);margin-top:56px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <span class="tag">附录 A · 开源生态调研</span>
+  <h1>这个赛道在开源世界是「零件齐全、没有整机」
+    <span class="sub">对 GitHub 上现有开源项目的分类梳理、许可风险提示与可复用点标注。结论：没有任何一个项目把「AI 分组 → 任务拆解 → 实时重规划 → 贡献归因」串成闭环，这正是共桨的定位空间。</span>
+  </h1>
+</header>
+
+<section id="a1">
+  <div class="secnum">A.1</div>
+  <h2>分组优化：最成熟的一类，参考价值最高</h2>
+  <p class="lead">共桨 M2 模块（多目标最优分组）在这类项目里有大量现成实现可直接借鉴，从启发式到精确求解器都有。</p>
+
+  <table>
+    <tr>
+      <th style="width:200px">项目</th><th style="width:150px">技术栈 / 许可</th><th>关键能力</th>
+    </tr>
+    <tr>
+      <td><span class="repo">gruepr/gruepr</span></td>
+      <td>C++ / Qt<br><span class="pill r">GPL-3.0</span></td>
+      <td>遗传算法把 4–1000 人分成最优小组。官方自述 <em>"inspired by CATME's team forming routine"</em>。支持 15 类属性的组内同质/异质控制、防孤立女性与非主流群体学生、课表空闲重合度（含时区）、互斥与绑定约束。评分函数设计最完整</td>
+    </tr>
+    <tr>
+      <td><span class="repo">UTDallasEPICS/Teambuilder</span></td>
+      <td>Python + TypeScript<br><span class="pill p">生产级</span></td>
+      <td><strong>用 Google OR-Tools CP-SAT 约束求解器求全局最优</strong>。硬约束（每人必属一组、组规模 4–6）+ 软偏好（专业多样性、性别均衡、老队员优先、技能匹配、志愿优先级）。有完整 wiki 讲建模细节。<span class="hl">这是最工业化的参考</span></td>
+    </tr>
+    <tr>
+      <td><span class="repo">smoab/teams-former</span></td>
+      <td>Python + Eel<br><span class="pill t">MIT</span></td>
+      <td>遗传算法 + 网页前端。<strong>三个指标：组间 GPA 均衡、时间不冲突、组内技能不重复</strong>。结构简单、MIT 许可可自由使用，<span class="hl">最容易直接改造</span></td>
+    </tr>
+    <tr>
+      <td><span class="repo">Bilin22/Forming-Optimal-Groups</span></td>
+      <td>Python<br><span class="pill">课程项目</span></td>
+      <td>三种算法对照实现：字母序 / 贪心 / <strong>模拟退火</strong>。多伦多大学 CSC148 课程项目，适合当 baseline 与消融实验的对照组</td>
+    </tr>
+    <tr>
+      <td><span class="repo">BasselTharwat/TeamClusterAndForm</span></td>
+      <td>Python + PyQt5 + pyvis</td>
+      <td>进化算法 + <strong>社交网络图可视化</strong> + 好友偏好匹配。可借鉴其"把关系画出来给教师看"的交互设计</td>
+    </tr>
+    <tr>
+      <td><span class="repo">nusoniclab.github.io</span></td>
+      <td>Python<br><span class="pill">论文配套</span></td>
+      <td><strong>NSGA-II 多目标遗传算法</strong>同时优化"团队沟通成本"与"成员多样性"，且建立在真实社交网络之上。<span class="hl">最贴近共桨「联系度 + 多样性」双目标命题</span>。附论文与三套实证数据集</td>
+    </tr>
+  </table>
+
+  <div class="card warn">
+    <h4>许可风险：gruepr 是 GPL-3.0 强 Copyleft</h4>
+    <p>把 gruepr 的代码链接或修改进自己的产品，整个产品就要以 GPL-3.0 开源。<strong>参赛与后续商业化都建议只借鉴算法思想（遗传算法与评分函数的设计），不引入代码。</strong>若要用代码，优先选 MIT 的 <code>smoab/teams-former</code> 或自行实现。</p>
+  </div>
+</section>
+
+<section id="a2">
+  <div class="secnum">A.2</div>
+  <h2>同伴互评：有实现，但全部是主观评分</h2>
+  <p class="lead">这类项目能直接给共桨 M6 提供数据模型参考，但它们有一个共同的局限——归因完全依赖学生自己填。</p>
+
+  <table>
+    <tr><th style="width:200px">项目</th><th style="width:150px">技术栈</th><th>可复用点</th></tr>
+    <tr>
+      <td><span class="repo">ItzPabz/PeerEval</span></td>
+      <td>Django + PostgreSQL 17</td>
+      <td><strong>数据模型最完整</strong>：机构 → 院系 → 课程 → 学期 → 班级 → 选课 → 分组 → 评价作业。多租户架构、角色权限、批量名册导入导出、成绩导出。五个评价维度（工作贡献 / 团队互动 / 团队意识 / 工作质量 / 知识技能）</td>
+    </tr>
+    <tr>
+      <td><span class="repo">jetcom/peer_eval</span></td>
+      <td>Node / 前后端分离</td>
+      <td>分阶段评价（1–5 个阶段）与<strong>截止日级联继承</strong>逻辑；<strong>评价热力图</strong>——一张图看出谁评了谁、谁没评。这个交互值得直接借鉴到教师端</td>
+    </tr>
+    <tr>
+      <td><span class="repo">imrohitvk/PeerEvaluation_V3</span></td>
+      <td>MERN + 可选 Python AI Engine</td>
+      <td>轻量、结构清晰，适合快速对照与二次开发起点</td>
+    </tr>
+  </table>
+
+  <div class="card dang">
+    <h4>共同局限 = 共桨的差异点</h4>
+    <p>所有开源互评系统的"贡献"来源都只有一条：<strong>学生自己填的问卷</strong>。没有一个做交付物级溯源。这意味着两件事：一是搭便车者只要会填表就能规避；二是数据模型里根本没有"产出物归属"这张表。<strong>共桨把产出物溯源作为第一类证据，是对这一类项目的结构性超越，而不是功能增量。</strong></p>
+  </div>
+</section>
+
+<section id="a3">
+  <div class="secnum">A.3</div>
+  <h2>课程 / 项目全流程管理：最接近"整机"的一类</h2>
+  <p class="lead">这类项目已经是一个完整系统了，但它们的短板惊人地一致——没有 AI 分组，也没有 AI 归因。</p>
+
+  <table>
+    <tr><th style="width:200px">项目</th><th style="width:150px">技术栈</th><th>能力与缺口</th></tr>
+    <tr>
+      <td><span class="repo">trackdevel/*<br>(trackdev-spring / trackdev-nextjs)</span></td>
+      <td>Java Spring Boot + Next.js<br>MySQL/PostgreSQL</td>
+      <td><strong>最接近共桨的产品形态。</strong>冲刺管理、用户故事与任务拆解、故事点估算、GitHub PR 联动、<strong>教师自动评估</strong>、学生/教师双看板、JWT + RBAC 三角色权限。<br><span class="pill r">缺口</span> 无 AI 分组，无贡献归因，只针对软件工程课程</td>
+    </tr>
+    <tr>
+      <td><span class="repo">classroom50.org</span></td>
+      <td>开源 · 基于 GitHub Org</td>
+      <td>GitHub Classroom 社区替代品。<strong>支持小组作业</strong>、起始代码仓库、自动评分、名册管理、成绩 CSV 导出。免费、活跃</td>
+    </tr>
+    <tr>
+      <td><span class="repo">sahilgsm2003/ProjecTrack</span></td>
+      <td>React PWA + Node + Prisma + PostgreSQL</td>
+      <td>学生自主组队、邀请制、<strong>项目提案与教师审批流</strong>、里程碑管理。MVP 阶段，适合看"师生双边审批"的流程建模</td>
+    </tr>
+    <tr>
+      <td><span class="repo">IBCNServices/ghtt</span></td>
+      <td>Python CLI</td>
+      <td>批量创建学生仓库、批量派发 issue、批量回收作业。<span class="hl">低摩擦数据采集</span>思路可参考：用 Git 侧的自动化换取过程数据</td>
+    </tr>
+    <tr>
+      <td><span class="repo">aejlaaks/AssignmentAndMaterialApp<br>(TehtavaApp)</span></td>
+      <td>.NET + React</td>
+      <td>含 <strong>AI 自动评分</strong>（OpenAI / Azure OpenAI + 评分量规），输出<strong>置信度与评分理由</strong>，且评分模式分"辅助（教师确认）"与"全自动"两种。<span class="hl">"教师确认"这一档设计可以直接借用来做共桨归因的教师终审</span></td>
+    </tr>
+  </table>
+</section>
+
+<section id="a4">
+  <div class="secnum">A.4</div>
+  <h2>AI Agent 式项目管理：跨领域，但机制可迁移</h2>
+  <p class="lead">这些项目管的是"AI 智能体团队"，不是"人类学生团队"。但它们的任务拆解、角色编排、阻塞检测机制可以整体迁移到共桨的 M3 与 M4。</p>
+
+  <table>
+    <tr><th style="width:230px">项目</th><th>可迁移的机制</th></tr>
+    <tr>
+      <td><span class="repo">sdi2200262/agentic-project-management</span></td>
+      <td>Planner / Manager / Worker <strong>三角色分工</strong>（与共桨的教师/队长/队员形成有趣映射）；规范驱动的产物（Spec / Plan / Rules 三份文档）；<strong>上下文 Handoff——当成员上下文耗尽时把工作记忆结构化移交</strong>。这个 Handoff 机制可以直接对应共桨的"重规划时的任务交接"</td>
+    </tr>
+    <tr>
+      <td><span class="repo">PriyankTyagii/ai-project-manager</span></td>
+      <td>四个专职 Agent：Planner（拆任务）/ Risk（监控阻塞与依赖）/ Motivation（停滞时推动）/ Report（自动日报）。<strong>事件驱动架构</strong>（Inngest）。<span class="hl">Risk Agent 与 Motivation Agent 完全对应共桨的进度感知与"中立第三方催办"</span></td>
+    </tr>
+    <tr>
+      <td><span class="repo">kunwarVivek/mcp-github-project-manager</span></td>
+      <td>Agent 注册与<strong>原子化认领任务</strong>（防重复、防冲突）、心跳存活监控、工作产物提交与互审、<strong>每人 token 预算与硬停</strong>。其中的"认领 + 心跳 + 互审"三件套，是把协作过程数据化的完整范式</td>
+    </tr>
+    <tr>
+      <td><span class="repo">MetaGPT / CrewAI / ChatDev</span></td>
+      <td>量级最大的角色化多智能体框架。把 SOP 编码进 prompt，让不同角色按流程协作。<strong>值得看的是它们如何定义角色边界与交接物</strong>，而不是直接使用</td>
+    </tr>
+  </table>
+
+  <div class="card acc">
+    <h4>一个值得写进答辩的类比</h4>
+    <p>多智能体系统里最难的问题不是"单个 agent 有多强"，而是<strong>"多个 agent 如何不重复劳动、不互相踩脚、不丢失上下文"</strong>。人类学生小组的失败模式几乎一模一样：重复劳动、依赖断裂、上下文（信息）不对称。共桨本质上是在给人类小组装一套<strong>多智能体编排层</strong>——这个类比能让评委瞬间理解你的产品在解决什么。</p>
+  </div>
+</section>
+
+<section id="a5">
+  <div class="secnum">A.5</div>
+  <h2>比代码更值钱：搭便车与贡献不均的实证研究</h2>
+  <p class="lead">共桨的贡献归因模块需要一个"什么时候该报警"的阈值，和一个"能不能据此扣分"的伦理依据。这两件事都能从学术文献里直接拿到答案。</p>
+
+  <div class="card ok">
+    <h4>关键文献：不等贡献对学生软件工程团队的影响（JSS 2023）</h4>
+    <p><strong>可用的硬数字：</strong>当团队中<strong>最不活跃成员的贡献低于其应分担份额的 14%</strong> 时，团队就大概率会主观感知到贡献不均。<span class="hl">这个 14% 可以直接做成共桨触发搭便车预警的、有研究支撑的阈值</span>——答辩时能说出"我们的预警阈值不是拍的，来自一篇实证研究"，说服力完全不同。</p>
+    <p><strong>同样重要的反向结论：</strong>该研究还发现，贡献不均与团队成绩、代码质量之间<strong>没有稳定的关联</strong>，且学生本身对相当程度的不均是有容忍度的。</p>
+    <p><strong>这意味着什么：</strong>不能因为"贡献不均"就直接判罚。<span class="hl">这条实证结论正是共桨「只给证据不给分」的直接依据</span>——系统提供的是决策依据，是否扣分由教师结合任务性质判断。把这条写进方案，伦理立场就立住了。</p>
+  </div>
+
+  <div class="card">
+    <h4>两个好的理论视角</h4>
+    <p><strong>1. Amdahl 定律视角（CogSci 2024 / Cognition 2025）</strong>：研究者用分布式系统的效率模型解释社会惰化——当团队规模增大、工作量固定、资源（工具）有限时，个人贡献的边际影响下降，<strong>有时"少出力"是对效率的理性反应，而非道德缺陷</strong>。共桨可以用这个视角做一个很高级的产品决策：<strong>不要设计成"抓坏人"的工具，而是设计成"让每个人的边际贡献可见"的工具。</strong></p>
+    <p><strong>2. 社会惰化的经典量化</strong>：林格曼拉绳实验——个人单独拉力 63 kg，3 人组人均降至 53.5 kg，8 人组仅 31 kg。<span class="hl">这个数字放在答辩 PPT 开场，比任何一句"小组作业有搭便车问题"都有冲击力。</span></p>
+    <p class="note">相关仓库：<span class="repo">emieczkowski/SocialLoafingEfficiency</span>、<span class="repo">emieczkowski/IdleCollaborators</span>（均含数据与分析代码）</p>
+  </div>
+</section>
+
+<section id="a6">
+  <div class="secnum">A.6</div>
+  <h2>结论：四个明确的空白点</h2>
+
+  <table>
+    <tr><th style="width:56px">#</th><th style="width:260px">空白点</th><th>说明与机会</th></tr>
+    <tr>
+      <td><span class="pill p">01</span></td>
+      <td><strong>没有闭环</strong></td>
+      <td>分组（gruepr、Teambuilder）、管理（TrackDev）、归因（PeerEval）各自独立，<strong>没有任何项目把四段串成一条流水线</strong>。共桨的核心价值就是这个"串联"</td>
+    </tr>
+    <tr>
+      <td><span class="pill p">02</span></td>
+      <td><strong>归因全是主观的</strong></td>
+      <td>开源的"贡献"无一例外来自自评互评问卷。基于<strong>交付物版本溯源</strong>的归因，在整个开源生态里是真空</td>
+    </tr>
+    <tr>
+      <td><span class="pill p">03</span></td>
+      <td><strong>没有中文高校场景</strong></td>
+      <td>全部是英文界面 + 海外教学语境，没有对接教务成绩、班级、综测、学分这类中式教学管理要素</td>
+    </tr>
+    <tr>
+      <td><span class="pill p">04</span></td>
+      <td><strong>没有一个是 LLM 原生的</strong></td>
+      <td>分组用遗传算法或约束求解器，管理用传统看板，AI 至多做自动评分。<strong>用 LLM 做任务语义拆解、依赖推断、冲突归因、自然语言解释的，一个都没有</strong></td>
+    </tr>
+  </table>
+
+  <div class="card acc">
+    <h4>可复用清单（按性价比排序）</h4>
+    <ul>
+      <li><strong>分组建模</strong> → 抄 <code>UTDallasEPICS/Teambuilder</code> 的 CP-SAT 约束建模（工业级、有文档）</li>
+      <li><strong>双目标优化</strong> → 参考 SONIC Lab 的 NSGA-II（沟通成本 vs 多样性，最贴合命题）</li>
+      <li><strong>快速起步</strong> → <code>smoab/teams-former</code>（MIT，结构简单，三个指标已经对齐共桨需求）</li>
+      <li><strong>产品骨架</strong> → <code>trackdevel</code> 的角色权限、任务拆解与自动评估设计</li>
+      <li><strong>数据模型</strong> → <code>ItzPabz/PeerEval</code> 的课程层级关系</li>
+      <li><strong>交互点子</strong> → <code>jetcom/peer_eval</code> 的评价热力图；TehtavaApp 的"AI 评分 + 教师确认"两档模式</li>
+      <li><strong>预警阈值</strong> → JSS 2023 的 <strong>14% 应分担份额</strong>；伦理依据 → 该研究的"不均与成绩无稳定关联"</li>
+    </ul>
+  </div>
+
+  <div class="card dang">
+    <h4>许可红线（必读）</h4>
+    <ul>
+      <li><span class="pill r">GPL-3.0</span> <code>gruepr</code> —— 强 Copyleft。<strong>引入代码即要求整个产品以 GPL-3.0 开源</strong>。只借鉴思想，不引代码</li>
+      <li><span class="pill t">MIT</span> <code>smoab/teams-former</code> —— 可自由使用、修改、商用，保留版权声明即可。<strong>优先选这一类</strong></li>
+      <li>其余多数项目未在 README 中明确声明许可（如 TrackDev、ProjecTrack），<strong>属于"默认保留全部权利"，商用前必须逐一确认</strong></li>
+      <li>CATME 的 EULA 明确禁止 "attempt to imitate, derive or discover" 其软件 —— 建议在方案书中主动声明"独立设计"，并避免逐条对照其功能清单</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <p><strong>共桨 CoPaddle</strong> · 附录 A：开源生态调研</p>
+  <p>调研时间 2026-09-21 · 信息来源为各项目公开仓库与 README，使用前请以仓库最新许可声明为准</p>
+</footer>
+
+</div>
+</body>
+</html>
