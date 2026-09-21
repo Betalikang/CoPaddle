@@ -44,7 +44,7 @@ export default function MyTasksPage() {
   const tasks = data?.tasks ?? [];
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
+    <section className="flex-1">
       <h1 className="mb-2 text-lg lg:text-2xl font-medium">我的部分</h1>
       <p className="mb-6 text-sm text-muted-foreground">
         我在各门课小组里的任务：负责什么、依赖谁、什么时候必须交。

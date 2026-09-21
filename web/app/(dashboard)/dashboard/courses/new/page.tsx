@@ -105,7 +105,7 @@ export default function NewCoursePage() {
   }
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
+    <section className="flex-1">
       <div className="mb-6 flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard')}>
           <ArrowLeft className="h-4 w-4" />

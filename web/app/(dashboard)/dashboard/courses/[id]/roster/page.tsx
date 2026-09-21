@@ -95,7 +95,7 @@ export default function RosterPage({ params }: { params: Promise<{ id: string }>
   }, [enrollments, roleFilter, classFilter, keyword]);
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
+    <section className="flex-1">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg lg:text-2xl font-medium">名单管理</h1>

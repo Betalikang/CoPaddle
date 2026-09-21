@@ -97,7 +97,7 @@ export default function ContributionsPage({ params }: { params: Promise<{ id: st
 
   if (groupsLoading || isLoading) {
     return (
-      <section className="flex-1 p-4 lg:p-8">
+      <section className="flex-1">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="mt-4 h-96" />
       </section>
@@ -106,7 +106,7 @@ export default function ContributionsPage({ params }: { params: Promise<{ id: st
 
   if (!group || !ledgerData?.snapshotAt) {
     return (
-      <section className="flex-1 p-4 lg:p-8">
+      <section className="flex-1">
         <h1 className="mb-4 text-lg lg:text-2xl font-medium">贡献账本</h1>
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
@@ -126,7 +126,7 @@ export default function ContributionsPage({ params }: { params: Promise<{ id: st
   }
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
+    <section className="flex-1">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-lg lg:text-2xl font-medium">贡献账本 · {group.name}</h1>

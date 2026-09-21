@@ -232,7 +232,7 @@ export default function GroupTasksPage({ params }: { params: Promise<{ id: strin
 
   if (isLoading && group) {
     return (
-      <section className="flex-1 p-4 lg:p-8">
+      <section className="flex-1">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="mt-4 h-96" />
       </section>
@@ -241,7 +241,7 @@ export default function GroupTasksPage({ params }: { params: Promise<{ id: strin
 
   if (error) {
     return (
-      <section className="flex-1 p-4 lg:p-8">
+      <section className="flex-1">
         <p className="text-sm text-destructive">加载失败，请刷新重试。</p>
       </section>
     );
@@ -249,7 +249,7 @@ export default function GroupTasksPage({ params }: { params: Promise<{ id: strin
 
   if (!group) {
     return (
-      <section className="flex-1 p-4 lg:p-8">
+      <section className="flex-1">
         <Card className="border-dashed">
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
             本课程还没有分组。请先在分组工作台生成并选定方案。
@@ -263,7 +263,7 @@ export default function GroupTasksPage({ params }: { params: Promise<{ id: strin
   const hasPlan = plan && tasks.length > 0;
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
+    <section className="flex-1">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-lg lg:text-2xl font-medium">任务与依赖 · {group.name}</h1>
         {hasPlan && (

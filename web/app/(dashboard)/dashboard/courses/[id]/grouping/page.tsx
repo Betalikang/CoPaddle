@@ -218,7 +218,7 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
 
   if (isLoading) {
     return (
-      <section className="flex-1 p-4 lg:p-8">
+      <section className="flex-1">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="mt-4 h-96" />
       </section>
@@ -227,7 +227,7 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
 
   if (error || !data) {
     return (
-      <section className="flex-1 p-4 lg:p-8">
+      <section className="flex-1">
         <p className="text-sm text-destructive">加载失败，请刷新重试。</p>
       </section>
     );
@@ -235,7 +235,7 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
 
   if (!data.run || plans.length === 0) {
     return (
-      <section className="flex-1 p-4 lg:p-8">
+      <section className="flex-1">
         <h1 className="mb-4 text-lg lg:text-2xl font-medium">分组工作台</h1>
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
@@ -254,7 +254,7 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
   }
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
+    <section className="flex-1">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-lg lg:text-2xl font-medium">分组工作台</h1>
         <div className="flex gap-2">

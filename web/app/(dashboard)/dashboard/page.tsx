@@ -94,7 +94,7 @@ export default function CoursesHomePage() {
   const courses = data?.courses ?? [];
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
+    <section className="flex-1">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-lg lg:text-2xl font-medium">课程工作台</h1>
         <Button asChild>

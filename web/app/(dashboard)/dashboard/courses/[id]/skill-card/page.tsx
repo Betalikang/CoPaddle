@@ -90,14 +90,14 @@ export default function SkillCardPage({ params }: { params: Promise<{ id: string
 
   if (isLoading) {
     return (
-      <section className="flex-1 p-4 lg:p-8">
+      <section className="flex-1">
         <Skeleton className="h-96" />
       </section>
     );
   }
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
+    <section className="flex-1">
       <h1 className="mb-2 text-lg lg:text-2xl font-medium">我的技能卡</h1>
       <p className="mb-6 text-sm text-muted-foreground">
         七维能力自评（0 = 没接触过，5 = 能独立带人做）。这份卡用于分组互补与任务分工。

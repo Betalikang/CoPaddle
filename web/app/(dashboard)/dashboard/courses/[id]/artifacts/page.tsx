@@ -135,7 +135,7 @@ export default function ArtifactsPage({ params }: { params: Promise<{ id: string
 
   if (isLoading) {
     return (
-      <section className="flex-1 p-4 lg:p-8">
+      <section className="flex-1">
         <Skeleton className="h-8 w-48" />
       </section>
     );
@@ -146,7 +146,7 @@ export default function ArtifactsPage({ params }: { params: Promise<{ id: string
   const totalWords = authorStats?.totalWords ?? 0;
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
+    <section className="flex-1">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-lg lg:text-2xl font-medium">交付物与溯源</h1>
         <div className="flex gap-2">

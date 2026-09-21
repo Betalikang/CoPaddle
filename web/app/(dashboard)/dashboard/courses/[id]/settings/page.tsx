@@ -95,7 +95,7 @@ export default function CourseSettingsPage({ params }: { params: Promise<{ id: s
 
   if (isLoading) {
     return (
-      <section className="flex-1 p-4 lg:p-8">
+      <section className="flex-1">
         <Skeleton className="h-96" />
       </section>
     );
@@ -103,14 +103,14 @@ export default function CourseSettingsPage({ params }: { params: Promise<{ id: s
 
   if (error || !current) {
     return (
-      <section className="flex-1 p-4 lg:p-8">
+      <section className="flex-1">
         <p className="text-sm text-destructive">设置加载失败。</p>
       </section>
     );
   }
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
+    <section className="flex-1">
       <h1 className="mb-6 text-lg lg:text-2xl font-medium">分组策略与权重</h1>
 
       <div className="max-w-2xl space-y-6">

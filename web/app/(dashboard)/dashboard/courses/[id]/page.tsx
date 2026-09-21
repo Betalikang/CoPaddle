@@ -50,7 +50,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
   if (isLoading) {
     return (
-      <section className="flex-1 p-4 lg:p-8">
+      <section className="flex-1">
         <Skeleton className="mb-4 h-8 w-48" />
         <Skeleton className="h-40" />
       </section>
@@ -59,7 +59,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
   if (error || !data) {
     return (
-      <section className="flex-1 p-4 lg:p-8">
+      <section className="flex-1">
         <p className="text-sm text-destructive">课程不存在或无权访问。</p>
         <Button variant="outline" className="mt-4" onClick={() => router.push('/dashboard')}>
           返回课程工作台
@@ -72,7 +72,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
   const isTeacherSide = myRole === 'teacher' || myRole === 'assistant';
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
+    <section className="flex-1">
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <h1 className="text-lg lg:text-2xl font-medium">
           {course.name}

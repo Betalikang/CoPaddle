@@ -21,13 +21,30 @@ export default function DashboardLayout({
     { href: '/dashboard/security', icon: Shield, label: '安全设置' }
   ];
 
+  const nav = (
+    <nav className="p-4">
+      {navItems.map((item) => (
+        <Link key={item.href} href={item.href} passHref>
+          <Button
+            variant={pathname === item.href ? 'secondary' : 'ghost'}
+            className={`shadow-none my-1 w-full justify-start ${
+              pathname === item.href ? 'bg-gray-100' : ''
+            }`}
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <item.icon className="h-4 w-4" />
+            {item.label}
+          </Button>
+        </Link>
+      ))}
+    </nav>
+  );
+
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-68px)] w-full">
+    <div className="w-full">
       {/* Mobile header */}
       <div className="lg:hidden flex items-center justify-between bg-white border-b border-gray-200 p-4">
-        <div className="flex items-center">
-          <span className="font-medium">设置</span>
-        </div>
+        <span className="font-medium">设置</span>
         <Button
           className="-mr-3"
           variant="ghost"
@@ -38,35 +55,21 @@ export default function DashboardLayout({
         </Button>
       </div>
 
-      <div className="flex flex-1 overflow-hidden h-full">
-        {/* Sidebar（贴屏幕左缘） */}
-        <aside
-          className={`w-64 shrink-0 bg-white lg:bg-gray-50 border-r border-gray-200 lg:block ${
-            isSidebarOpen ? 'block' : 'hidden'
-          } lg:relative absolute inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-            isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
-        >
-          <nav className="h-full overflow-y-auto p-4">
-            {navItems.map((item) => (
-              <Link key={item.href} href={item.href} passHref>
-                <Button
-                  variant={pathname === item.href ? 'secondary' : 'ghost'}
-                  className={`shadow-none my-1 w-full justify-start ${
-                    pathname === item.href ? 'bg-gray-100' : ''
-                  }`}
-                  onClick={() => setIsSidebarOpen(false)}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </Button>
-              </Link>
-            ))}
-          </nav>
+      <div className="lg:flex lg:items-start">
+        {/* 桌面端：sticky 侧栏，贴左常驻 */}
+        <aside className="hidden lg:block w-64 shrink-0 bg-gray-50 border-r border-gray-200 lg:sticky lg:top-[57px] lg:h-[calc(100dvh-57px)]">
+          <div className="h-full overflow-y-auto">{nav}</div>
         </aside>
 
-        {/* Main content（撑满侧栏右侧空间，页面内部自行限宽） */}
-        <main className="flex-1 overflow-y-auto p-0 lg:p-4">{children}</main>
+        {/* 移动端：抽屉式侧栏 */}
+        {isSidebarOpen && (
+          <aside className="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 lg:hidden">
+            <div className="h-full overflow-y-auto">{nav}</div>
+          </aside>
+        )}
+
+        {/* 主内容：贴顶排布，页面级滚动 */}
+        <main className="flex-1 min-w-0 p-4 lg:p-8">{children}</main>
       </div>
     </div>
   );
