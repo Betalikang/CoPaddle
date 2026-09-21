@@ -532,6 +532,179 @@ export const contractAcceptances = pgTable('contract_acceptances', {
 });
 
 // ============================================================
+// 共桨域⑤：交付物与溯源（规格书 S1，护城河）
+// ============================================================
+
+export const artifacts = pgTable('artifacts', {
+  id: serial('id').primaryKey(),
+  groupId: integer('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+  taskId: integer('task_id').references(() => tasks.id, { onDelete: 'set null' }),
+  title: varchar('title', { length: 200 }).notNull(),
+  type: varchar('type', { length: 20 }).notNull().default('document'),
+  currentVersionId: integer('current_version_id'),
+  status: varchar('status', { length: 20 }).notNull().default('draft'),
+  // 是否最终交付物（只有它强制在平台内沉淀，规格书产品方案 07）
+  isFinalDeliverable: boolean('is_final_deliverable').notNull().default(false),
+  createdBy: integer('created_by')
+    .notNull()
+    .references(() => users.id),
+  deletedAt: timestamp('deleted_at'),
+}, (t) => [index('artifacts_group_status_idx').on(t.groupId, t.status)]);
+
+export const artifactVersions = pgTable('artifact_versions', {
+  id: serial('id').primaryKey(),
+  artifactId: integer('artifact_id')
+    .notNull()
+    .references(() => artifacts.id, { onDelete: 'cascade' }),
+  versionNo: smallint('version_no').notNull(),
+  // 汇编后的完整文本（段落按 seq 拼接）
+  content: text('content'),
+  storagePath: text('storage_path'),
+  fileSize: integer('file_size'),
+  checksum: varchar('checksum', { length: 64 }),
+  diffSummary: text('diff_summary'),
+  createdBy: integer('created_by')
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [uniqueIndex('artifact_versions_uniq').on(t.artifactId, t.versionNo)]);
+
+// ★ 溯源核心表：段落级归属由「平台内撰写」行为天然产生，非学生自报
+export const artifactSegments = pgTable('artifact_segments', {
+  id: serial('id').primaryKey(),
+  versionId: integer('version_id')
+    .notNull()
+    .references(() => artifactVersions.id, { onDelete: 'cascade' }),
+  seq: smallint('seq').notNull(),
+  kind: varchar('kind', { length: 20 }).notNull().default('paragraph'),
+  authorId: integer('author_id')
+    .notNull()
+    .references(() => users.id),
+  content: text('content').notNull(),
+  contentHash: varchar('content_hash', { length: 64 }),
+  wordCount: integer('word_count').notNull().default(0),
+  sourceTaskId: integer('source_task_id').references(() => tasks.id, { onDelete: 'set null' }),
+  revisedBy: integer('revised_by').references(() => users.id),
+  revisedCount: smallint('revised_count').notNull().default(0),
+}, (t) => [
+  index('artifact_segments_version_seq_idx').on(t.versionId, t.seq),
+  index('artifact_segments_author_idx').on(t.authorId),
+]);
+
+// 每一次段落级动作都留痕，用于区分「主责产出」与「审阅返工」
+export const segmentEdits = pgTable('segment_edits', {
+  id: serial('id').primaryKey(),
+  segmentId: integer('segment_id')
+    .notNull()
+    .references(() => artifactSegments.id, { onDelete: 'cascade' }),
+  editorId: integer('editor_id')
+    .notNull()
+    .references(() => users.id),
+  editType: varchar('edit_type', { length: 20 }).notNull(),
+  deltaChars: integer('delta_chars').notNull().default(0),
+  beforeHash: varchar('before_hash', { length: 64 }),
+  afterHash: varchar('after_hash', { length: 64 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  index('segment_edits_segment_idx').on(t.segmentId),
+  index('segment_edits_editor_idx').on(t.editorId),
+]);
+
+// ============================================================
+// 共桨域⑥⑧：贡献归因（规格书 S1）
+// ============================================================
+
+export const contributionSnapshots = pgTable('contribution_snapshots', {
+  id: serial('id').primaryKey(),
+  groupId: integer('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  snapshotAt: timestamp('snapshot_at').notNull().defaultNow(),
+  // 贡献构成明细（algo comp：主责产出/协作产出/按时交付/审阅返工/主动补位/同伴评价）
+  comp: jsonb('comp').$type<Record<string, number>>(),
+  // 区间估计（系统永不输出单一分数）
+  lowPct: numeric('low_pct', { precision: 5, scale: 2 }).notNull().default('0'),
+  highPct: numeric('high_pct', { precision: 5, scale: 2 }).notNull().default('0'),
+  confidence: varchar('confidence', { length: 20 }).notNull().default('low'),
+  peerMedian: numeric('peer_median', { precision: 3, scale: 2 }),
+  onTimeCount: integer('on_time_count').notNull().default(0),
+  delayCount: integer('delay_count').notNull().default(0),
+  reworkCount: integer('rework_count').notNull().default(0),
+  reviewCount: integer('review_count').notNull().default(0),
+  // 应分担份额占比，< 0.14 触发提示
+  fairShareRatio: numeric('fair_share_ratio', { precision: 5, scale: 3 }).notNull().default('0'),
+  warning: text('warning'),
+}, (t) => [
+  uniqueIndex('contribution_snapshots_uniq').on(t.groupId, t.userId, t.snapshotAt),
+]);
+
+// 每一条结论都必须能追到若干条 evidence_items——这是「可下钻」的实现
+export const evidenceItems = pgTable('evidence_items', {
+  id: serial('id').primaryKey(),
+  groupId: integer('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  snapshotId: integer('snapshot_id')
+    .notNull()
+    .references(() => contributionSnapshots.id, { onDelete: 'cascade' }),
+  // artifact | process | peer
+  source: varchar('source', { length: 20 }).notNull(),
+  refType: varchar('ref_type', { length: 30 }),
+  refId: integer('ref_id'),
+  weight: numeric('weight', { precision: 4, scale: 3 }).notNull().default('1.000'),
+  value: numeric('value', { precision: 6, scale: 3 }).notNull().default('0'),
+  note: text('note'),
+  computedAt: timestamp('computed_at').notNull().defaultNow(),
+}, (t) => [
+  index('evidence_items_snapshot_idx').on(t.snapshotId),
+  index('evidence_items_user_idx').on(t.userId),
+]);
+
+// 教师终审：系统只给区间，最终值由教师确定
+export const attributionReviews = pgTable('attribution_reviews', {
+  id: serial('id').primaryKey(),
+  snapshotId: integer('snapshot_id')
+    .notNull()
+    .references(() => contributionSnapshots.id, { onDelete: 'cascade' }),
+  reviewerId: integer('reviewer_id')
+    .notNull()
+    .references(() => users.id),
+  adjustedLow: numeric('adjusted_low', { precision: 5, scale: 2 }),
+  adjustedHigh: numeric('adjusted_high', { precision: 5, scale: 2 }),
+  finalNote: text('final_note'),
+  isLocked: boolean('is_locked').notNull().default(false),
+  reviewedAt: timestamp('reviewed_at').notNull().defaultNow(),
+});
+
+// 学生申诉通道
+export const attributionAppeals = pgTable('attribution_appeals', {
+  id: serial('id').primaryKey(),
+  snapshotId: integer('snapshot_id')
+    .notNull()
+    .references(() => contributionSnapshots.id, { onDelete: 'cascade' }),
+  appellantId: integer('appellant_id')
+    .notNull()
+    .references(() => users.id),
+  reason: text('reason').notNull(),
+  evidenceText: text('evidence_text'),
+  attachments: jsonb('attachments').$type<unknown[]>(),
+  // submitted | reviewing | accepted | rejected | partially_accepted
+  status: varchar('status', { length: 20 }).notNull().default('submitted'),
+  handlerId: integer('handler_id').references(() => users.id),
+  resultNote: text('result_note'),
+  handledAt: timestamp('handled_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [index('attribution_appeals_status_idx').on(t.status)]);
+
+// ============================================================
 // relations（drizzle query API）
 // ============================================================
 
@@ -673,6 +846,14 @@ export type TaskAssignment = typeof taskAssignments.$inferSelect;
 export type TaskStatusEvent = typeof taskStatusEvents.$inferSelect;
 export type Contract = typeof contracts.$inferSelect;
 export type ContractGlossary = typeof contractGlossary.$inferSelect;
+export type Artifact = typeof artifacts.$inferSelect;
+export type ArtifactVersion = typeof artifactVersions.$inferSelect;
+export type ArtifactSegment = typeof artifactSegments.$inferSelect;
+export type SegmentEdit = typeof segmentEdits.$inferSelect;
+export type ContributionSnapshot = typeof contributionSnapshots.$inferSelect;
+export type EvidenceItem = typeof evidenceItems.$inferSelect;
+export type AttributionReview = typeof attributionReviews.$inferSelect;
+export type AttributionAppeal = typeof attributionAppeals.$inferSelect;
 
 // 课程级角色（规格书 S5 权限矩阵）；判定时与小组级 duty 求交
 export const COURSE_ROLES = ['teacher', 'assistant', 'captain', 'member'] as const;
