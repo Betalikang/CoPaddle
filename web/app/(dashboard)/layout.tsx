@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { use, useState, Suspense } from 'react';
+import { useEffect, use, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { CircleIcon, Home, LogOut } from 'lucide-react';
 import {
@@ -20,6 +20,10 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // radix 组件（useId）在 React 19 + dev HMR 下 SSR/CSR id 不一致会触发
+  // hydration mismatch：挂载前只渲染同尺寸占位，挂载后再渲染真实组件
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const { data: user } = useSWR<User>('/api/user', fetcher);
   const router = useRouter();
 
@@ -27,6 +31,10 @@ function UserMenu() {
     await signOut();
     mutate('/api/user');
     router.push('/');
+  }
+
+  if (!mounted) {
+    return <div className="size-9" />;
   }
 
   if (!user) {
