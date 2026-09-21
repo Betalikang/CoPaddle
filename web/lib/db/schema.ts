@@ -402,6 +402,136 @@ export const groupMembers = pgTable('group_members', {
 ]);
 
 // ============================================================
+// 共桨域④：任务、依赖与契约（规格书 S1）
+// ============================================================
+
+export const taskPlans = pgTable('task_plans', {
+  id: serial('id').primaryKey(),
+  groupId: integer('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+  assignmentTitle: varchar('assignment_title', { length: 200 }),
+  assignmentText: text('assignment_text'),
+  assignmentFileUrl: text('assignment_file_url'),
+  // 一次拆解产出一个 plan，plan 下挂 tasks
+  llmModel: varchar('llm_model', { length: 50 }),
+  promptTokens: integer('prompt_tokens'),
+  completionTokens: integer('completion_tokens'),
+  generatedAt: timestamp('generated_at').notNull().defaultNow(),
+  validated: boolean('validated').notNull().default(true),
+  // LLM 后置校验未过的问题清单（不静默丢弃，界面高亮人工修正）
+  validateProblems: jsonb('validate_problems').$type<string[]>(),
+}, (t) => [index('task_plans_group_generated_idx').on(t.groupId, t.generatedAt)]);
+
+export const tasks = pgTable('tasks', {
+  id: serial('id').primaryKey(),
+  planId: integer('plan_id')
+    .notNull()
+    .references(() => taskPlans.id, { onDelete: 'cascade' }),
+  groupId: integer('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+  code: varchar('code', { length: 10 }).notNull(),
+  title: varchar('title', { length: 200 }).notNull(),
+  description: text('description'),
+  milestone: varchar('milestone', { length: 100 }),
+  orderIndex: integer('order_index').notNull().default(0),
+  estHours: numeric('est_hours', { precision: 5, scale: 1 }).notNull().default('2.0'),
+  actualHours: numeric('actual_hours', { precision: 5, scale: 1 }),
+  status: varchar('status', { length: 20 }).notNull().default('todo'),
+  deliverableType: varchar('deliverable_type', { length: 20 }).notNull().default('document'),
+  priority: varchar('priority', { length: 20 }).notNull().default('normal'),
+  dueAt: timestamp('due_at'),
+  startedAt: timestamp('started_at'),
+  completedAt: timestamp('completed_at'),
+  blockedReason: text('blocked_reason'),
+  onCriticalPath: boolean('on_critical_path').notNull().default(false),
+  createdBy: integer('created_by').references(() => users.id),
+  deletedAt: timestamp('deleted_at'),
+}, (t) => [
+  index('tasks_group_status_idx').on(t.groupId, t.status),
+  index('tasks_due_at_idx').on(t.dueAt),
+  uniqueIndex('tasks_plan_code_uniq').on(t.planId, t.code),
+]);
+
+// 有向无环图：写入前必须做环检测（加边时校验）
+export const taskDeps = pgTable('task_deps', {
+  taskId: integer('task_id')
+    .notNull()
+    .references(() => tasks.id, { onDelete: 'cascade' }),
+  dependsOnId: integer('depends_on_id')
+    .notNull()
+    .references(() => tasks.id, { onDelete: 'cascade' }),
+}, (t) => [index('task_deps_task_idx').on(t.taskId)]);
+
+export const taskAssignments = pgTable('task_assignments', {
+  id: serial('id').primaryKey(),
+  taskId: integer('task_id')
+    .notNull()
+    .references(() => tasks.id, { onDelete: 'cascade' }),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  // RACI：lead 主责 | contributor 协作 | reviewer 审阅
+  raci: varchar('raci', { length: 20 }).notNull().default('contributor'),
+  assignedBy: integer('assigned_by').references(() => users.id),
+  assignedAt: timestamp('assigned_at').notNull().defaultNow(),
+  acceptedAt: timestamp('accepted_at'),
+  workloadShare: numeric('workload_share', { precision: 5, scale: 4 }),
+}, (t) => [uniqueIndex('task_assignments_uniq').on(t.taskId, t.userId, t.raci)]);
+
+// 进度信号的第一手来源（B-10 从这里算延期与返工）
+export const taskStatusEvents = pgTable('task_status_events', {
+  id: serial('id').primaryKey(),
+  taskId: integer('task_id')
+    .notNull()
+    .references(() => tasks.id, { onDelete: 'cascade' }),
+  fromStatus: varchar('from_status', { length: 20 }),
+  toStatus: varchar('to_status', { length: 20 }).notNull(),
+  actorId: integer('actor_id').references(() => users.id),
+  note: text('note'),
+  evidenceUrl: text('evidence_url'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [index('task_status_events_task_created_idx').on(t.taskId, t.createdAt)]);
+
+export const contracts = pgTable('contracts', {
+  id: serial('id').primaryKey(),
+  groupId: integer('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+  version: smallint('version').notNull().default(1),
+  // g1 = LLM 生成 | manual = 人工编辑
+  generatedBy: varchar('generated_by', { length: 20 }).notNull().default('g1'),
+  formatSpec: text('format_spec'),
+  publishedAt: timestamp('published_at'),
+  publishedBy: integer('published_by').references(() => users.id),
+}, (t) => [index('contracts_group_version_idx').on(t.groupId, t.version)]);
+
+export const contractGlossary = pgTable('contract_glossary', {
+  id: serial('id').primaryKey(),
+  contractId: integer('contract_id')
+    .notNull()
+    .references(() => contracts.id, { onDelete: 'cascade' }),
+  term: varchar('term', { length: 100 }).notNull(),
+  definition: text('definition'),
+  // 单位与统计范围是冲突高发区
+  unit: varchar('unit', { length: 50 }),
+  scope: varchar('scope', { length: 100 }),
+  example: text('example'),
+});
+
+export const contractAcceptances = pgTable('contract_acceptances', {
+  contractId: integer('contract_id')
+    .notNull()
+    .references(() => contracts.id, { onDelete: 'cascade' }),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  acceptedAt: timestamp('accepted_at').notNull().defaultNow(),
+  device: varchar('device', { length: 100 }),
+});
+
+// ============================================================
 // relations（drizzle query API）
 // ============================================================
 
@@ -536,6 +666,13 @@ export type GroupingRun = typeof groupingRuns.$inferSelect;
 export type GroupingPlan = typeof groupingPlans.$inferSelect;
 export type Group = typeof groups.$inferSelect;
 export type GroupMember = typeof groupMembers.$inferSelect;
+export type TaskPlan = typeof taskPlans.$inferSelect;
+export type Task = typeof tasks.$inferSelect;
+export type TaskDep = typeof taskDeps.$inferSelect;
+export type TaskAssignment = typeof taskAssignments.$inferSelect;
+export type TaskStatusEvent = typeof taskStatusEvents.$inferSelect;
+export type Contract = typeof contracts.$inferSelect;
+export type ContractGlossary = typeof contractGlossary.$inferSelect;
 
 // 课程级角色（规格书 S5 权限矩阵）；判定时与小组级 duty 求交
 export const COURSE_ROLES = ['teacher', 'assistant', 'captain', 'member'] as const;
