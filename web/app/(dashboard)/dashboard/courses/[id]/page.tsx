@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { use } from 'react';
 import {
   BookOpenCheck,
+  FileText,
   ClipboardList,
   FileSpreadsheet,
   GitBranch,
@@ -94,20 +95,21 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
           <EntryCard href={`/dashboard/courses/${id}/settings`} icon={<Settings className="h-5 w-5" />} title="分组策略与权重" desc="组数规模、四项目标权重、三类证据权重与阈值" ready />
           <EntryCard href={`/dashboard/courses/${id}/grouping`} icon={<GitBranch className="h-5 w-5" />} title="分组工作台" desc="AI 生成三方案、拖动微调实时看分、破坏硬约束标红" ready />
           <EntryCard href={`/dashboard/courses/${id}/tasks`} icon={<ListChecks className="h-5 w-5" />} title="任务与依赖" desc="AI 拆解任务 DAG、分工指派、协作契约" ready />
-          <EntryCard href={`/dashboard/courses/${id}/contributions`} icon={<ClipboardList className="h-5 w-5" />} title="贡献账本" desc="贡献构成、区间估计与证据下钻（S4 期）" />
+          <EntryCard href={`/dashboard/courses/${id}/contributions`} icon={<ClipboardList className="h-5 w-5" />} title="贡献账本" desc="区间估计、贡献构成、证据下钻、教师终审与申诉" ready />
+          <EntryCard href={`/dashboard/courses/${id}/artifacts`} icon={<FileText className="h-5 w-5" />} title="交付物与溯源" desc="平台内分段撰写、diff 归属、汇编终稿" ready />
           <EntryCard href={`/dashboard/courses/${id}/skill-card`} icon={<FileSpreadsheet className="h-5 w-5" />} title="我的技能卡" desc="填写我的能力自评（30 秒）" ready />
         </div>
       ) : myRole === 'captain' ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <EntryCard href={`/dashboard/courses/${id}/tasks`} icon={<ListChecks className="h-5 w-5" />} title="小组任务" desc="AI 拆解任务 DAG、分工指派、协作契约" ready />
           <EntryCard href={`/dashboard/courses/${id}/skill-card`} icon={<FileSpreadsheet className="h-5 w-5" />} title="我的技能卡" desc="填写我的能力自评（30 秒）" ready />
-          <EntryCard href={`/dashboard/courses/${id}/contributions`} icon={<ClipboardList className="h-5 w-5" />} title="我的贡献账本" desc="贡献构成与证据（S4 期）" />
+          <EntryCard href={`/dashboard/courses/${id}/contributions`} icon={<ClipboardList className="h-5 w-5" />} title="我的贡献账本" desc="我的区间、构成与证据，可申诉" ready />
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <EntryCard href={`/dashboard/courses/${id}/skill-card`} icon={<FileSpreadsheet className="h-5 w-5" />} title="我的技能卡" desc="填写我的能力自评（30 秒），分组与分工都依赖它" ready />
           <EntryCard href={`/dashboard/my-tasks`} icon={<BookOpenCheck className="h-5 w-5" />} title="我的部分" desc="我负责什么、依赖谁、何时必须交" ready />
-          <EntryCard href={`/dashboard/courses/${id}/contributions`} icon={<ClipboardList className="h-5 w-5" />} title="我的贡献账本" desc="贡献构成、区间与证据下钻（S4 期）" />
+          <EntryCard href={`/dashboard/courses/${id}/contributions`} icon={<ClipboardList className="h-5 w-5" />} title="我的贡献账本" desc="我的区间、构成与证据，可申诉" ready />
         </div>
       )}
     </section>
