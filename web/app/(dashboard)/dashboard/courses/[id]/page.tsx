@@ -92,7 +92,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <EntryCard href={`/dashboard/courses/${id}/roster`} icon={<Users className="h-5 w-5" />} title="名单管理" desc="导入名单、查看技能卡填写进度、调整班级与角色" ready />
           <EntryCard href={`/dashboard/courses/${id}/settings`} icon={<Settings className="h-5 w-5" />} title="分组策略与权重" desc="组数规模、四项目标权重、三类证据权重与阈值" ready />
-          <EntryCard href={`/dashboard/courses/${id}/grouping`} icon={<GitBranch className="h-5 w-5" />} title="分组工作台" desc="AI 生成三方案、拖动微调实时看分（S2 期）" />
+          <EntryCard href={`/dashboard/courses/${id}/grouping`} icon={<GitBranch className="h-5 w-5" />} title="分组工作台" desc="AI 生成三方案、拖动微调实时看分、破坏硬约束标红" ready />
           <EntryCard href={`/dashboard/courses/${id}/tasks`} icon={<ListChecks className="h-5 w-5" />} title="任务总览" desc="任务 DAG、关键路径与健康度（S3/S5 期）" />
           <EntryCard href={`/dashboard/courses/${id}/contributions`} icon={<ClipboardList className="h-5 w-5" />} title="贡献账本" desc="贡献构成、区间估计与证据下钻（S4 期）" />
           <EntryCard href={`/dashboard/courses/${id}/skill-card`} icon={<FileSpreadsheet className="h-5 w-5" />} title="我的技能卡" desc="填写我的能力自评（30 秒）" ready />
