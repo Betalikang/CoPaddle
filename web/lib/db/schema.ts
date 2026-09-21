@@ -65,9 +65,8 @@ export const teamMembers = pgTable('team_members', {
 
 export const activityLogs = pgTable('activity_logs', {
   id: serial('id').primaryKey(),
-  teamId: integer('team_id')
-    .notNull()
-    .references(() => teams.id),
+  // 共桨账号级操作（登录/登出/改密）也写活动记录：team_id 可空
+  teamId: integer('team_id').references(() => teams.id),
   userId: integer('user_id').references(() => users.id),
   action: text('action').notNull(),
   timestamp: timestamp('timestamp').notNull().defaultNow(),

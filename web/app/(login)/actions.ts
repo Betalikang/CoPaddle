@@ -31,11 +31,9 @@ async function logActivity(
   type: ActivityType,
   ipAddress?: string
 ) {
-  if (teamId === null || teamId === undefined) {
-    return;
-  }
+  // 账号级操作（登录/登出/改密等）无条件记录，team_id 可为空
   const newActivity: NewActivityLog = {
-    teamId,
+    teamId: teamId ?? null,
     userId,
     action: type,
     ipAddress: ipAddress || ''
