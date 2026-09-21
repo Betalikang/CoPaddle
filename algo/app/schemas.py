@@ -153,9 +153,33 @@ class HealthComputeResponse(BaseModel):
     diagnosis: list[str] = Field(default_factory=list)
 
 
+class AttributionMemberInput(BaseModel):
+    """单成员的三类证据原料（由 web 侧从溯源表/状态事件/互评表汇总后传入）。"""
+
+    user_id: str
+    # 证据 A·产出物（段落级溯源，非自报）
+    words_authored: int = Field(default=0, ge=0)  # 本人主责段落字数
+    words_revised: int = Field(default=0, ge=0)  # 本人修改他人段落字数（协作，半权）
+    # 证据 B·过程（task_status_events / 补位记录统计）
+    lead_total: int = Field(default=0, ge=0)  # 主责任务总数
+    lead_on_time: int = Field(default=0, ge=0)  # 按期完成的主责任务数
+    cp_total: int = Field(default=0, ge=0)  # 关键路径任务总数（组内）
+    cp_done: int = Field(default=0, ge=0)  # 本人完成的关键路径任务数
+    rework_count: int = Field(default=0, ge=0)  # 返工次数（reviewing→doing）
+    help_count: int = Field(default=0, ge=0)  # 主动补位次数
+    # 证据 C·同伴（组内互评原始分，5 分制；空 = 本轮无互评数据）
+    peer_scores: list[float] = Field(default_factory=list)
+
+
 class AttributionComputeRequest(BaseModel):
     group_id: str
-    member_ids: list[str] = Field(default_factory=list)
+    members: list[AttributionMemberInput] = Field(default_factory=list)
+    # 三类证据权重（合计 1.0；同伴缺失时按 0.5:0.3 重分配给产出物/过程）
+    w_artifact: float = Field(default=0.5, ge=0, le=1)
+    w_process: float = Field(default=0.3, ge=0, le=1)
+    w_peer: float = Field(default=0.2, ge=0, le=1)
+    # 搭便车提示阈值（JSS 2023 实证研究：低于应分担份额 14%）
+    fair_share_threshold: float = Field(default=0.14, ge=0, le=1)
 
 
 class AttributionMemberResult(BaseModel):
@@ -166,10 +190,15 @@ class AttributionMemberResult(BaseModel):
     confidence: str = "low"  # low | medium | high
     fair_share_ratio: float = 0.0
     warning: str = ""
+    # 贡献构成（占该成员 point 的百分比）。比规格示例多一个「按时交付」键：
+    # 过程证据里按期/关键路径部分单列，避免混入产出物语义
+    comp: dict[str, float] = Field(default_factory=dict)
 
 
 class AttributionComputeResponse(BaseModel):
     members: list[AttributionMemberResult] = Field(default_factory=list)
+    # 同伴证据整体缺席时为 true（账本需标注「区间已放宽」）
+    peer_missing: bool = False
 
 
 class DecomposeRequest(BaseModel):
