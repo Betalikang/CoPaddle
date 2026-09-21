@@ -1,0 +1,153 @@
+'use client';
+
+import useSWR from 'swr';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { use } from 'react';
+import {
+  BookOpenCheck,
+  ClipboardList,
+  FileSpreadsheet,
+  GitBranch,
+  ListChecks,
+  Settings,
+  Users
+} from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+const ROLE_LABEL: Record<string, string> = {
+  teacher: '教师',
+  assistant: '助教',
+  captain: '队长',
+  member: '队员'
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  draft: '草稿',
+  active: '进行中',
+  archived: '已归档'
+};
+
+type CourseDetail = {
+  course: { id: number; name: string; code: string | null; term: string; status: string; description: string | null };
+  settings: Record<string, unknown>;
+  myRole: string;
+};
+
+export default function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter();
+  const { id } = use(params);
+  const { data, error, isLoading } = useSWR<CourseDetail>(
+    `/api/courses/${id}`,
+    fetcher
+  );
+
+  if (isLoading) {
+    return (
+      <section className="flex-1 p-4 lg:p-8">
+        <Skeleton className="mb-4 h-8 w-48" />
+        <Skeleton className="h-40" />
+      </section>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <section className="flex-1 p-4 lg:p-8">
+        <p className="text-sm text-destructive">课程不存在或无权访问。</p>
+        <Button variant="outline" className="mt-4" onClick={() => router.push('/dashboard')}>
+          返回课程工作台
+        </Button>
+      </section>
+    );
+  }
+
+  const { course, myRole } = data;
+  const isTeacherSide = myRole === 'teacher' || myRole === 'assistant';
+
+  return (
+    <section className="flex-1 p-4 lg:p-8">
+      <div className="mb-6 flex flex-wrap items-center gap-3">
+        <h1 className="text-lg lg:text-2xl font-medium">
+          {course.name}
+          {course.code ? `（${course.code}）` : ''}
+        </h1>
+        <Badge variant={course.status === 'active' ? 'default' : 'secondary'}>
+          {STATUS_LABEL[course.status] ?? course.status}
+        </Badge>
+        <Badge variant="outline">我的角色：{ROLE_LABEL[myRole] ?? myRole}</Badge>
+        <span className="text-sm text-muted-foreground">{course.term}</span>
+      </div>
+
+      {course.description && (
+        <p className="mb-6 max-w-2xl text-sm text-muted-foreground">{course.description}</p>
+      )}
+
+      {isTeacherSide ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <EntryCard href={`/dashboard/courses/${id}/roster`} icon={<Users className="h-5 w-5" />} title="名单管理" desc="导入名单、查看技能卡填写进度、调整班级与角色" ready />
+          <EntryCard href={`/dashboard/courses/${id}/settings`} icon={<Settings className="h-5 w-5" />} title="分组策略与权重" desc="组数规模、四项目标权重、三类证据权重与阈值" ready />
+          <EntryCard href={`/dashboard/courses/${id}/grouping`} icon={<GitBranch className="h-5 w-5" />} title="分组工作台" desc="AI 生成三方案、拖动微调实时看分（S2 期）" />
+          <EntryCard href={`/dashboard/courses/${id}/tasks`} icon={<ListChecks className="h-5 w-5" />} title="任务总览" desc="任务 DAG、关键路径与健康度（S3/S5 期）" />
+          <EntryCard href={`/dashboard/courses/${id}/contributions`} icon={<ClipboardList className="h-5 w-5" />} title="贡献账本" desc="贡献构成、区间估计与证据下钻（S4 期）" />
+          <EntryCard href={`/dashboard/courses/${id}/skill-card`} icon={<FileSpreadsheet className="h-5 w-5" />} title="我的技能卡" desc="填写我的能力自评（30 秒）" ready />
+        </div>
+      ) : myRole === 'captain' ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <EntryCard href={`/dashboard/courses/${id}/tasks`} icon={<ListChecks className="h-5 w-5" />} title="小组任务" desc="任务 DAG、分工与看板（S3 期）" />
+          <EntryCard href={`/dashboard/courses/${id}/skill-card`} icon={<FileSpreadsheet className="h-5 w-5" />} title="我的技能卡" desc="填写我的能力自评（30 秒）" ready />
+          <EntryCard href={`/dashboard/courses/${id}/contributions`} icon={<ClipboardList className="h-5 w-5" />} title="我的贡献账本" desc="贡献构成与证据（S4 期）" />
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <EntryCard href={`/dashboard/courses/${id}/skill-card`} icon={<FileSpreadsheet className="h-5 w-5" />} title="我的技能卡" desc="填写我的能力自评（30 秒），分组与分工都依赖它" ready />
+          <EntryCard href={`/dashboard/courses/${id}/my-tasks`} icon={<BookOpenCheck className="h-5 w-5" />} title="我的部分" desc="我负责什么、依赖谁、何时必须交（S3 期）" />
+          <EntryCard href={`/dashboard/courses/${id}/contributions`} icon={<ClipboardList className="h-5 w-5" />} title="我的贡献账本" desc="贡献构成、区间与证据下钻（S4 期）" />
+        </div>
+      )}
+    </section>
+  );
+}
+
+function EntryCard({
+  href,
+  icon,
+  title,
+  desc,
+  ready = false
+}: {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  desc: string;
+  ready?: boolean;
+}) {
+  if (!ready) {
+    return (
+      <Card className="opacity-60">
+        <CardHeader className="flex flex-row items-center gap-2 pb-1">
+          {icon}
+          <CardTitle className="text-base">{title}</CardTitle>
+          <Badge variant="secondary" className="ml-auto">规划中</Badge>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">{desc}</CardContent>
+      </Card>
+    );
+  }
+  return (
+    <Link href={href}>
+      <Card className="h-full cursor-pointer transition-shadow hover:shadow-md">
+        <CardHeader className="flex flex-row items-center gap-2 pb-1">
+          {icon}
+          <CardTitle className="text-base">{title}</CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm text-muted-foreground">{desc}</CardContent>
+      </Card>
+    </Link>
+  );
+}

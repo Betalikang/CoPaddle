@@ -12,7 +12,7 @@ import {
 } from '../db/schema';
 import type { CreateCourseInput, UpdateCourseInput, UpdateSettingsInput } from '@/lib/validation/courses';
 
-export type CourseWithRole = Course & { myRole: CourseRole };
+export type CourseWithRole = Course & { myRole: CourseRole; memberCount: number };
 
 /**
  * 建课：一条事务里落 courses + course_settings 默认值 + 教师本人 membership。
@@ -48,15 +48,27 @@ export async function createCourse(
   });
 }
 
-/** 我参与的课程：教的 + 被加入的，附我在每门课的角色。 */
+/** 我参与的课程：教的 + 被加入的，附我在每门课的角色与在册人数。 */
 export async function listMyCourses(userId: number): Promise<CourseWithRole[]> {
+  const memberCounts = db
+    .select({
+      courseId: courseMemberships.courseId,
+      count: sql<number>`count(*)`.as('count')
+    })
+    .from(courseMemberships)
+    .where(eq(courseMemberships.status, 'active'))
+    .groupBy(courseMemberships.courseId)
+    .as('member_counts');
+
   const rows = await db
     .select({
       course: courses,
-      myRole: courseMemberships.role
+      myRole: courseMemberships.role,
+      memberCount: memberCounts.count
     })
     .from(courseMemberships)
     .innerJoin(courses, eq(courseMemberships.courseId, courses.id))
+    .leftJoin(memberCounts, eq(memberCounts.courseId, courses.id))
     .where(
       and(
         eq(courseMemberships.userId, userId),
@@ -66,7 +78,11 @@ export async function listMyCourses(userId: number): Promise<CourseWithRole[]> {
     )
     .orderBy(sql`${courses.createdAt} DESC`);
 
-  return rows.map((r) => ({ ...r.course, myRole: r.myRole as CourseRole }));
+  return rows.map((r) => ({
+    ...r.course,
+    myRole: r.myRole as CourseRole,
+    memberCount: Number(r.memberCount ?? 0)
+  }));
 }
 
 /** 课程详情（含设置），仅参与人可读；返回 null 表示无权限或不存在。 */

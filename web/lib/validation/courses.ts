@@ -71,4 +71,5 @@ export type CreateCourseInput = z.infer<typeof createCourseSchema>;
 export type UpdateCourseInput = z.infer<typeof updateCourseSchema>;
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
 export type AddEnrollmentInput = z.infer<typeof addEnrollmentSchema>;
-export type SkillCardInput = z.infer<typeof skillCardSchema>;
+// 技能卡有带默认值的可选字段，服务层入参用 input 类型（允许省略）
+export type SkillCardInput = z.input<typeof skillCardSchema>;
