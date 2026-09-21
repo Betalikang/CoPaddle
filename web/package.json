@@ -41,6 +41,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.88.0",
+    "reactflow": "^11.11.4",
     "recharts": "^3.10.1",
     "server-only": "^0.0.1",
     "swr": "^2.3.3",
