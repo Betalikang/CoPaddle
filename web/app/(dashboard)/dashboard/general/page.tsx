@@ -34,25 +34,25 @@ function AccountForm({
     <>
       <div>
         <Label htmlFor="name" className="mb-2">
-          Name
+          姓名
         </Label>
         <Input
           id="name"
           name="name"
-          placeholder="Enter your name"
+          placeholder="请输入姓名"
           defaultValue={state.name || nameValue}
           required
         />
       </div>
       <div>
         <Label htmlFor="email" className="mb-2">
-          Email
+          邮箱
         </Label>
         <Input
           id="email"
           name="email"
           type="email"
-          placeholder="Enter your email"
+          placeholder="请输入邮箱"
           defaultValue={emailValue}
           required
         />
@@ -81,12 +81,12 @@ export default function GeneralPage() {
   return (
     <section className="flex-1 p-4 lg:p-8">
       <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
-        General Settings
+        账号设置
       </h1>
 
       <Card>
         <CardHeader>
-          <CardTitle>Account Information</CardTitle>
+          <CardTitle>账号信息</CardTitle>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" action={formAction}>
@@ -107,10 +107,10 @@ export default function GeneralPage() {
               {isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
+                  保存中…
                 </>
               ) : (
-                'Save Changes'
+                '保存修改'
               )}
             </Button>
           </form>

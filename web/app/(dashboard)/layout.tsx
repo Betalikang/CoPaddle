@@ -66,7 +66,7 @@ function UserMenu() {
           <button type="submit" className="flex w-full">
             <DropdownMenuItem className="w-full flex-1 cursor-pointer">
               <LogOut className="mr-2 h-4 w-4" />
-              <span>Sign out</span>
+              <span>退出登录</span>
             </DropdownMenuItem>
           </button>
         </form>

@@ -169,7 +169,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
         .where(eq(teams.id, teamId))
         .limit(1);
     } else {
-      return { error: 'Invalid or expired invitation.', email, password };
+      return { error: '邀请无效或已过期。', email, password };
     }
   } else {
     // Create a new team if there's no invitation
@@ -181,7 +181,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
     if (!createdTeam) {
       return {
-        error: 'Failed to create team. Please try again.',
+        error: '创建团队失败，请重试。',
         email,
         password
       };
@@ -236,7 +236,7 @@ export const updatePassword = validatedActionWithUser(
         currentPassword,
         newPassword,
         confirmPassword,
-        error: 'Current password is incorrect.'
+        error: '当前密码不正确。'
       };
     }
 
@@ -245,7 +245,7 @@ export const updatePassword = validatedActionWithUser(
         currentPassword,
         newPassword,
         confirmPassword,
-        error: 'New password must be different from the current password.'
+        error: '新密码不能与当前密码相同。'
       };
     }
 
@@ -254,7 +254,7 @@ export const updatePassword = validatedActionWithUser(
         currentPassword,
         newPassword,
         confirmPassword,
-        error: 'New password and confirmation password do not match.'
+        error: '两次输入的新密码不一致。'
       };
     }
 
@@ -270,7 +270,7 @@ export const updatePassword = validatedActionWithUser(
     ]);
 
     return {
-      success: 'Password updated successfully.'
+      success: '密码已更新。'
     };
   }
 );
@@ -288,7 +288,7 @@ export const deleteAccount = validatedActionWithUser(
     if (!isPasswordValid) {
       return {
         password,
-        error: 'Incorrect password. Account deletion failed.'
+        error: '密码不正确，账号注销失败。'
       };
     }
 
@@ -326,8 +326,8 @@ export const deleteAccount = validatedActionWithUser(
 );
 
 const updateAccountSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100),
-  email: z.string().email('Invalid email address')
+  name: z.string().min(1, '姓名不能为空').max(100),
+  email: z.string().email('邮箱格式不正确')
 });
 
 export const updateAccount = validatedActionWithUser(
@@ -341,7 +341,7 @@ export const updateAccount = validatedActionWithUser(
       logActivity(userWithTeam?.teamId, user.id, ActivityType.UPDATE_ACCOUNT)
     ]);
 
-    return { name, success: 'Account updated successfully.' };
+    return { name, success: '账号信息已更新。' };
   }
 );
 
@@ -356,7 +356,7 @@ export const removeTeamMember = validatedActionWithUser(
     const userWithTeam = await getUserWithTeam(user.id);
 
     if (!userWithTeam?.teamId) {
-      return { error: 'User is not part of a team' };
+      return { error: '你还未加入任何团队' };
     }
 
     await db
@@ -374,12 +374,12 @@ export const removeTeamMember = validatedActionWithUser(
       ActivityType.REMOVE_TEAM_MEMBER
     );
 
-    return { success: 'Team member removed successfully' };
+    return { success: '团队成员已移除' };
   }
 );
 
 const inviteTeamMemberSchema = z.object({
-  email: z.string().email('Invalid email address'),
+  email: z.string().email('邮箱格式不正确'),
   role: z.enum(['member', 'owner'])
 });
 
@@ -390,7 +390,7 @@ export const inviteTeamMember = validatedActionWithUser(
     const userWithTeam = await getUserWithTeam(user.id);
 
     if (!userWithTeam?.teamId) {
-      return { error: 'User is not part of a team' };
+      return { error: '你还未加入任何团队' };
     }
 
     const existingMember = await db
@@ -403,7 +403,7 @@ export const inviteTeamMember = validatedActionWithUser(
       .limit(1);
 
     if (existingMember.length > 0) {
-      return { error: 'User is already a member of this team' };
+      return { error: '该用户已是团队成员' };
     }
 
     // Check if there's an existing invitation
@@ -420,7 +420,7 @@ export const inviteTeamMember = validatedActionWithUser(
       .limit(1);
 
     if (existingInvitation.length > 0) {
-      return { error: 'An invitation has already been sent to this email' };
+      return { error: '该邮箱已发送过邀请' };
     }
 
     // Create a new invitation
@@ -441,6 +441,6 @@ export const inviteTeamMember = validatedActionWithUser(
     // TODO: Send invitation email and include ?inviteId={id} to sign-up URL
     // await sendInvitationEmail(email, userWithTeam.team.name, role)
 
-    return { success: 'Invitation sent successfully' };
+    return { success: '邀请已发送' };
   }
 );

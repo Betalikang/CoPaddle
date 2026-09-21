@@ -31,40 +31,40 @@ function getRelativeTime(date: Date) {
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-  if (diffInSeconds < 60) return 'just now';
+  if (diffInSeconds < 60) return '刚刚';
   if (diffInSeconds < 3600)
-    return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+    return `${Math.floor(diffInSeconds / 60)} 分钟前`;
   if (diffInSeconds < 86400)
-    return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+    return `${Math.floor(diffInSeconds / 3600)} 小时前`;
   if (diffInSeconds < 604800)
-    return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    return `${Math.floor(diffInSeconds / 86400)} 天前`;
   return date.toLocaleDateString();
 }
 
 function formatAction(action: ActivityType): string {
   switch (action) {
     case ActivityType.SIGN_UP:
-      return 'You signed up';
+      return '你注册了账号';
     case ActivityType.SIGN_IN:
-      return 'You signed in';
+      return '你登录了账号';
     case ActivityType.SIGN_OUT:
-      return 'You signed out';
+      return '你退出了账号';
     case ActivityType.UPDATE_PASSWORD:
-      return 'You changed your password';
+      return '你修改了密码';
     case ActivityType.DELETE_ACCOUNT:
-      return 'You deleted your account';
+      return '你注销了账号';
     case ActivityType.UPDATE_ACCOUNT:
-      return 'You updated your account';
+      return '你更新了账号信息';
     case ActivityType.CREATE_TEAM:
-      return 'You created a new team';
+      return '你创建了团队';
     case ActivityType.REMOVE_TEAM_MEMBER:
-      return 'You removed a team member';
+      return '你移除了团队成员';
     case ActivityType.INVITE_TEAM_MEMBER:
-      return 'You invited a team member';
+      return '你邀请了团队成员';
     case ActivityType.ACCEPT_INVITATION:
-      return 'You accepted an invitation';
+      return '你接受了邀请';
     default:
-      return 'Unknown action occurred';
+      return '未知操作';
   }
 }
 
@@ -74,11 +74,11 @@ export default async function ActivityPage() {
   return (
     <section className="flex-1 p-4 lg:p-8">
       <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
-        Activity Log
+        活动记录
       </h1>
       <Card>
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
+          <CardTitle>最近活动</CardTitle>
         </CardHeader>
         <CardContent>
           {logs.length > 0 ? (
