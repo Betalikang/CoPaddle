@@ -99,6 +99,8 @@ class PreviewMoveResponse(BaseModel):
     deltas: dict[str, float] = Field(default_factory=dict)
     total_before: float = 0.0
     total_after: float = 0.0
+    # score 端点填充：给定方案的四维得分（0–100）
+    scores: dict[str, float] = Field(default_factory=dict)
 
 
 # ---------- 图算法（B-08/B-10 支撑）----------

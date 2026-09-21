@@ -85,6 +85,13 @@ def score(req: PreviewMoveRequest) -> PreviewMoveResponse:
         deltas={},
         total_before=scores.total,
         total_after=scores.total,
+        scores={
+            "skill_cover": scores.skill_cover,
+            "weak_tie": scores.weak_tie,
+            "balance": scores.balance,
+            "history_avoid": scores.history_avoid,
+            "total": scores.total,
+        },
     )
 
 

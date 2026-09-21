@@ -312,6 +312,96 @@ export const constraints = pgTable('constraints', {
 }, (t) => [index('constraints_course_status_idx').on(t.courseId, t.status)]);
 
 // ============================================================
+// 共桨域③：分组（规格书 S1）
+// ============================================================
+
+export const groupingRuns = pgTable('grouping_runs', {
+  id: serial('id').primaryKey(),
+  courseId: integer('course_id')
+    .notNull()
+    .references(() => courses.id, { onDelete: 'cascade' }),
+  triggeredBy: integer('triggered_by')
+    .notNull()
+    .references(() => users.id),
+  // cpsat | greedy | manual
+  mode: varchar('mode', { length: 20 }).notNull().default('cpsat'),
+  // 本次求解的输入参数快照（人数/组数/权重/约束条数），供复现与审计
+  params: jsonb('params').$type<Record<string, unknown>>(),
+  // running | ok | infeasible | timeout | error
+  status: varchar('status', { length: 20 }).notNull().default('running'),
+  solverStatus: varchar('solver_status', { length: 20 }),
+  durationMs: integer('duration_ms'),
+  solutionsFound: integer('solutions_found').notNull().default(0),
+  errorDetail: text('error_detail'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [index('grouping_runs_course_created_idx').on(t.courseId, t.createdAt)]);
+
+export const groupingPlans = pgTable('grouping_plans', {
+  id: serial('id').primaryKey(),
+  runId: integer('run_id')
+    .notNull()
+    .references(() => groupingRuns.id, { onDelete: 'cascade' }),
+  // 方案A | 方案B | 方案C
+  label: varchar('label', { length: 20 }).notNull(),
+  // skill_first | weaktie_first | fairness_first
+  strategy: varchar('strategy', { length: 30 }).notNull(),
+  totalScore: numeric('total_score', { precision: 5, scale: 2 }).notNull().default('0'),
+  // 四维原始得分，0–100
+  scoreSkillCover: numeric('score_skill_cover', { precision: 5, scale: 2 }).notNull().default('0'),
+  scoreWeakTie: numeric('score_weak_tie', { precision: 5, scale: 2 }).notNull().default('0'),
+  scoreBalance: numeric('score_balance', { precision: 5, scale: 2 }).notNull().default('0'),
+  scoreHistoryAvoid: numeric('score_history_avoid', { precision: 5, scale: 2 }).notNull().default('0'),
+  // 模板拼装生成的「为什么这样分」（规格书 S6.3：不让模型编理由）
+  explanation: text('explanation'),
+  // ---- 以下三列为规格书的工程补充：三选一期间教师要拖动微调，
+  // 分组快照与得分必须可被修改并保留（preview-move 的落点）----
+  // 当前分组快照：[[user_id,...],...]
+  groups: jsonb('groups').$type<number[][]>().notNull(),
+  // 求解器原始结果（拖动后「还原」用）
+  originalGroups: jsonb('original_groups').$type<number[][]>().notNull(),
+  // 本方案的四维权重预设
+  weights: jsonb('weights').$type<Record<string, number>>(),
+  isSelected: boolean('is_selected').notNull().default(false),
+  selectedAt: timestamp('selected_at'),
+  selectedBy: integer('selected_by').references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [index('grouping_plans_run_idx').on(t.runId)]);
+
+export const groups = pgTable('groups', {
+  id: serial('id').primaryKey(),
+  courseId: integer('course_id')
+    .notNull()
+    .references(() => courses.id, { onDelete: 'cascade' }),
+  planId: integer('plan_id').references(() => groupingPlans.id),
+  name: varchar('name', { length: 50 }).notNull().default(''),
+  captainId: integer('captain_id').references(() => users.id),
+  // forming | active | dissolved | merged
+  status: varchar('status', { length: 20 }).notNull().default('forming'),
+  mergedInto: integer('merged_into'),
+  milestoneProgress: numeric('milestone_progress', { precision: 4, scale: 3 }).notNull().default('0'),
+  formedAt: timestamp('formed_at').notNull().defaultNow(),
+  dissolvedAt: timestamp('dissolved_at'),
+}, (t) => [index('groups_course_status_idx').on(t.courseId, t.status)]);
+
+export const groupMembers = pgTable('group_members', {
+  id: serial('id').primaryKey(),
+  groupId: integer('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
+  // RACI 简化版：lead | contributor | reviewer
+  duty: varchar('duty', { length: 20 }).notNull().default('contributor'),
+  joinedAt: timestamp('joined_at').notNull().defaultNow(),
+  leftAt: timestamp('left_at'),
+  leaveReason: text('leave_reason'),
+}, (t) => [
+  uniqueIndex('group_members_active_uniq').on(t.groupId, t.userId, t.leftAt),
+  index('group_members_user_idx').on(t.userId),
+]);
+
+// ============================================================
 // relations（drizzle query API）
 // ============================================================
 
@@ -442,6 +532,10 @@ export type MemberProfile = typeof memberProfiles.$inferSelect;
 export type MemberSkill = typeof memberSkills.$inferSelect;
 export type SocialEdge = typeof socialEdges.$inferSelect;
 export type Constraint = typeof constraints.$inferSelect;
+export type GroupingRun = typeof groupingRuns.$inferSelect;
+export type GroupingPlan = typeof groupingPlans.$inferSelect;
+export type Group = typeof groups.$inferSelect;
+export type GroupMember = typeof groupMembers.$inferSelect;
 
 // 课程级角色（规格书 S5 权限矩阵）；判定时与小组级 duty 求交
 export const COURSE_ROLES = ['teacher', 'assistant', 'captain', 'member'] as const;
