@@ -113,6 +113,12 @@ class TaskNode(BaseModel):
     est_hours: float = Field(default=1.0, ge=0)
     status: str = "todo"
     due_at: str | None = None
+    # 调度字段（健康度/重规划用）
+    skills: list[str] = Field(default_factory=list)
+    assignee_id: str | None = None
+    remaining_hours: float | None = Field(default=None, ge=0)
+    deliverable_type: str = "document"
+    milestone: str = ""
 
 
 class CriticalPathRequest(BaseModel):
@@ -143,6 +149,8 @@ class HealthComputeRequest(BaseModel):
     tasks: list[TaskNode] = Field(default_factory=list)
     member_ids: list[str] = Field(default_factory=list)
     last_signal_at: dict[str, str] = Field(default_factory=dict, description="user_id -> ISO 时间")
+    idle_trigger_days: int = Field(default=3, ge=1)
+    now_iso: str | None = None
 
 
 class HealthComputeResponse(BaseModel):
@@ -151,6 +159,39 @@ class HealthComputeResponse(BaseModel):
     overload_score: float = 100.0
     overall: float = 100.0
     diagnosis: list[str] = Field(default_factory=list)
+    blocked_tasks: list[str] = Field(default_factory=list)
+    idle_members: list[str] = Field(default_factory=list)
+    overload_members: list[str] = Field(default_factory=list)
+
+
+class ReplanMemberInput(BaseModel):
+    id: str
+    name: str = ""
+    skills: dict[str, int] = Field(default_factory=dict)
+    load_ratio: float = Field(default=0.0, ge=0, le=1)
+
+
+class ReplanRequest(BaseModel):
+    """滚动重规划（规格书 S4.5）：三方案全部纯算法生成，不用大模型。"""
+
+    group_id: str
+    tasks: list[TaskNode] = Field(default_factory=list)
+    members: list[ReplanMemberInput] = Field(default_factory=list)
+    trigger_task_id: str | None = None
+    # 其他小组（组间补位候选）：{group_id, name, health, members:[{id,name,skills,load_ratio}]}
+    other_groups: list[dict[str, object]] = Field(default_factory=list)
+
+
+class ReplanOption(BaseModel):
+    label: str
+    action: str  # redistribute | scope_cut | borrow_member
+    payload: list[dict[str, object]] = Field(default_factory=list)
+    cost_summary: str = ""
+    est_impact_days: float = 0.0
+
+
+class ReplanResponse(BaseModel):
+    options: list[ReplanOption] = Field(default_factory=list)
 
 
 class AttributionMemberInput(BaseModel):

@@ -51,7 +51,8 @@ def _std(values: list[float]) -> float:
     if len(values) < 2:
         return 0.0
     mean = sum(values) / len(values)
-    return (sum((v - mean) ** 2 for v in values) / len(values)) ** 0.5
+    var = sum((v - mean) ** 2 for v in values) / len(values)
+    return float(var ** 0.5)
 
 
 def compute_attribution(req: AttributionComputeRequest) -> AttributionComputeResponse:
@@ -87,7 +88,7 @@ def compute_attribution(req: AttributionComputeRequest) -> AttributionComputeRes
     sum_p = sum(p_raw.values())
 
     # ---- 证据 C·同伴 ----
-    peer_raw: dict[str, float] = {}
+    peer_raw: dict[str, float | None] = {}
     for m in members:
         median = _peer_median(m.peer_scores)
         peer_raw[m.user_id] = None if median is None else max(0.0, (median - 1) / 4)
@@ -108,7 +109,8 @@ def compute_attribution(req: AttributionComputeRequest) -> AttributionComputeRes
         uid = m.user_id
         a_score = 100 * w_total[uid] / sum_total if sum_total > 0 else 0.0
         p_score = 100 * p_raw[uid] / sum_p if sum_p > 0 else 0.0
-        peer_score = 100 * peer_raw[uid] / sum_peer if sum_peer > 0 else 0.0
+        _peer = peer_raw[uid]
+        peer_score = 100 * _peer / sum_peer if (sum_peer > 0 and _peer is not None) else 0.0
         point = w_a * a_score + w_p * p_score + w_peer * peer_score
 
         # 构成（占 point 的百分比；过程证据拆为 按时交付/审阅返工/主动补位）

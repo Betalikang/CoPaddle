@@ -91,7 +91,7 @@ def test_internal_rejects_missing_or_wrong_secret(client: TestClient) -> None:
 def test_internal_stubs_return_501(client: TestClient, auth_headers: dict[str, str]) -> None:
     # 尚未实现的端点仍返回 501 占位（S5 期逐个落地）；
     # grouping 三端点与 ai/decompose 已实现，见各自专项测试
-    live_paths = ("/internal/grouping/", "/internal/ai/decompose", "/internal/attribution/compute")
+    live_paths = ("/internal/grouping/", "/internal/ai/decompose", "/internal/attribution/compute", "/internal/graph/", "/internal/health/compute")
     for path, payload in INTERNAL_ENDPOINTS:
         if any(path.startswith(p) for p in live_paths):
             continue

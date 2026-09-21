@@ -3,9 +3,11 @@
 全部为纯计算，不使用大模型（规格书 S6.3）。
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 
 from ..algorithms.attribution import compute_attribution as attribution_impl
+from ..algorithms.scheduling import Task
+from ..algorithms.scheduling import health as health_impl
 from ..deps import require_internal_secret
 from ..schemas import (
     AttributionComputeRequest,
@@ -22,8 +24,38 @@ attribution_router = APIRouter(
 
 @health_router.post("/compute", response_model=HealthComputeResponse)
 def compute_health(req: HealthComputeRequest) -> HealthComputeResponse:
-    """三维健康度（阻塞/失联/过载）+ 诊断条目，公式见规格书 S4.4。"""
-    raise HTTPException(status_code=501, detail="S5 期实现：健康度三维计算")
+    """三维健康度（阻塞/失联/过载）+ 综合分 + 诊断条目，公式见规格书 S4.4。"""
+    tasks = [
+        Task(
+            id=t.id,
+            title=t.title,
+            deps=list(t.deps),
+            est_hours=t.est_hours,
+            status=t.status,
+            due_at=t.due_at,
+            skills=list(t.skills),
+            assignee_id=t.assignee_id,
+            remaining_hours=t.remaining_hours,
+        )
+        for t in req.tasks
+    ]
+    result = health_impl(
+        tasks=tasks,
+        member_ids=list(req.member_ids),
+        last_signal_at=dict(req.last_signal_at),
+        idle_trigger_days=req.idle_trigger_days,
+        now_iso=req.now_iso,
+    )
+    return HealthComputeResponse(
+        blocked_score=float(result["blocked_score"]),
+        idle_score=float(result["idle_score"]),
+        overload_score=float(result["overload_score"]),
+        overall=float(result["overall"]),
+        diagnosis=[str(d) for d in result["diagnosis"]],
+        blocked_tasks=[str(x) for x in result["blocked_tasks"]],
+        idle_members=[str(x) for x in result["idle_members"]],
+        overload_members=[str(x) for x in result["overload_members"]],
+    )
 
 
 @attribution_router.post("/compute", response_model=AttributionComputeResponse)
