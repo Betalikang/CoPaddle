@@ -13,3 +13,9 @@ select = ["E", "F", "I", "UP", "B"]
 python_version = "3.12"
 strict = true
 ignore_missing_imports = true
+
+# ortools 的 CP-SAT 绑定类型标注不全（方法在运行时存在），跳过其类型跟踪
+[[tool.mypy.overrides]]
+module = "ortools.*"
+follow_imports = "skip"
+ignore_missing_imports = true

@@ -2,6 +2,7 @@
 
 全部为纯计算，不使用大模型（规格书 S6.3）。脚手架阶段为占位实现（501）。
 """
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..deps import require_internal_secret

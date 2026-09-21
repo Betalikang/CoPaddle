@@ -7,6 +7,7 @@
 超时 90s，失败重试 1 次后降级；每次调用写 ai_call_logs（S6 期接入）。
 脚手架阶段为占位实现（501）。
 """
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..deps import require_internal_secret

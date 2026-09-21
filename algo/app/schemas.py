@@ -3,6 +3,7 @@
 脚手架阶段只定义各端点的最小输入输出契约；字段随 S2–S5 期实现逐步补齐。
 权威数据结构以规格书 S1（47 表）与 S2（9 个内部接口）为准。
 """
+
 from pydantic import BaseModel, Field
 
 # ---------- 分组（B-06 支撑）----------
@@ -33,6 +34,9 @@ class GroupingSolveRequest(BaseModel):
     max_group_size: int = Field(ge=1)
     forbidden_pairs: list[tuple[str, str]] = Field(default_factory=list)
     required_pairs: list[tuple[str, str]] = Field(default_factory=list)
+    # 社交联系图（弱连接引入度输入）与历史同组对（历史规避输入）
+    edges: list[tuple[str, str, float]] = Field(default_factory=list)
+    history_pairs: list[tuple[str, str]] = Field(default_factory=list)
     weights: GroupingWeights = Field(default_factory=GroupingWeights)
     time_limit_seconds: float = Field(default=10.0, gt=0, le=30)
 
@@ -54,25 +58,33 @@ class GroupingPlan(BaseModel):
 
 
 class GroupingSolveResponse(BaseModel):
-    run_id: str
+    run_id: str = ""
     status: str  # running | ok | infeasible | timeout | error
     plans: list[GroupingPlan] = Field(default_factory=list)
     detail: str = ""
+    degraded: bool = False  # True = 贪心兜底（快速模式）
 
 
 class PreviewMoveRequest(BaseModel):
-    """拖动预演（规格书 S4.3）：绝不重新求解，内存重算四维得分。"""
+    """拖动预演（规格书 S4.3）：绝不重新求解，内存重算四维得分。
+
+    user_id 从 from_group 移到 to_group；若同时给 swap_with，则为两人互换。
+    """
 
     plan_groups: list[list[str]]
     user_id: str
     from_group: int
     to_group: int
+    swap_with: str | None = None
     students: list[StudentProfile] = Field(default_factory=list)
     num_groups: int = Field(ge=1)
     min_group_size: int = Field(ge=1)
     max_group_size: int = Field(ge=1)
     forbidden_pairs: list[tuple[str, str]] = Field(default_factory=list)
     required_pairs: list[tuple[str, str]] = Field(default_factory=list)
+    allow_cross_class: bool = False
+    edges: list[tuple[str, str, float]] = Field(default_factory=list)
+    history_pairs: list[tuple[str, str]] = Field(default_factory=list)
     weights: GroupingWeights = Field(default_factory=GroupingWeights)
 
 

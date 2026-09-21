@@ -2,6 +2,7 @@
 
 约定见《技术选型说明书》T8。任何密钥不得硬编码。
 """
+
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict

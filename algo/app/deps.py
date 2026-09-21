@@ -4,6 +4,7 @@
 算法服务不暴露公网，仅由 Next.js 服务端经内网调用，请求必须携带共享密钥头。
 部署层另需保证：仅监听 127.0.0.1、来源 IP 白名单（由反代/防火墙负责，不在本模块内）。
 """
+
 from fastapi import Header, HTTPException
 
 from .config import get_settings

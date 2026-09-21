@@ -2,6 +2,7 @@
 
 业务端点此处只断言 501（占位）；各期实现后按规格书 S9 验收断言替换。
 """
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -45,8 +46,17 @@ INTERNAL_ENDPOINTS: list[tuple[str, dict]] = [
             "max_group_size": 3,
         },
     ),
-    ("/internal/graph/critical-path", {"tasks": [{"id": "t1", "est_hours": 2}, {"id": "t2", "deps": ["t1"], "est_hours": 3}]}),
-    ("/internal/graph/impact", {"tasks": [{"id": "t1", "est_hours": 2}, {"id": "t2", "deps": ["t1"], "est_hours": 3}], "delayed_task_id": "t1"}),
+    (
+        "/internal/graph/critical-path",
+        {"tasks": [{"id": "t1", "est_hours": 2}, {"id": "t2", "deps": ["t1"], "est_hours": 3}]},
+    ),
+    (
+        "/internal/graph/impact",
+        {
+            "tasks": [{"id": "t1", "est_hours": 2}, {"id": "t2", "deps": ["t1"], "est_hours": 3}],
+            "delayed_task_id": "t1",
+        },
+    ),
     ("/internal/health/compute", {"group_id": "g1", "member_ids": ["u1", "u2"]}),
     ("/internal/attribution/compute", {"group_id": "g1", "member_ids": ["u1", "u2"]}),
     ("/internal/ai/decompose", {"assignment_text": "完成一份城市客流量分析报告，含数据采集、建模与可视化。"}),
@@ -79,9 +89,26 @@ def test_internal_rejects_missing_or_wrong_secret(client: TestClient) -> None:
 
 
 def test_internal_stubs_return_501(client: TestClient, auth_headers: dict[str, str]) -> None:
+    # 尚未实现的端点仍返回 501 占位（S3–S5 期逐个落地）
     for path, payload in INTERNAL_ENDPOINTS:
+        if path.startswith("/internal/grouping/"):
+            continue
         r = client.post(path, json=payload, headers=auth_headers)
         assert r.status_code == 501, f"{path} 应返回 501 占位，实际 {r.status_code}"
+
+
+def test_grouping_endpoints_live(client: TestClient, auth_headers: dict[str, str]) -> None:
+    """分组三端点已在 S2 期实现（solve/score/validate），不再占位。"""
+    solve_payload = next(p for path, p in INTERNAL_ENDPOINTS if path == "/internal/grouping/solve")
+    r = client.post("/internal/grouping/solve", json=solve_payload, headers=auth_headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] == "ok"
+    assert len(r.json()["plans"]) == 3
+
+    validate_payload = next(p for path, p in INTERNAL_ENDPOINTS if path == "/internal/grouping/validate")
+    r = client.post("/internal/grouping/validate", json=validate_payload, headers=auth_headers)
+    assert r.status_code == 200
+    assert r.json()["ok"] is True
 
 
 def test_payload_validation_active(client: TestClient, auth_headers: dict[str, str]) -> None:

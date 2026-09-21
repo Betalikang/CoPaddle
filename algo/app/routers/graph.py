@@ -3,6 +3,7 @@
 脚手架阶段为占位实现（501）；关键路径为 DAG 最长路径（est_hours 之和最大），
 注意与 networkx 默认最短路径不同（《技术选型说明书》T4）。
 """
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from ..deps import require_internal_secret

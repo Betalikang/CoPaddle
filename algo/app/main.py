@@ -3,6 +3,7 @@
 启动：uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 仅内网监听；9 个 /internal/* 业务接口全部要求共享密钥头，/internal/healthz 为存活探针。
 """
+
 from fastapi import FastAPI
 from fastapi.responses import RedirectResponse
 
