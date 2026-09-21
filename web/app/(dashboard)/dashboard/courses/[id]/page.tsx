@@ -47,6 +47,19 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
     `/api/courses/${id}`,
     fetcher
   );
+  const { data: classData } = useSWR<{ classes: { id: number; name: string; memberCount: number }[] }>(
+    `/api/courses/${id}/classes`,
+    fetcher
+  );
+  const { data: groupsData, mutate: mutateGroups } = useSWR<{
+    groups: {
+      id: number;
+      name: string;
+      status: string;
+      captainId: number | null;
+      members: { userId: number; name: string | null; studentNo: string | null; duty: string; className: string | null }[];
+    }[];
+  }>(`/api/courses/${id}/groups`, fetcher);
 
   if (isLoading) {
     return (
@@ -55,6 +68,16 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         <Skeleton className="h-40" />
       </section>
     );
+  }
+
+  async function dissolveGroup(groupId: number, name: string) {
+    if (!window.confirm(`解散「${name}」？成员将回池，小组任务与交付物归档。`)) return;
+    const res = await fetch(`/api/groups/${groupId}/dissolve`, { method: 'POST' });
+    if (!res.ok) {
+      alert((await res.json()).error ?? '解散失败');
+      return;
+    }
+    await mutateGroups();
   }
 
   if (error || !data) {
@@ -87,6 +110,57 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
 
       {course.description && (
         <p className="mb-6 max-w-2xl text-sm text-muted-foreground">{course.description}</p>
+      )}
+
+      {/* 班级与小组 */}
+      {((classData?.classes?.length ?? 0) > 0 || (groupsData?.groups?.length ?? 0) > 0) && (
+        <div className="mb-6 space-y-3">
+          {(classData?.classes?.length ?? 0) > 0 && (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-muted-foreground">班级：</span>
+              {classData!.classes.map((c) => (
+                <Badge key={c.id} variant="outline">
+                  {c.name}（{c.memberCount} 人）
+                </Badge>
+              ))}
+            </div>
+          )}
+          {(groupsData?.groups?.length ?? 0) > 0 && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {groupsData!.groups.map((g) => (
+                <Card key={g.id} className={g.status === 'dissolved' ? 'opacity-50' : ''}>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm">{g.name}</CardTitle>
+                    <div className="flex items-center gap-1">
+                      <Badge variant={g.status === 'active' ? 'default' : 'secondary'}>
+                        {g.status === 'active' ? '进行中' : g.status === 'dissolved' ? '已解散' : g.status}
+                      </Badge>
+                      {isTeacherSide && g.status === 'active' && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 text-destructive"
+                          onClick={() => dissolveGroup(g.id, g.name)}
+                        >
+                          解散
+                        </Button>
+                      )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="flex flex-wrap gap-1">
+                    {g.members.map((m) => (
+                      <Badge key={m.userId} variant="secondary" className="font-normal">
+                        {m.name ?? `#${m.userId}`}
+                        {m.className ? ` · ${m.className}` : ''}
+                        {m.duty === 'lead' ? '（组长）' : ''}
+                      </Badge>
+                    ))}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {isTeacherSide ? (

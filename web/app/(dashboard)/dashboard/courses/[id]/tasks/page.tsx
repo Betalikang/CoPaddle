@@ -150,9 +150,19 @@ export default function GroupTasksPage({ params }: { params: Promise<{ id: strin
   const router = useRouter();
 
   const { data: groupsData } = useSWR<{
-    groups: { id: number; name: string; members: { userId: number; name: string | null; studentNo: string | null }[] }[];
+    groups: { id: number; name: string; members: { userId: number; name: string | null; studentNo: string | null; className?: string | null }[] }[];
   }>(`/api/courses/${id}/groups`, fetcher);
-  const group = groupsData?.groups?.[0];
+  const { data: courseData } = useSWR<{ myRole: string }>(`/api/courses/${id}`, fetcher);
+  const { data: meData } = useSWR<{ user: { id: number } }>('/api/auth/me', fetcher);
+  const [pickedGroupId, setPickedGroupId] = useState<number | null>(null);
+
+  const allGroups = groupsData?.groups ?? [];
+  const isTeacherSide = courseData?.myRole === 'teacher' || courseData?.myRole === 'assistant';
+  // 教师/助教：按小组下发（切换目标小组，作业要求下发给该组组长）
+  // 队长/队员：锁定自己所在的小组
+  const group = isTeacherSide
+    ? (allGroups.find((g) => g.id === pickedGroupId) ?? allGroups[0])
+    : (allGroups.find((g) => g.members.some((m) => m.userId === meData?.user?.id)) ?? allGroups[0]);
 
   const { data, error, isLoading, mutate } = useSWR<PlanData>(
     group ? `/api/groups/${group.id}/task-plan` : null,
@@ -265,7 +275,24 @@ export default function GroupTasksPage({ params }: { params: Promise<{ id: strin
   return (
     <section className="flex-1">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-lg lg:text-2xl font-medium">任务与依赖 · {group.name}</h1>
+        <h1 className="text-lg lg:text-2xl font-medium">
+          任务与依赖 · {group.name}
+          {!isTeacherSide && <span className="ml-2 text-sm text-muted-foreground">（你所在的小组）</span>}
+        </h1>
+        {isTeacherSide && allGroups.length > 1 && (
+          <div className="flex flex-wrap gap-1">
+            {allGroups.map((g) => (
+              <Button
+                key={g.id}
+                size="sm"
+                variant={g.id === group.id ? 'default' : 'outline'}
+                onClick={() => setPickedGroupId(g.id)}
+              >
+                {g.name}
+              </Button>
+            ))}
+          </div>
+        )}
         {hasPlan && (
           <Button
             variant="outline"

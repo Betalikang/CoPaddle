@@ -22,7 +22,7 @@ import {
   RadarChart,
   ResponsiveContainer
 } from 'recharts';
-import { Gauge, RotateCcw, Shuffle, Users } from 'lucide-react';
+import { Gauge, RotateCcw, Shuffle, Trash2, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -43,7 +43,7 @@ type Plan = {
   groups: number[][];
 };
 
-type Member = { userId: number; name: string | null; studentNo: string | null };
+type Member = { userId: number; name: string | null; studentNo: string | null; className: string | null };
 
 const DIMS = [
   { key: 'skill_cover', label: '技能覆盖', field: 'scoreSkillCover' },
@@ -68,18 +68,24 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
     plans: Plan[];
   }>(`/api/courses/${courseId}/grouping/latest`, fetcher);
 
-  const { data: roster } = useSWR<{ enrollments: Member[] }>(
-    `/api/courses/${courseId}/enrollments`,
+  const { data: groupsData } = useSWR<{
+    groups: { id: number; name: string; members: Member[] }[];
+  }>(`/api/courses/${courseId}/groups`, fetcher);
+  const { data: courseData } = useSWR<{ myRole: string }>(
+    `/api/courses/${courseId}`,
     fetcher
   );
 
+  // 成员信息取自 groups（组内角色均可读）：姓名 + 学号 + 班级
   const memberMap = useMemo(() => {
     const m = new Map<number, Member>();
-    for (const e of roster?.enrollments ?? []) {
-      m.set(e.userId, { userId: e.userId, name: e.name, studentNo: e.studentNo });
+    for (const g of groupsData?.groups ?? []) {
+      for (const e of g.members) {
+        m.set(e.userId, e);
+      }
     }
     return m;
-  }, [roster]);
+  }, [groupsData]);
 
   const plans = data?.plans ?? [];
   const [activePlanId, setActivePlanId] = useState<number | null>(null);
@@ -182,6 +188,24 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
       setPreview(null);
       setViolations([]);
       await mutate();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function dissolve() {
+    const g = groupsData?.groups?.[0];
+    if (!g) return;
+    if (!window.confirm(`解散「${g.name}」？成员将回池，小组任务与交付物归档。`)) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/groups/${g.id}/dissolve`, { method: 'POST' });
+      const body = await res.json();
+      if (!res.ok) {
+        setViolations([{ code: 'DISSOLVE', message: body.error ?? '解散失败' }]);
+        return;
+      }
+      router.push(`/dashboard/courses/${courseId}`);
     } finally {
       setBusy(false);
     }
@@ -316,11 +340,24 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
                     {dragId !== null && <MemberChip member={memberMap.get(dragId)} dragging />}
                   </DragOverlay>
                 </DndContext>
-                <div className="mt-3">
+                <div className="mt-3 flex flex-wrap gap-2">
                   <Button variant="outline" size="sm" disabled={busy} onClick={resetPlan}>
                     <RotateCcw className="mr-1 h-4 w-4" />
                     还原到求解器原始结果
                   </Button>
+                  {(courseData?.myRole === 'teacher' || courseData?.myRole === 'assistant') &&
+                    groupsData?.groups?.[0] && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive"
+                      disabled={busy}
+                      onClick={dissolve}
+                    >
+                      <Trash2 className="mr-1 h-4 w-4" />
+                      解散分组
+                    </Button>
+                  )}
                 </div>
               </div>
 
@@ -444,6 +481,15 @@ function GroupCard({
   // 只标红违规消息中提及本组的卡片（消息格式：「第 N 组…」）
   const groupNo = `第 ${index + 1} 组`;
   const myViolations = violations.filter((v) => v.message.includes(groupNo));
+  // 班级构成汇总（如「数媒本24-1 ×3、数媒本24-2 ×1」）
+  const classCount = new Map<string, number>();
+  for (const uid of members) {
+    const cn = memberMap.get(uid)?.className ?? '未分班';
+    classCount.set(cn, (classCount.get(cn) ?? 0) + 1);
+  }
+  const classSummary = [...classCount.entries()]
+    .map(([cn, n]) => `${cn}×${n}`)
+    .join('、');
 
   return (
     <Card
@@ -456,8 +502,11 @@ function GroupCard({
             : ''
       }
     >
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm">第{index + 1}组</CardTitle>
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-1 pb-2">
+        <div>
+          <CardTitle className="text-sm">第{index + 1}组</CardTitle>
+          <p className="text-xs text-muted-foreground">{classSummary}</p>
+        </div>
         <div className="flex items-center gap-2">
           <Badge variant="secondary">{members.length} 人</Badge>
           {canReceive && (

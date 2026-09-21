@@ -3,6 +3,7 @@ import { db } from '../db/drizzle';
 import {
   CourseSettings,
   constraints,
+  classes,
   courseMemberships,
   courseSettings,
   groupingPlans,
@@ -472,18 +473,64 @@ export async function listGroups(courseId: number) {
       userId: groupMembers.userId,
       duty: groupMembers.duty,
       name: users.name,
-      studentNo: users.studentNo
+      studentNo: users.studentNo,
+      className: classes.name
     })
     .from(groupMembers)
     .innerJoin(users, eq(groupMembers.userId, users.id))
+    .leftJoin(
+      courseMemberships,
+      and(
+        eq(courseMemberships.userId, users.id),
+        eq(courseMemberships.courseId, courseId)
+      )
+    )
+    .leftJoin(classes, eq(courseMemberships.classId, classes.id))
     .where(isNull(groupMembers.leftAt));
 
   return groupRows.map((g) => ({
     ...g,
     members: memberRows
       .filter((m) => m.groupId === g.id)
-      .map((m) => ({ userId: m.userId, name: m.name, studentNo: m.studentNo, duty: m.duty }))
+      .map((m) => ({
+        userId: m.userId,
+        name: m.name,
+        studentNo: m.studentNo,
+        duty: m.duty,
+        className: m.className
+      }))
   }));
+}
+
+/**
+ * 解散小组（规格书 B-07）：状态置 dissolved、成员回池（left_at 置空）、
+ * 解散时间记录。任务与交付物保留（小组数据归档）。
+ */
+export async function dissolveGroup(groupId: number, teacherId: number) {
+  const [group] = await db
+    .select()
+    .from(groups)
+    .where(eq(groups.id, groupId))
+    .limit(1);
+  if (!group) return { error: '小组不存在' as const };
+  if (group.status === 'dissolved') {
+    return { error: '小组已解散' as const };
+  }
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(groups)
+      .set({ status: 'dissolved', dissolvedAt: new Date() })
+      .where(eq(groups.id, groupId));
+    // 成员回池：left_at 置为当前时间（历史记录保留）
+    await tx
+      .update(groupMembers)
+      .set({ leftAt: new Date(), leaveReason: '小组解散' })
+      .where(and(eq(groupMembers.groupId, groupId), isNull(groupMembers.leftAt)));
+  });
+
+  void teacherId;
+  return { ok: true as const };
 }
 
 async function getPlan(planId: number) {
