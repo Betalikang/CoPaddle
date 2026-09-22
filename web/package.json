@@ -8,7 +8,7 @@
     ]
   },
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "cross-env NEXT_DIST_DIR=.next-dev next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "db:setup": "npx tsx lib/db/setup.ts",
@@ -52,6 +52,7 @@
     "zod": "^3.24.4"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "tsx": "^4.23.15",
     "vitest": "^5.0.1"
   }
