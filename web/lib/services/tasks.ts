@@ -188,8 +188,67 @@ export async function generateTaskPlan(
       }
     }
 
+    // 关键路径回写（演示第 3 步加粗 + 归因关键路径信用）
+    try {
+      await markCriticalPath(groupId);
+    } catch {
+      // 算法服务不可用时不影响计划生成（页面可手动重算）
+    }
     return { planId: plan.id, problems: result.validation_problems };
   });
+}
+
+/**
+ * 计算关键路径并回写 tasks.on_critical_path（演示第 3 步「关键路径加粗」
+ * 与归因 cp_credit 的数据来源）。任务计划生成后、依赖变更后调用。
+ */
+export async function markCriticalPath(groupId: number) {
+  const taskRows = await db
+    .select()
+    .from(tasks)
+    .where(and(eq(tasks.groupId, groupId), isNull(tasks.deletedAt)))
+    .orderBy(asc(tasks.orderIndex));
+  if (taskRows.length === 0) return { path: [] as string[], totalHours: 0 };
+
+  const taskIds = taskRows.map((t) => t.id);
+  const depRows = await db
+    .select()
+    .from(taskDeps)
+    .where(inArray(taskDeps.taskId, taskIds));
+
+  // deps 挂在每个 task 上（algo TaskNode.deps）
+  const depsByTask = new Map<number, string[]>();
+  for (const d of depRows) {
+    depsByTask.set(d.taskId, [...(depsByTask.get(d.taskId) ?? []), String(d.dependsOnId)]);
+  }
+
+  const result = await callAlgo<{ path: string[]; total_hours: number }>(
+    '/internal/graph/critical-path',
+    {
+      tasks: taskRows.map((t) => ({
+        id: String(t.id),
+        title: t.title,
+        est_hours: Number(t.estHours),
+        status: t.status,
+        deps: depsByTask.get(t.id) ?? []
+      }))
+    },
+    15000,
+    { groupId }
+  );
+
+  const pathIds = new Set(result.path.map(Number));
+  // 全量重置后按路径标记（避免残留）
+  for (const t of taskRows) {
+    const shouldBe = pathIds.has(t.id);
+    if (t.onCriticalPath !== shouldBe) {
+      await db
+        .update(tasks)
+        .set({ onCriticalPath: shouldBe })
+        .where(eq(tasks.id, t.id));
+    }
+  }
+  return { path: result.path, totalHours: result.total_hours };
 }
 
 /** 小组当前任务计划（含任务、依赖、指派）。 */

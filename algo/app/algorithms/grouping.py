@@ -350,6 +350,8 @@ def solve_grouping(
     plans: list[Plan] = []
     degraded = False
 
+    # 三套方案共享同一时间预算（规格书 S4.2：10s 为总预算），每套保底 1s
+    per_plan_limit = max(time_limit / len(STRATEGY_PRESETS), 1.0)
     for strategy, (label, preset) in STRATEGY_PRESETS.items():
         w = weights or preset
         groups = None
@@ -365,7 +367,7 @@ def solve_grouping(
                 allow_cross_class,
                 edges,
                 history_pairs,
-                time_limit,
+                per_plan_limit,
             )
         if groups is None:
             degraded = True

@@ -6,6 +6,8 @@ import { getArtifactCourseId, saveVersion } from '@/lib/services/artifacts';
 type Params = { params: Promise<{ id: string }> };
 
 // 段落提交：保存时提交段落数组，服务端 diff 后写 segments/edits
+const MAX_CONTENT_CHARS = 1_000_000; // 单交付物文本上限（约 1MB，远低于 20MB 文件限制）
+
 const versionSchema = z.object({
   segments: z
     .array(
@@ -17,6 +19,10 @@ const versionSchema = z.object({
       })
     )
     .min(1, '至少一个段落')
+    .refine(
+      (segs) => segs.reduce((n, s) => n + s.content.length, 0) <= MAX_CONTENT_CHARS,
+      `交付物内容超过上限（${MAX_CONTENT_CHARS} 字符）`
+    )
 });
 
 /** 保存新版本（段落 diff → 归属沉淀）。 */
