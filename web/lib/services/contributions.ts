@@ -16,6 +16,7 @@ import {
   tasks
 } from '../db/schema';
 import { AlgoServiceError, callAlgo } from '@/lib/algo/client';
+import { getPeerScoresForAttribution } from './peer-reviews';
 
 /** algo /internal/attribution/compute 的响应类型。 */
 type AlgoAttributionResponse = {
@@ -165,6 +166,12 @@ export async function computeGroupContributions(groupId: number) {
     }
   }
 
+  // ---- 证据 C：同伴（最近一轮 closed/published 互评收到的原始分）----
+  const peerScoresByUser = new Map<number, number[]>();
+  for (const uid of userIds) {
+    peerScoresByUser.set(uid, await getPeerScoresForAttribution(groupId, uid));
+  }
+
   // ---- 调 algo ----
   let result: AlgoAttributionResponse;
   try {
@@ -182,7 +189,7 @@ export async function computeGroupContributions(groupId: number) {
           cp_done: stats.get(uid)!.cpDone,
           rework_count: stats.get(uid)!.rework,
           help_count: 0,
-          peer_scores: []
+          peer_scores: peerScoresByUser.get(uid) ?? []
         })),
         w_artifact: settings ? Number(settings.wArtifact) : 0.5,
         w_process: settings ? Number(settings.wProcess) : 0.3,
@@ -225,14 +232,32 @@ export async function computeGroupContributions(groupId: number) {
       snapshotIds.set(uid, snap.id);
     }
 
-    for (const ev of [...artifactEvidence, ...processEvidence]) {
+    // 同伴证据条目（可下钻到互评轮次）
+  const peerEvidence: { userId: number; refType: string; refId: number; value: number; note: string }[] = [];
+  for (const [uid, scores] of peerScoresByUser) {
+    for (const [i, sc] of scores.entries()) {
+      peerEvidence.push({
+        userId: uid,
+        refType: 'peer_review',
+        refId: i + 1, // 序号引用（下钻时展示均分与份数）
+        value: Math.round(sc * 100) / 100,
+        note: `收到第 ${i + 1} 份互评，均分 ${sc.toFixed(1)}`
+      });
+    }
+  }
+
+  for (const ev of [...artifactEvidence, ...processEvidence, ...peerEvidence]) {
       const snapshotId = snapshotIds.get(ev.userId);
       if (!snapshotId) continue;
       await tx.insert(evidenceItems).values({
         groupId,
         userId: ev.userId,
         snapshotId,
-        source: ev.refType.startsWith('segment') ? 'artifact' : 'process',
+        source: ev.refType.startsWith('segment')
+          ? 'artifact'
+          : ev.refType.startsWith('peer') || ev.refType.startsWith('task_')
+            ? (ev.refType.startsWith('peer') ? 'peer' : 'process')
+            : 'process',
         refType: ev.refType,
         refId: ev.refId,
         value: String(ev.value),

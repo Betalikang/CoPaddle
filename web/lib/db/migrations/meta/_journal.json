@@ -50,6 +50,13 @@
       "when": 1790005591064,
       "tag": "0006_gifted_kylun",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790044915639,
+      "tag": "0007_yellow_monster_badoon",
+      "breakpoints": true
     }
   ]
 }

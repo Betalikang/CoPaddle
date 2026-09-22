@@ -861,6 +861,9 @@ export type ConflictAttribution = typeof conflictAttributions.$inferSelect;
 export type ConflictResolution = typeof conflictResolutions.$inferSelect;
 export type ReplanEvent = typeof replanEvents.$inferSelect;
 export type ReplanOption = typeof replanOptions.$inferSelect;
+export type PeerReviewRound = typeof peerReviewRounds.$inferSelect;
+export type PeerReview = typeof peerReviews.$inferSelect;
+export type PeerReviewAnomaly = typeof peerReviewAnomalies.$inferSelect;
 
 // 课程级角色（规格书 S5 权限矩阵）；判定时与小组级 duty 求交
 export const COURSE_ROLES = ['teacher', 'assistant', 'captain', 'member'] as const;
@@ -1014,4 +1017,63 @@ export const replanOptions = pgTable('replan_options', {
   costSummary: text('cost_summary'),
   estImpactDays: numeric('est_impact_days', { precision: 4, scale: 1 }).notNull().default('0'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
+// ============================================================
+// 共桨域⑨：同伴互评（规格书 S1）
+// ============================================================
+
+export const peerReviewRounds = pgTable('peer_review_rounds', {
+  id: serial('id').primaryKey(),
+  courseId: integer('course_id')
+    .notNull()
+    .references(() => courses.id, { onDelete: 'cascade' }),
+  name: varchar('name', { length: 100 }).notNull(),
+  openAt: timestamp('open_at'),
+  closeAt: timestamp('close_at'),
+  // scheduled | open | closed | published
+  status: varchar('status', { length: 20 }).notNull().default('scheduled'),
+  isAnonymous: boolean('is_anonymous').notNull().default(true),
+  // 默认五维，可由教师自定义：[{key, label}]
+  dimensions: jsonb('dimensions').$type<{ key: string; label: string }[]>(),
+  createdBy: integer('created_by')
+    .notNull()
+    .references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [index('peer_review_rounds_course_status_idx').on(t.courseId, t.status)]);
+
+export const peerReviews = pgTable('peer_reviews', {
+  id: serial('id').primaryKey(),
+  roundId: integer('round_id')
+    .notNull()
+    .references(() => peerReviewRounds.id, { onDelete: 'cascade' }),
+  groupId: integer('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+  reviewerId: integer('reviewer_id')
+    .notNull()
+    .references(() => users.id),
+  revieweeId: integer('reviewee_id')
+    .notNull()
+    .references(() => users.id),
+  // {贡献:4, 沟通:5, ...}
+  scores: jsonb('scores').$type<Record<string, number>>().notNull(),
+  comment: text('comment'),
+  submittedAt: timestamp('submitted_at').notNull().defaultNow(),
+}, (t) => [uniqueIndex('peer_reviews_uniq').on(t.roundId, t.reviewerId, t.revieweeId)]);
+
+export const peerReviewAnomalies = pgTable('peer_review_anomalies', {
+  id: serial('id').primaryKey(),
+  roundId: integer('round_id')
+    .notNull()
+    .references(() => peerReviewRounds.id, { onDelete: 'cascade' }),
+  groupId: integer('group_id')
+    .notNull()
+    .references(() => groups.id, { onDelete: 'cascade' }),
+  // mutual_inflation | extreme_low | single_source | non_response
+  type: varchar('type', { length: 30 }).notNull(),
+  payload: jsonb('payload').$type<Record<string, unknown>>(),
+  severity: varchar('severity', { length: 20 }).notNull().default('medium'),
+  detectedAt: timestamp('detected_at').notNull().defaultNow(),
+  note: text('note'),
 });
