@@ -72,6 +72,7 @@ async function main() {
     `/dashboard/courses/${course.id}/conflicts`,
     `/dashboard/courses/${course.id}/replans`,
     `/dashboard/my-tasks`,
+    `/dashboard/courses/${course.id}/grades`,
     '/dashboard/notifications',
     '/dashboard/audit'
   ]) {

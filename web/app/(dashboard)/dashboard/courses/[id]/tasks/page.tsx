@@ -11,6 +11,15 @@ import ReactFlow, {
   type Node
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import {
+  DndContext,
+  PointerSensor,
+  useDraggable,
+  useDroppable,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
 import { FileText, RefreshCw, Sparkles, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -42,6 +51,7 @@ type Task = {
   estHours: string;
   dueAt: string | null;
   deliverableType: string;
+  onCriticalPath: boolean;
 };
 
 type PlanData = {
@@ -155,8 +165,14 @@ export default function GroupTasksPage({ params }: { params: Promise<{ id: strin
   const { data: courseData } = useSWR<{ myRole: string }>(`/api/courses/${id}`, fetcher);
   const { data: meData } = useSWR<{ user: { id: number } }>('/api/auth/me', fetcher);
   const [pickedGroupId, setPickedGroupId] = useState<number | null>(null);
+  const [view, setView] = useState<'list' | 'board'>('list');
 
   const allGroups = groupsData?.groups ?? [];
+  const memberMap = useMemo(() => {
+    const m = new Map<number, { name: string | null; studentNo: string | null }>();
+    for (const g of allGroups) for (const mem of g.members) m.set(mem.userId, mem);
+    return m;
+  }, [allGroups]);
   const isTeacherSide = courseData?.myRole === 'teacher' || courseData?.myRole === 'assistant';
   // 教师/助教：按小组下发（切换目标小组，作业要求下发给该组组长）
   // 队长/队员：锁定自己所在的小组
@@ -371,8 +387,37 @@ export default function GroupTasksPage({ params }: { params: Promise<{ id: strin
         </Card>
       )}
 
-      {/* 任务表格 */}
+      {/* 视图切换：列表 / 看板 */}
       {hasPlan && (
+        <div className="mb-3 flex gap-1">
+          <Button size="sm" variant={view === 'list' ? 'default' : 'outline'} onClick={() => setView('list')}>
+            任务清单
+          </Button>
+          <Button size="sm" variant={view === 'board' ? 'default' : 'outline'} onClick={() => setView('board')}>
+            任务看板
+          </Button>
+        </div>
+      )}
+
+      {/* 任务看板（C-04）：五列，拖拽改状态 */}
+      {hasPlan && view === 'board' && (
+        <KanbanBoard
+          tasks={tasks}
+          assignments={data?.assignments ?? []}
+          memberMap={memberMap}
+          onMove={async (taskId, toStatus) => {
+            await fetch(`/api/tasks/${taskId}/status`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ toStatus })
+            });
+            await mutate();
+          }}
+        />
+      )}
+
+      {/* 任务表格 */}
+      {hasPlan && view === 'list' && (
         <Card className="mb-4">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">任务清单（{tasks.length}）</CardTitle>
@@ -550,5 +595,116 @@ function PublishButton({ groupId, onDone }: { groupId: number; onDone: () => voi
     >
       {publishing ? '发布中…' : '发布契约，通知成员确认'}
     </Button>
+  );
+}
+
+
+const BOARD_COLUMNS = [
+  { status: 'todo', label: '待启动' },
+  { status: 'doing', label: '进行中' },
+  { status: 'blocked', label: '阻塞' },
+  { status: 'reviewing', label: '审阅中' },
+  { status: 'done', label: '已完成' }
+];
+
+/** 组内看板（规格书 C-04）：五列，任务卡片拖拽改状态（服务端状态机校验）。 */
+function KanbanBoard({
+  tasks,
+  assignments,
+  memberMap,
+  onMove
+}: {
+  tasks: Task[];
+  assignments: { taskId: number; userId: number; raci: string }[];
+  memberMap: Map<number, { name: string | null; studentNo: string | null }>;
+  onMove: (taskId: number, toStatus: string) => Promise<void>;
+}) {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  // 主责人（RACI=lead）映射
+  const leadByTask = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const a of assignments) {
+      if (a.raci === 'lead') m.set(a.taskId, a.userId);
+    }
+    return m;
+  }, [assignments]);
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return;
+    const taskId = Number(active.id);
+    const toStatus = String(over.id);
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || task.status === toStatus) return;
+    void onMove(taskId, toStatus);
+  }
+
+  return (
+    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {BOARD_COLUMNS.map((col) => (
+          <BoardColumn key={col.status} status={col.status} label={col.label} count={
+            tasks.filter((t) => t.status === col.status).length
+          }>
+            {tasks
+              .filter((t) => t.status === col.status)
+              .map((t) => (
+                <TaskCard key={t.id} task={t} member={memberMap.get(leadByTask.get(t.id) ?? 0)} />
+              ))}
+          </BoardColumn>
+        ))}
+      </div>
+    </DndContext>
+  );
+}
+
+function BoardColumn({
+  status,
+  label,
+  count,
+  children
+}: {
+  status: string;
+  label: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id: status });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`min-h-32 rounded-lg border bg-muted/40 p-2 ${isOver ? 'border-primary' : ''}`}
+    >
+      <div className="mb-2 flex items-center justify-between text-xs font-medium text-muted-foreground">
+        <span>{label}</span>
+        <span>{count}</span>
+      </div>
+      <div className="space-y-2">{children}</div>
+    </div>
+  );
+}
+
+function TaskCard({
+  task,
+  member
+}: {
+  task: Task;
+  member: { name: string | null; studentNo: string | null } | undefined;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={`cursor-grab rounded border bg-white p-2 text-xs shadow-sm ${isDragging ? 'opacity-50' : ''}`}
+    >
+      <div className="font-mono text-muted-foreground">{task.code}</div>
+      <div className="font-medium">{task.title}</div>
+      <div className="mt-1 text-muted-foreground">
+        {member?.name ?? '未指派'} · {task.estHours}h
+        {task.onCriticalPath && <span className="ml-1 text-orange-600">关键路径</span>}
+      </div>
+    </div>
   );
 }
