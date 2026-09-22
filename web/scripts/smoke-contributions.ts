@@ -219,6 +219,13 @@ async function main() {
 
   // ---- 清理 ----
   await db.delete(courses).where(eq(courses.id, course.id));
+  // audit_logs 无 cascade：先删引用再删 users
+  const { auditLogs } = await import('../lib/db/schema');
+  const { inArray: inArray2 } = await import('drizzle-orm');
+  const doomed = await db.select({ id: users.id }).from(users).where(like(users.email, `%-${RUN}@test.local`));
+  if (doomed.length) {
+    await db.delete(auditLogs).where(inArray2(auditLogs.actorId, doomed.map((d) => d.id)));
+  }
   await db.delete(users).where(like(users.email, `%-${RUN}@test.local`));
 
   console.log(failures === 0 ? 'CONTRIBUTIONS SMOKE PASS' : `CONTRIBUTIONS SMOKE FAIL (${failures})`);

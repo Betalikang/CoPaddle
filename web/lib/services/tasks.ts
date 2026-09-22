@@ -22,6 +22,7 @@ import {
   UpdateTaskInput
 } from '@/lib/validation/tasks';
 import { AlgoServiceError, callAlgo } from '@/lib/algo/client';
+import { groupMemberIds, notify } from './notifications';
 
 /** algo /internal/ai/decompose 的响应（与 algo/app/schemas.py 对齐） */
 type AlgoDecomposeResponse = {
@@ -318,6 +319,24 @@ export async function assignTask(taskId: number, userId: number, raci: string, a
     .values({ taskId, userId, raci, assignedBy })
     .onConflictDoNothing()
     .returning();
+
+  // 通知被指派人（新任务分派）
+  const [task] = await db
+    .select({ groupId: tasks.groupId, title: tasks.title, code: tasks.code })
+    .from(tasks)
+    .where(eq(tasks.id, taskId))
+    .limit(1);
+  if (task) {
+    const raciLabel = raci === 'lead' ? '主责' : raci === 'reviewer' ? '审阅' : '协作';
+    await notify([userId], {
+      type: 'task_assigned',
+      title: `你被指派为「${task.title}」的${raciLabel}人`,
+      body: `任务编号 ${task.code}，请查看「我的部分」。`,
+      link: '/dashboard/my-tasks',
+      groupId: task.groupId,
+      priority: 'normal'
+    });
+  }
   return row ?? null;
 }
 
@@ -456,6 +475,16 @@ export async function publishContract(groupId: number, publisherId: number) {
     .set({ publishedAt: new Date(), publishedBy: publisherId })
     .where(eq(contracts.id, latest.id))
     .returning();
+  // 通知全体成员确认签署
+  const members = await groupMemberIds(groupId);
+  await notify(members, {
+    type: 'contract_published',
+    title: '协作契约已发布，请确认',
+    body: '术语表与接口约定以新版本为准，请及时签署。',
+    link: `/dashboard/tasks`,
+    groupId,
+    priority: 'normal'
+  });
   return updated;
 }
 

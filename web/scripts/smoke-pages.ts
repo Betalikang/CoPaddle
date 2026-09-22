@@ -71,7 +71,9 @@ async function main() {
     `/dashboard/courses/${course.id}/alerts`,
     `/dashboard/courses/${course.id}/conflicts`,
     `/dashboard/courses/${course.id}/replans`,
-    `/dashboard/my-tasks`
+    `/dashboard/my-tasks`,
+    '/dashboard/notifications',
+    '/dashboard/audit'
   ]) {
     const res = await fetch(`${BASE}${path}`, { headers: { Cookie: cookie }, redirect: 'manual' });
     check(`${path} 200`, res.status === 200, String(res.status));

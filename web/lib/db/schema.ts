@@ -864,6 +864,10 @@ export type ReplanOption = typeof replanOptions.$inferSelect;
 export type PeerReviewRound = typeof peerReviewRounds.$inferSelect;
 export type PeerReview = typeof peerReviews.$inferSelect;
 export type PeerReviewAnomaly = typeof peerReviewAnomalies.$inferSelect;
+export type Notification = typeof notifications.$inferSelect;
+export type NotificationSettings = typeof notificationSettings.$inferSelect;
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type AiCallLog = typeof aiCallLogs.$inferSelect;
 
 // 课程级角色（规格书 S5 权限矩阵）；判定时与小组级 duty 求交
 export const COURSE_ROLES = ['teacher', 'assistant', 'captain', 'member'] as const;
@@ -1077,3 +1081,74 @@ export const peerReviewAnomalies = pgTable('peer_review_anomalies', {
   detectedAt: timestamp('detected_at').notNull().defaultNow(),
   note: text('note'),
 });
+
+// ============================================================
+// 共桨域⑩：通知、审计与 AI 日志（规格书 S1）
+// ============================================================
+
+export const notifications = pgTable('notifications', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  type: varchar('type', { length: 50 }).notNull(),
+  title: varchar('title', { length: 200 }).notNull(),
+  body: text('body'),
+  link: text('link'),
+  channel: varchar('channel', { length: 20 }).notNull().default('inapp'),
+  priority: varchar('priority', { length: 20 }).notNull().default('normal'),
+  groupId: integer('group_id').references(() => groups.id, { onDelete: 'cascade' }),
+  courseId: integer('course_id').references(() => courses.id, { onDelete: 'cascade' }),
+  readAt: timestamp('read_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [index('notifications_user_read_idx').on(t.userId, t.readAt)]);
+
+export const notificationSettings = pgTable('notification_settings', {
+  userId: integer('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  emailEnabled: boolean('email_enabled').notNull().default(true),
+  wechatEnabled: boolean('wechat_enabled').notNull().default(false),
+  muteTypes: jsonb('mute_types').$type<string[]>(),
+  digestMode: varchar('digest_mode', { length: 20 }).notNull().default('instant'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const auditLogs = pgTable('audit_logs', {
+  id: serial('id').primaryKey(),
+  actorId: integer('actor_id')
+    .notNull()
+    .references(() => users.id),
+  actorRole: varchar('actor_role', { length: 20 }),
+  action: text('action').notNull(),
+  targetType: varchar('target_type', { length: 50 }),
+  targetId: integer('target_id'),
+  before: jsonb('before').$type<Record<string, unknown>>(),
+  after: jsonb('after').$type<Record<string, unknown>>(),
+  ip: varchar('ip', { length: 45 }),
+  ua: varchar('ua', { length: 300 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  index('audit_logs_actor_created_idx').on(t.actorId, t.createdAt),
+  index('audit_logs_target_idx').on(t.targetType, t.targetId),
+]);
+
+// AI 成本与调试监控（2 个 LLM 调用点 + 算法服务调用）
+export const aiCallLogs = pgTable('ai_call_logs', {
+  id: serial('id').primaryKey(),
+  callerId: integer('caller_id').references(() => users.id, { onDelete: 'set null' }),
+  endpoint: varchar('endpoint', { length: 50 }).notNull(),
+  model: varchar('model', { length: 50 }),
+  promptTokens: integer('prompt_tokens'),
+  completionTokens: integer('completion_tokens'),
+  latencyMs: integer('latency_ms'),
+  status: varchar('status', { length: 20 }).notNull().default('ok'),
+  error: text('error'),
+  requestHash: varchar('request_hash', { length: 64 }),
+  courseId: integer('course_id').references(() => courses.id, { onDelete: 'set null' }),
+  groupId: integer('group_id').references(() => groups.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (t) => [
+  index('ai_call_logs_created_idx').on(t.createdAt),
+  index('ai_call_logs_endpoint_idx').on(t.endpoint),
+]);

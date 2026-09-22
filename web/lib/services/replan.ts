@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '../db/drizzle';
+import { courseTeacherId, groupMemberIds, notify } from './notifications';
 import {
   groupMembers,
   groups,
@@ -101,6 +102,12 @@ export async function triggerReplan(
   triggerType: TriggerType,
   input: { triggerTaskId?: number; delayDays?: number; actorId: number }
 ) {
+  const [groupRow] = await db
+    .select({ courseId: groups.courseId })
+    .from(groups)
+    .where(eq(groups.id, groupId))
+    .limit(1);
+  if (!groupRow) return { error: '小组不存在' as const };
   const taskRows = await db
     .select()
     .from(tasks)
@@ -171,6 +178,28 @@ export async function triggerReplan(
         payload: opt.payload,
         costSummary: opt.cost_summary,
         estImpactDays: String(opt.est_impact_days)
+      });
+    }
+    // 通知：重规划待决策 → 队长（紧迫）；涉教师授权的知会教师
+    const members = await groupMemberIds(groupId);
+    const link = `/dashboard/courses/${groupRow.courseId}/replans`;
+    await notify(members, {
+      type: 'replan_pending',
+      title: '重规划决策包待处理',
+      body: `${TRIGGER_LABEL[triggerType]}触发，已生成三方案与代价说明，请及时决策。`,
+      link,
+      priority: 'urgent',
+      groupId
+    });
+    const teacherId = await courseTeacherId(groupRow.courseId);
+    if (teacherId) {
+      await notify([teacherId], {
+        type: 'replan_pending',
+        title: '有小组触发重规划',
+        body: '「缩减范围/组间补位」方案需要你授权。',
+        link,
+        priority: 'normal',
+        groupId
       });
     }
     return { triggered: true as const, eventId: event.id };

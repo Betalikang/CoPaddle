@@ -17,6 +17,7 @@ import {
 } from '../db/schema';
 import { AlgoServiceError, callAlgo } from '@/lib/algo/client';
 import { getPeerScoresForAttribution } from './peer-reviews';
+import { groupMemberIds, logAudit, notify } from './notifications';
 
 /** algo /internal/attribution/compute 的响应类型。 */
 type AlgoAttributionResponse = {
@@ -407,11 +408,38 @@ export async function reviewSnapshot(
       finalNote: input.finalNote ?? null
     })
     .returning();
+
+  // 审计（五类必审操作之一：调分）
+  await logAudit({
+    actorId: reviewerId,
+    actorRole: 'teacher',
+    action: 'attribution_review',
+    targetType: 'contribution_snapshot',
+    targetId: snapshotId,
+    after: { adjustedLow: review.adjustedLow, adjustedHigh: review.adjustedHigh, finalNote: review.finalNote }
+  });
+
+  // 通知该成员：教师终审完成
+  const [snap] = await db
+    .select({ groupId: contributionSnapshots.groupId, userId: contributionSnapshots.userId })
+    .from(contributionSnapshots)
+    .where(eq(contributionSnapshots.id, snapshotId))
+    .limit(1);
+  if (snap) {
+    await notify([snap.userId], {
+      type: 'review_done',
+      title: '教师已完成你的贡献终审',
+      body: '请查看贡献账本中的终审区间与评语。',
+      link: `/dashboard/contributions`,
+      groupId: snap.groupId,
+      priority: 'normal'
+    });
+  }
   return review;
 }
 
 /** 批量锁定终审结果。 */
-export async function lockGroupSnapshots(groupId: number) {
+export async function lockGroupSnapshots(groupId: number, reviewerId: number) {
   const latest = await db
     .select({ snapshotAt: contributionSnapshots.snapshotAt })
     .from(contributionSnapshots)
@@ -432,6 +460,14 @@ export async function lockGroupSnapshots(groupId: number) {
     .set({ isLocked: true })
     .where(inArray(attributionReviews.snapshotId, snaps.map((s) => s.id)))
     .returning();
+  await logAudit({
+    actorId: reviewerId,
+    actorRole: 'teacher',
+    action: 'attribution_lock',
+    targetType: 'group',
+    targetId: groupId,
+    after: { locked: rows.length }
+  });
   return { locked: rows.length };
 }
 

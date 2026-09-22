@@ -26,6 +26,6 @@ export async function POST(_request: Request, { params }: Params) {
   const auth = await assertCourseRole(group.courseId, ['teacher']);
   if (!auth.ok) return auth.response;
 
-  const result = await lockGroupSnapshots(groupId);
+  const result = await lockGroupSnapshots(groupId, auth.user.id);
   return NextResponse.json(result);
 }

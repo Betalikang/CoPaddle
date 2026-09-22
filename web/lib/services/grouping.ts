@@ -16,6 +16,7 @@ import {
 } from '../db/schema';
 import type { GroupingMoveInput, GroupingSwapInput } from '@/lib/validation/grouping';
 import { AlgoServiceError, callAlgo } from '@/lib/algo/client';
+import { courseTeacherId, logAudit, notify } from './notifications';
 
 /** algo 侧 /internal/grouping/* 的响应类型（与 algo/app/schemas.py 对齐） */
 type AlgoPlan = {
@@ -529,7 +530,33 @@ export async function dissolveGroup(groupId: number, teacherId: number) {
       .where(and(eq(groupMembers.groupId, groupId), isNull(groupMembers.leftAt)));
   });
 
-  void teacherId;
+  await logAudit({
+    actorId: teacherId,
+    actorRole: 'teacher',
+    action: 'group_dissolve',
+    targetType: 'group',
+    targetId: groupId,
+    before: { status: group.status }
+  });
+  // 通知原成员：小组已解散，回池待重新分组
+  const [row] = await db
+    .select({ courseId: groups.courseId })
+    .from(groups)
+    .where(eq(groups.id, groupId))
+    .limit(1);
+  const members = await db
+    .select({ userId: groupMembers.userId })
+    .from(groupMembers)
+    .where(eq(groupMembers.groupId, groupId));
+  await notify(members.map((m) => m.userId), {
+    type: 'group_dissolved',
+    title: '你所在的小组已解散',
+    body: '你已回池，教师重新分组后会自动归入新小组。',
+    link: row ? `/dashboard/courses/${row.courseId}` : '/dashboard',
+    priority: 'urgent',
+    groupId
+  });
+  void courseTeacherId;
   return { ok: true as const };
 }
 

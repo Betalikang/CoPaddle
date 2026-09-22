@@ -57,6 +57,13 @@
       "when": 1790044915639,
       "tag": "0007_yellow_monster_badoon",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790045497459,
+      "tag": "0008_colorful_william_stryker",
+      "breakpoints": true
     }
   ]
 }

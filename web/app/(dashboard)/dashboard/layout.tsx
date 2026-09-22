@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Users, Settings, Shield, Activity, Menu } from 'lucide-react';
+import { Users, Settings, Shield, Activity, Bell, History, Menu } from 'lucide-react';
 
 export default function DashboardLayout({
   children
@@ -18,7 +18,9 @@ export default function DashboardLayout({
     { href: '/dashboard', icon: Users, label: '课程工作台' },
     { href: '/dashboard/general', icon: Settings, label: '账号设置' },
     { href: '/dashboard/activity', icon: Activity, label: '活动记录' },
-    { href: '/dashboard/security', icon: Shield, label: '安全设置' }
+    { href: '/dashboard/security', icon: Shield, label: '安全设置' },
+    { href: '/dashboard/notifications', icon: Bell, label: '通知中心' },
+    { href: '/dashboard/audit', icon: History, label: '审计与 AI 日志' }
   ];
 
   const nav = (

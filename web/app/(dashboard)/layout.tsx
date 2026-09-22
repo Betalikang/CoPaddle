@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, use, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { CircleIcon, Home, LogOut } from 'lucide-react';
+import { Bell, CircleIcon, Home, LogOut } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +17,17 @@ import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+/** 未读小红点（登录后才显示）。 */
+function NotificationDot() {
+  const { data } = useSWR<{ unread: number }>('/api/notifications', fetcher);
+  if (!data || data.unread === 0) return null;
+  return (
+    <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
+      {data.unread > 99 ? '99+' : data.unread}
+    </span>
+  );
+}
 
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -92,6 +103,11 @@ function Header() {
           <span className="ml-2 text-xl font-semibold text-gray-900">共桨 CoPaddle</span>
         </Link>
         <div className="flex items-center space-x-4">
+          <Link href="/dashboard/notifications" className="relative rounded-full p-2 hover:bg-accent">
+            <Bell className="h-5 w-5" />
+            <span className="sr-only">通知</span>
+            <NotificationDot />
+          </Link>
           <Suspense fallback={<div className="h-9" />}>
             <UserMenu />
           </Suspense>
