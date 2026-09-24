@@ -24,7 +24,8 @@ export async function setCourseContextCookie(courseId: number) {
   (await cookies()).set(CONTEXT_COOKIE, String(courseId), {
     httpOnly: true,
     sameSite: 'lax',
-    secure: true,
+    // 与 session cookie 同策略：纯 HTTP 部署需 COOKIE_SECURE=false（见 lib/auth/session.ts）
+    secure: process.env.COOKIE_SECURE !== 'false',
     maxAge: 60 * 60 * 24 * 30
   });
 }

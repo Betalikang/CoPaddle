@@ -3,7 +3,7 @@
 Fork 自 [nextjs/saas-starter](https://github.com/nextjs/saas-starter)（MIT），
 作为共桨 CoPaddle 的 Web 应用基座：三角色界面、看板、拖拽、图表、Route Handlers。
 
-> 本项目为学习用途（ICAN 赛题），不商用、不对外上线。
+> 本项目为学习用途，不商用、不对外上线。
 
 ## 已做的基座改造
 

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Users, Settings, Shield, Activity, Bell, History, Menu } from 'lucide-react';
+import { Users, Settings, Activity, Bell, History, Menu } from 'lucide-react';
 
 export default function DashboardLayout({
   children
@@ -18,7 +18,6 @@ export default function DashboardLayout({
     { href: '/dashboard', icon: Users, label: '课程工作台' },
     { href: '/dashboard/general', icon: Settings, label: '账号设置' },
     { href: '/dashboard/activity', icon: Activity, label: '活动记录' },
-    { href: '/dashboard/security', icon: Shield, label: '安全设置' },
     { href: '/dashboard/notifications', icon: Bell, label: '通知中心' },
     { href: '/dashboard/audit', icon: History, label: '审计与 AI 日志' }
   ];
@@ -30,7 +29,7 @@ export default function DashboardLayout({
           <Button
             variant={pathname === item.href ? 'secondary' : 'ghost'}
             className={`shadow-none my-1 w-full justify-start ${
-              pathname === item.href ? 'bg-gray-100' : ''
+              pathname === item.href ? 'bg-gray-100 dark:bg-gray-800' : ''
             }`}
             onClick={() => setIsSidebarOpen(false)}
           >
@@ -45,7 +44,7 @@ export default function DashboardLayout({
   return (
     <div className="w-full">
       {/* Mobile header */}
-      <div className="lg:hidden flex items-center justify-between bg-white border-b border-gray-200 p-4">
+      <div className="lg:hidden flex items-center justify-between bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 p-4">
         <span className="font-medium">设置</span>
         <Button
           className="-mr-3"
@@ -59,13 +58,13 @@ export default function DashboardLayout({
 
       <div className="lg:flex lg:items-start">
         {/* 桌面端：sticky 侧栏，贴左常驻 */}
-        <aside className="hidden lg:block w-64 shrink-0 bg-gray-50 border-r border-gray-200 lg:sticky lg:top-[57px] lg:h-[calc(100dvh-57px)]">
+        <aside className="hidden lg:block w-64 shrink-0 bg-gray-50 dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 lg:sticky lg:top-[57px] lg:h-[calc(100dvh-57px)]">
           <div className="h-full overflow-y-auto">{nav}</div>
         </aside>
 
         {/* 移动端：抽屉式侧栏 */}
         {isSidebarOpen && (
-          <aside className="fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 lg:hidden">
+          <aside className="fixed inset-y-0 left-0 z-40 w-64 bg-white dark:bg-gray-950 border-r border-gray-200 dark:border-gray-800 lg:hidden">
             <div className="h-full overflow-y-auto">{nav}</div>
           </aside>
         )}

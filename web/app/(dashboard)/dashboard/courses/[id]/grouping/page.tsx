@@ -69,7 +69,7 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
   }>(`/api/courses/${courseId}/grouping/latest`, fetcher);
 
   const { data: groupsData } = useSWR<{
-    groups: { id: number; name: string; members: Member[] }[];
+    groups: { id: number; name: string; status?: string; members: Member[] }[];
   }>(`/api/courses/${courseId}/groups`, fetcher);
   const { data: courseData } = useSWR<{ myRole: string }>(
     `/api/courses/${courseId}`,
@@ -94,14 +94,35 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
 
   // 本地快照：记录属于哪个方案，切 Tab 时自动回落到该方案的库内快照
   const [local, setLocal] = useState<{ planId: number; value: number[][] } | null>(null);
-  const shownGroups =
-    local && local.planId === currentPlanId ? local.value : (currentPlan?.groups ?? []);
+  // 预览分组：优先方案快照；空快照时用已落库小组兜底，避免左侧整块空白
+  const formedFallback = useMemo(
+    () =>
+      (groupsData?.groups ?? [])
+        .filter((g) => g.status !== 'dissolved')
+        .map((g) => g.members.map((m) => m.userId))
+        .filter((g) => g.length > 0),
+    [groupsData]
+  );
+  const shownGroups = useMemo(() => {
+    if (local && local.planId === currentPlanId) return local.value;
+    const fromPlan = currentPlan?.groups ?? [];
+    if (fromPlan.some((g) => (g?.length ?? 0) > 0)) return fromPlan;
+    return formedFallback;
+  }, [local, currentPlanId, currentPlan, formedFallback]);
 
   const [dragId, setDragId] = useState<number | null>(null);
   const [preview, setPreview] = useState<{
     deltas: Record<string, number>;
     totalBefore: number;
     totalAfter: number;
+  } | null>(null);
+  // 实时得分（拖动后立刻刷新雷达与总分，规格书 P-09）
+  const [liveScores, setLiveScores] = useState<{
+    skill_cover: number;
+    weak_tie: number;
+    balance: number;
+    history_avoid: number;
+    total: number;
   } | null>(null);
   const [violations, setViolations] = useState<{ code: string; message: string }[]>([]);
   const [busy, setBusy] = useState(false);
@@ -113,6 +134,7 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
     setActivePlanId(planId);
     setLocal(null);
     setPreview(null);
+    setLiveScores(null);
     setViolations([]);
     setSelected(null);
   }
@@ -126,7 +148,20 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
     return res.json();
   }
 
-  /** 一次移动的完整流程：preview（服务端权威）→ 合法则 apply → 更新面板。 */
+  /** 当前面板展示的四维得分：优先实时值，否则回落到方案库内快照。 */
+  const shownScores = useMemo(() => {
+    if (liveScores) return liveScores;
+    if (!currentPlan) return null;
+    return {
+      skill_cover: Number(currentPlan.scoreSkillCover),
+      weak_tie: Number(currentPlan.scoreWeakTie),
+      balance: Number(currentPlan.scoreBalance),
+      history_avoid: Number(currentPlan.scoreHistoryAvoid),
+      total: Number(currentPlan.totalScore)
+    };
+  }, [liveScores, currentPlan]);
+
+  /** 一次移动的完整流程：preview（服务端权威）→ 合法则 apply → 刷新主得分面板。 */
   async function moveFlow(userId: number, fromGroup: number, toGroup: number) {
     if (!currentPlan || fromGroup === toGroup) return;
     setBusy(true);
@@ -143,10 +178,12 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
       }
       setViolations([]);
       setPreview({
-        deltas: previewRes.deltas,
-        totalBefore: previewRes.totalBefore,
-        totalAfter: previewRes.totalAfter
+        deltas: previewRes.deltas ?? {},
+        totalBefore: previewRes.totalBefore ?? 0,
+        totalAfter: previewRes.totalAfter ?? 0
       });
+      // 主面板立刻反映移动后的得分（0.5s 内，规格 P-09）
+      if (previewRes.scores) setLiveScores(previewRes.scores);
       const applyRes = await post(`/api/grouping/plans/${currentPlan.id}/apply-move`, {
         userId,
         fromGroup,
@@ -154,6 +191,7 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
       });
       if (applyRes.ok) {
         setLocal({ planId: currentPlan.id, value: applyRes.groups });
+        if (applyRes.scores) setLiveScores(applyRes.scores);
       }
     } finally {
       setBusy(false);
@@ -183,9 +221,10 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
     if (!currentPlan) return;
     setBusy(true);
     try {
-      await post(`/api/grouping/plans/${currentPlan.id}/reset`);
+      const res = await post(`/api/grouping/plans/${currentPlan.id}/reset`);
       setLocal(null);
       setPreview(null);
+      setLiveScores(res?.scores ?? null);
       setViolations([]);
       await mutate();
     } finally {
@@ -218,6 +257,7 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
       setActivePlanId(null);
       setLocal(null);
       setPreview(null);
+      setLiveScores(null);
       setViolations([]);
       await mutate();
     } finally {
@@ -322,22 +362,30 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
                   onDragCancel={() => setDragId(null)}
                 >
                   <div className="grid gap-3 sm:grid-cols-2">
-                    {shownGroups.map((g, gi) => (
-                      <GroupCard
-                        key={gi}
-                        index={gi}
-                        members={g}
-                        memberMap={memberMap}
-                        violations={violations}
-                        canReceive={selected !== null}
-                        onReceive={() => moveSelectedTo(gi)}
-                        selected={selected}
-                        onSelectMember={setSelected}
-                      />
-                    ))}
+                    {shownGroups.length === 0 ? (
+                      <p className="col-span-full py-10 text-center text-sm text-muted-foreground">
+                        暂无分组预览。确认名单后点击「重新求解」生成方案。
+                      </p>
+                    ) : (
+                      shownGroups.map((g, gi) => (
+                        <GroupCard
+                          key={gi}
+                          index={gi}
+                          members={g}
+                          memberMap={memberMap}
+                          violations={violations}
+                          canReceive={selected !== null}
+                          onReceive={() => moveSelectedTo(gi)}
+                          selected={selected}
+                          onSelectMember={setSelected}
+                        />
+                      ))
+                    )}
                   </div>
                   <DragOverlay>
-                    {dragId !== null && <MemberChip member={memberMap.get(dragId)} dragging />}
+                    {dragId !== null && (
+                      <MemberChip userId={dragId} member={memberMap.get(dragId)} dragging />
+                    )}
                   </DragOverlay>
                 </DndContext>
                 <div className="mt-3 flex flex-wrap gap-2">
@@ -368,13 +416,17 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Gauge className="h-4 w-4" />
                       四维得分
+                      {liveScores && <Badge variant="secondary" className="ml-1">实时</Badge>}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="h-52">
                       <ResponsiveContainer>
                         <RadarChart
-                          data={DIMS.map((d) => ({ dim: d.label, score: Number(plan[d.field]) }))}
+                          data={DIMS.map((d) => ({
+                            dim: d.label,
+                            score: shownScores ? shownScores[d.key] : 0
+                          }))}
                         >
                           <PolarGrid />
                           <PolarAngleAxis dataKey="dim" tick={{ fontSize: 12 }} />
@@ -386,7 +438,7 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
                     <p className="mt-2 text-center text-sm text-muted-foreground">
                       综合得分{' '}
                       <span className="text-lg font-semibold text-foreground tabular-nums">
-                        {Number(plan.totalScore).toFixed(1)}
+                        {(shownScores?.total ?? 0).toFixed(1)}
                       </span>
                     </p>
                   </CardContent>
@@ -398,7 +450,7 @@ export default function GroupingWorkbenchPage({ params }: { params: Promise<{ id
                       <CardTitle className="text-base">上次拖动的影响</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-1 text-sm">
-                      {DIMS.map((d) => {
+                      {[...DIMS, { key: 'total' as const, label: '总分' }].map((d) => {
                         const delta = preview.deltas[d.key];
                         if (delta === undefined) return null;
                         return (
@@ -520,6 +572,7 @@ function GroupCard({
         {members.map((uid) => (
           <MemberChip
             key={uid}
+            userId={uid}
             member={memberMap.get(uid)}
             selected={selected === uid}
             onSelect={() => onSelectMember(selected === uid ? null : uid)}
@@ -531,21 +584,24 @@ function GroupCard({
 }
 
 function MemberChip({
+  userId,
   member,
   dragging = false,
   selected = false,
   onSelect
 }: {
+  userId: number;
   member: Member | undefined;
   dragging?: boolean;
   selected?: boolean;
   onSelect?: () => void;
 }) {
-  const { attributes, listeners, setNodeRef } = useDraggable({
-    id: member?.userId ?? 0,
-    disabled: !member
-  });
-  if (!member) return null;
+  const { attributes, listeners, setNodeRef } = useDraggable({ id: userId });
+  // 名单信息缺失时仍渲染占位，避免整块预览被 return null 清空
+  const label = member
+    ? `${member.name ?? `#${member.userId}`}${member.studentNo ? ` · ${member.studentNo}` : ''}`
+    : `#${userId}`;
+  const title = member ? `${member.name ?? ''} ${member.studentNo ?? ''}`.trim() : `用户 ${userId}`;
 
   return (
     <button
@@ -558,10 +614,9 @@ function MemberChip({
         (dragging ? 'cursor-grabbing opacity-50 ' : 'cursor-grab hover:bg-accent ') +
         (selected ? 'border-primary bg-primary/10 font-medium ' : '')
       }
-      title={`${member.name ?? ''} ${member.studentNo ?? ''}`}
+      title={title}
     >
-      {member.name ?? `#${member.userId}`}
-      {member.studentNo ? ` · ${member.studentNo}` : ''}
+      {label}
     </button>
   );
 }

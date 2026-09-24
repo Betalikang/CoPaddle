@@ -1,0 +1,7 @@
+# 默认 HTTP 反代。有域名后改成：your.domain {
+#   reverse_proxy web:3000
+# }
+:80 {
+	encode gzip
+	reverse_proxy web:3000
+}

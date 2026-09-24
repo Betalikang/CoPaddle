@@ -131,7 +131,9 @@ export async function triggerReplan(
   }
 
   // ---- 触发判定 ----
+  // 显式调用即认为条件已成立（critical_delay 再核对任务是否真延误）
   const settings = { delayTriggerDays: 2, idleTriggerDays: 3 };
+  void settings.idleTriggerDays;
   let shouldTrigger = triggerType === 'manual';
   const triggerTask = input.triggerTaskId
     ? taskRows.find((t) => t.id === input.triggerTaskId)
@@ -143,8 +145,15 @@ export async function triggerReplan(
         ? Math.max(0, Math.floor((Date.now() - triggerTask.dueAt.getTime()) / 86400000))
         : 0;
     shouldTrigger = lateDays >= settings.delayTriggerDays;
-  } else if (triggerType === 'rework_overflow') {
+  } else if (
+    triggerType === 'member_idle' ||
+    triggerType === 'rework_overflow' ||
+    triggerType === 'deadline_changed'
+  ) {
     shouldTrigger = true;
+  } else if (triggerType === 'critical_delay') {
+    // 无触发任务时按 delayDays 语义放行（演示/手动补偿）
+    shouldTrigger = (input.delayDays ?? 0) >= settings.delayTriggerDays;
   }
 
   if (!shouldTrigger) {
@@ -300,12 +309,75 @@ export async function getReplanEvent(eventId: number) {
   return { event, options };
 }
 
-export async function listReplanEvents(groupId: number) {
-  return db
+/** 事件 + 内嵌三方案（工作台列表直接消费）。 */
+async function withOptions<T extends { id: number }>(events: T[]) {
+  if (events.length === 0) return events.map((e) => ({ ...e, options: [] as (typeof replanOptions.$inferSelect)[] }));
+  const opts = await db
     .select()
+    .from(replanOptions)
+    .where(inArray(replanOptions.eventId, events.map((e) => e.id)))
+    .orderBy(replanOptions.id);
+  return events.map((e) => ({
+    ...e,
+    options: opts.filter((o) => o.eventId === e.id)
+  }));
+}
+
+/** 某组的重规划事件（含三方案）。 */
+export async function listReplanEvents(groupId: number) {
+  const rows = await db
+    .select({
+      event: replanEvents,
+      groupName: groups.name
+    })
     .from(replanEvents)
+    .leftJoin(groups, eq(replanEvents.groupId, groups.id))
     .where(eq(replanEvents.groupId, groupId))
     .orderBy(replanEvents.createdAt);
+  return withOptions(rows.map((r) => ({ ...r.event, groupName: r.groupName })));
+}
+
+/**
+ * 课程级重规划事件（重规划中心默认视图）。
+ * 教师/助教看全班；队长/队员只看本组，避免整页落在无事件的第 0 组上。
+ */
+export async function listCourseReplanEvents(
+  courseId: number,
+  userId: number,
+  role: 'teacher' | 'assistant' | 'captain' | 'member'
+) {
+  let groupIds: number[] | null = null;
+  if (role === 'captain' || role === 'member') {
+    const mine = await db
+      .select({ groupId: groupMembers.groupId })
+      .from(groupMembers)
+      .innerJoin(groups, eq(groupMembers.groupId, groups.id))
+      .where(
+        and(
+          eq(groups.courseId, courseId),
+          eq(groupMembers.userId, userId),
+          isNull(groupMembers.leftAt),
+          eq(groups.status, 'active')
+        )
+      );
+    groupIds = mine.map((m) => m.groupId);
+    if (groupIds.length === 0) return [];
+  }
+
+  const rows = await db
+    .select({
+      event: replanEvents,
+      groupName: groups.name
+    })
+    .from(replanEvents)
+    .innerJoin(groups, eq(replanEvents.groupId, groups.id))
+    .where(
+      groupIds
+        ? and(eq(groups.courseId, courseId), inArray(replanEvents.groupId, groupIds))
+        : eq(groups.courseId, courseId)
+    )
+    .orderBy(replanEvents.createdAt);
+  return withOptions(rows.map((r) => ({ ...r.event, groupName: r.groupName })));
 }
 
 /**

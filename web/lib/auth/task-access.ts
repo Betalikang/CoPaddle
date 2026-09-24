@@ -50,4 +50,17 @@ export async function isGroupMember(groupId: number, userId: number): Promise<bo
   return Boolean(row);
 }
 
+/**
+ * 组级资源鉴权（规格书 S5）：课程角色 ∩ 小组归属。
+ * 教师/助教可跨组查看；队长/队员必须是在册组员，否则 403（防组间 IDOR）。
+ */
+export async function assertGroupAccess(
+  groupId: number,
+  user: { id: number },
+  courseRole: string
+): Promise<boolean> {
+  if (courseRole === 'teacher' || courseRole === 'assistant') return true;
+  return isGroupMember(groupId, user.id);
+}
+
 export type { CourseRole };

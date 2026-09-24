@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { useEffect, use, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { Bell, CircleIcon, Home, LogOut } from 'lucide-react';
+import { Bell, Home, LogOut } from 'lucide-react';
+import { BrandMark } from '@/components/brand-mark';
+import { ThemeToggle } from '@/components/theme-toggle';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,9 +25,7 @@ function NotificationDot() {
   const { data } = useSWR<{ unread: number }>('/api/notifications', fetcher);
   if (!data || data.unread === 0) return null;
   return (
-    <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] text-white">
-      {data.unread > 99 ? '99+' : data.unread}
-    </span>
+    <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
   );
 }
 
@@ -96,13 +96,14 @@ function UserMenu() {
 
 function Header() {
   return (
-    <header className="border-b border-gray-200">
+    <header className="border-b border-gray-400 dark:border-gray-800">
       <div className="px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
         <Link href="/" className="flex items-center">
-          <CircleIcon className="h-6 w-6 text-orange-500" />
-          <span className="ml-2 text-xl font-semibold text-gray-900">共桨 CoPaddle</span>
+          <BrandMark className="h-7 w-7 text-orange-500" />
+          <span className="ml-2 text-xl font-semibold text-gray-900 dark:text-gray-100">共桨 CoPaddle</span>
         </Link>
         <div className="flex items-center space-x-4">
+          <ThemeToggle />
           <Link href="/dashboard/notifications" className="relative rounded-full p-2 hover:bg-accent">
             <Bell className="h-5 w-5" />
             <span className="sr-only">通知</span>

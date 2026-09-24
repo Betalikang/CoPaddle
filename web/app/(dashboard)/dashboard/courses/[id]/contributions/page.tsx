@@ -2,7 +2,7 @@
 
 import useSWR from 'swr';
 import { use, useState } from 'react';
-import { FileText, Lock, MessageSquarePlus } from 'lucide-react';
+import { FileText, Lock, MessageSquarePlus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -53,7 +53,31 @@ export default function ContributionsPage({ params }: { params: Promise<{ id: st
   const { data: groupsData, isLoading: groupsLoading } = useSWR<{
     groups: { id: number; name: string; members: { userId: number; name: string | null; studentNo: string | null }[] }[];
   }>(`/api/courses/${id}/groups`, fetcher);
-  const group = groupsData?.groups?.[0];
+  const { data: courseData } = useSWR<{
+    course: { name: string };
+    myRole: string;
+  }>(`/api/courses/${id}`, fetcher);
+  const { data: meData } = useSWR<{ user: { id: number } }>('/api/auth/me', fetcher);
+
+  const myRole = courseData?.myRole ?? 'member';
+  const isTeacher = myRole === 'teacher';
+  const isTeacherSide = myRole === 'teacher' || myRole === 'assistant';
+
+  const [pickedGroupId, setPickedGroupId] = useState<number | null>(null);
+  const [groupQuery, setGroupQuery] = useState('');
+  const [evidenceSnapId, setEvidenceSnapId] = useState<number | null>(null);
+  const [reviewing, setReviewing] = useState<Entry | null>(null);
+  const [appealing, setAppealing] = useState<Entry | null>(null);
+
+  const allGroups = groupsData?.groups ?? [];
+  // 24 组规模：切换器带检索 + 限高滚动（教师侧）
+  const visibleGroups = allGroups.filter((g) =>
+    g.name.toLowerCase().includes(groupQuery.trim().toLowerCase())
+  );
+  // 教师/助教可切换查看任一组；队长/队员固定本组（与任务页同口径）
+  const group = isTeacherSide
+    ? (allGroups.find((g) => g.id === pickedGroupId) ?? allGroups[0])
+    : (allGroups.find((g) => g.members.some((m) => m.userId === meData?.user?.id)) ?? allGroups[0]);
 
   const { data: ledgerData, isLoading, mutate } = useSWR<{
     snapshotAt: string | null;
@@ -61,22 +85,10 @@ export default function ContributionsPage({ params }: { params: Promise<{ id: st
     entries: Entry[];
   }>(group ? `/api/groups/${group.id}/contributions` : null, fetcher);
 
-  const { data: courseData } = useSWR<{
-    course: { name: string };
-    myRole: string;
-  }>(`/api/courses/${id}`, fetcher);
-
-  const [evidenceSnapId, setEvidenceSnapId] = useState<number | null>(null);
-  const [reviewing, setReviewing] = useState<Entry | null>(null);
-  const [appealing, setAppealing] = useState<Entry | null>(null);
-
-  const myRole = courseData?.myRole ?? 'member';
-  const isTeacher = myRole === 'teacher';
   const entries = ledgerData?.entries ?? [];
   const memberMap = new Map((group?.members ?? []).map((m) => [m.userId, m]));
 
   // 队员只看自己的区间（规格书 S5：他人区间默认不可见）
-  const { data: meData } = useSWR<{ user: { id: number } }>('/api/auth/me', fetcher);
   const myId = meData?.user?.id;
   const visibleEntries = isTeacher || myRole === 'assistant' || myRole === 'captain'
     ? entries
@@ -129,12 +141,45 @@ export default function ContributionsPage({ params }: { params: Promise<{ id: st
     <section className="flex-1">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-lg lg:text-2xl font-medium">贡献账本 · {group.name}</h1>
+          <h1 className="text-lg lg:text-2xl font-medium">
+            贡献账本 · {group.name}
+            {!isTeacherSide && <span className="ml-2 text-sm text-muted-foreground">（你所在的小组）</span>}
+          </h1>
           <p className="text-sm text-muted-foreground">
             快照时间 {new Date(ledgerData.snapshotAt).toLocaleString('zh-CN')} ·
             系统输出区间与证据，评分权归教师
           </p>
         </div>
+        {isTeacherSide && allGroups.length > 1 && (
+          <div className="w-full max-w-72">
+            <div className="relative">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="mb-1 pl-8"
+                placeholder="搜索小组（如 2-03）"
+                value={groupQuery}
+                onChange={(e) => setGroupQuery(e.target.value)}
+              />
+            </div>
+            <div className="max-h-40 overflow-y-auto rounded-md border p-1">
+              <div className="flex flex-wrap gap-1">
+                {visibleGroups.map((g) => (
+                  <Button
+                    key={g.id}
+                    size="sm"
+                    variant={g.id === group.id ? 'default' : 'outline'}
+                    onClick={() => setPickedGroupId(g.id)}
+                  >
+                    {g.name}
+                  </Button>
+                ))}
+                {visibleGroups.length === 0 && (
+                  <p className="p-2 text-xs text-muted-foreground">没有匹配的小组</p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         <div className="flex gap-2">
           <Button variant="outline" onClick={compute}>重新计算</Button>
           {isTeacher && (
@@ -264,6 +309,9 @@ function EvidenceDrawer({ snapshotId, onClose }: { snapshotId: number; onClose: 
         <DialogHeader>
           <DialogTitle>证据下钻（{items.length} 条）</DialogTitle>
         </DialogHeader>
+        <p className="text-xs text-muted-foreground">
+          每条结论都可下钻到段落原文 / 任务事件 / 互评原文（规格书 P-19）。
+        </p>
         {isLoading && <Skeleton className="h-40" />}
         {!isLoading && items.length === 0 && (
           <p className="text-sm text-muted-foreground">该成员暂无证据条目。</p>
@@ -279,15 +327,31 @@ function EvidenceDrawer({ snapshotId, onClose }: { snapshotId: number; onClose: 
                 <span className="ml-auto tabular-nums text-muted-foreground">{i.value} 字/次</span>
               </div>
               {i.segment && (
-                <p className="mt-1 line-clamp-2 rounded bg-muted p-1 text-xs text-muted-foreground">
-                  第 {i.segment.seq} 段原文：{i.segment.content.slice(0, 80)}
-                  {i.segment.content.length > 80 ? '…' : ''}（作者 #{i.segment.authorId}）
-                </p>
+                <div className="mt-1 rounded bg-muted p-2 text-xs text-muted-foreground">
+                  <p className="mb-1 font-medium text-foreground">
+                    段落 #{i.segment.seq} · 作者 #{i.segment.authorId} · {i.segment.wordCount} 字
+                  </p>
+                  <p className="whitespace-pre-wrap">{i.segment.content}</p>
+                </div>
               )}
               {i.task && (
                 <p className="mt-1 text-xs text-muted-foreground">
                   任务 {i.task.code} {i.task.title}（{i.task.status}）
                 </p>
+              )}
+              {i.peerReview && (
+                <div className="mt-1 rounded bg-muted p-2 text-xs text-muted-foreground">
+                  <p className="mb-1 font-medium text-foreground">
+                    互评原文 · 评价人 #{i.peerReview.reviewerId}
+                  </p>
+                  <p>
+                    维度分：
+                    {Object.entries(i.peerReview.scores ?? {})
+                      .map(([k, v]) => `${k} ${v}`)
+                      .join('、') || '（无）'}
+                  </p>
+                  {i.peerReview.comment && <p className="mt-1 whitespace-pre-wrap">{i.peerReview.comment}</p>}
+                </div>
               )}
             </li>
           ))}

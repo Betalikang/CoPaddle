@@ -53,7 +53,8 @@ export async function setSession(user: NewUser) {
   (await cookies()).set('session', encryptedSession, {
     expires: expiresInOneDay,
     httpOnly: true,
-    secure: true,
+    // 纯 HTTP 部署（裸 IP 演示环境）浏览器会拒收 Secure cookie，需设 COOKIE_SECURE=false
+    secure: process.env.COOKIE_SECURE !== 'false',
     sameSite: 'lax',
   });
 }

@@ -294,7 +294,7 @@ export const constraints = pgTable('constraints', {
   courseId: integer('course_id')
     .notNull()
     .references(() => courses.id, { onDelete: 'cascade' }),
-  // no_same_group | must_same_group | time_conflict
+  // no_same_group | time_conflict（must_same_group / 必须同组已去掉，不再作为硬约束）
   type: varchar('type', { length: 30 }).notNull(),
   memberA: integer('member_a')
     .notNull()
@@ -371,6 +371,8 @@ export const groups = pgTable('groups', {
   courseId: integer('course_id')
     .notNull()
     .references(() => courses.id, { onDelete: 'cascade' }),
+  // 小组挂在班级下（班级设计与名单管理一致）；跨班组可为空
+  classId: integer('class_id').references(() => classes.id, { onDelete: 'set null' }),
   planId: integer('plan_id').references(() => groupingPlans.id),
   name: varchar('name', { length: 50 }).notNull().default(''),
   captainId: integer('captain_id').references(() => users.id),
@@ -380,7 +382,10 @@ export const groups = pgTable('groups', {
   milestoneProgress: numeric('milestone_progress', { precision: 4, scale: 3 }).notNull().default('0'),
   formedAt: timestamp('formed_at').notNull().defaultNow(),
   dissolvedAt: timestamp('dissolved_at'),
-}, (t) => [index('groups_course_status_idx').on(t.courseId, t.status)]);
+}, (t) => [
+  index('groups_course_status_idx').on(t.courseId, t.status),
+  index('groups_class_idx').on(t.classId),
+]);
 
 export const groupMembers = pgTable('group_members', {
   id: serial('id').primaryKey(),

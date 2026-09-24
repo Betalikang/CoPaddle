@@ -27,6 +27,8 @@ ASSIGNMENT = """小组作业：城市商圈客流量分析与选址建议。
 
 
 def test_live_decompose_produces_dag_and_contract() -> None:
+    from app.ai.llm import LlmUnavailableError
+
     get_settings.cache_clear()
     req = DecomposeRequest(
         assignment_text=ASSIGNMENT,
@@ -34,7 +36,10 @@ def test_live_decompose_produces_dag_and_contract() -> None:
         course_name="数据分析基础",
         remaining_days=14,
     )
-    resp = decompose(req)
+    try:
+        resp = decompose(req)
+    except LlmUnavailableError as err:
+        pytest.skip(f"LLM 不可达（{err}）")
 
     assert resp.tasks, "应拆出任务"
     assert 1 <= len(resp.tasks) <= 12, f"任务数 {len(resp.tasks)} 超出规格"

@@ -44,26 +44,14 @@ type CourseDetail = {
   myRole: string;
 };
 
+/**
+ * 课程首页：只做功能入口导航。
+ * 班级 / 名单 / 小组管理统一在「名单管理」——班级卡片内嵌小组（与名单同一套 classId）。
+ */
 export default function CourseDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
-  const { data, error, isLoading } = useSWR<CourseDetail>(
-    `/api/courses/${id}`,
-    fetcher
-  );
-  const { data: classData } = useSWR<{ classes: { id: number; name: string; memberCount: number }[] }>(
-    `/api/courses/${id}/classes`,
-    fetcher
-  );
-  const { data: groupsData, mutate: mutateGroups } = useSWR<{
-    groups: {
-      id: number;
-      name: string;
-      status: string;
-      captainId: number | null;
-      members: { userId: number; name: string | null; studentNo: string | null; duty: string; className: string | null }[];
-    }[];
-  }>(`/api/courses/${id}/groups`, fetcher);
+  const { data, error, isLoading } = useSWR<CourseDetail>(`/api/courses/${id}`, fetcher);
 
   if (isLoading) {
     return (
@@ -72,16 +60,6 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         <Skeleton className="h-40" />
       </section>
     );
-  }
-
-  async function dissolveGroup(groupId: number, name: string) {
-    if (!window.confirm(`解散「${name}」？成员将回池，小组任务与交付物归档。`)) return;
-    const res = await fetch(`/api/groups/${groupId}/dissolve`, { method: 'POST' });
-    if (!res.ok) {
-      alert((await res.json()).error ?? '解散失败');
-      return;
-    }
-    await mutateGroups();
   }
 
   if (error || !data) {
@@ -116,60 +94,9 @@ export default function CourseDetailPage({ params }: { params: Promise<{ id: str
         <p className="mb-6 max-w-2xl text-sm text-muted-foreground">{course.description}</p>
       )}
 
-      {/* 班级与小组 */}
-      {((classData?.classes?.length ?? 0) > 0 || (groupsData?.groups?.length ?? 0) > 0) && (
-        <div className="mb-6 space-y-3">
-          {(classData?.classes?.length ?? 0) > 0 && (
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-muted-foreground">班级：</span>
-              {classData!.classes.map((c) => (
-                <Badge key={c.id} variant="outline">
-                  {c.name}（{c.memberCount} 人）
-                </Badge>
-              ))}
-            </div>
-          )}
-          {(groupsData?.groups?.length ?? 0) > 0 && (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {groupsData!.groups.map((g) => (
-                <Card key={g.id} className={g.status === 'dissolved' ? 'opacity-50' : ''}>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm">{g.name}</CardTitle>
-                    <div className="flex items-center gap-1">
-                      <Badge variant={g.status === 'active' ? 'default' : 'secondary'}>
-                        {g.status === 'active' ? '进行中' : g.status === 'dissolved' ? '已解散' : g.status}
-                      </Badge>
-                      {isTeacherSide && g.status === 'active' && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 text-destructive"
-                          onClick={() => dissolveGroup(g.id, g.name)}
-                        >
-                          解散
-                        </Button>
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex flex-wrap gap-1">
-                    {g.members.map((m) => (
-                      <Badge key={m.userId} variant="secondary" className="font-normal">
-                        {m.name ?? `#${m.userId}`}
-                        {m.className ? ` · ${m.className}` : ''}
-                        {m.duty === 'lead' ? '（组长）' : ''}
-                      </Badge>
-                    ))}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {isTeacherSide ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <EntryCard href={`/dashboard/courses/${id}/roster`} icon={<Users className="h-5 w-5" />} title="名单管理" desc="导入名单、查看技能卡填写进度、调整班级与角色" ready />
+          <EntryCard href={`/dashboard/courses/${id}/roster`} icon={<Users className="h-5 w-5" />} title="名单管理" desc="班级、名单、技能卡进度；小组管理在班级卡片内" ready />
           <EntryCard href={`/dashboard/courses/${id}/settings`} icon={<Settings className="h-5 w-5" />} title="分组策略与权重" desc="组数规模、四项目标权重、三类证据权重与阈值" ready />
           <EntryCard href={`/dashboard/courses/${id}/grouping`} icon={<GitBranch className="h-5 w-5" />} title="分组工作台" desc="AI 生成三方案、拖动微调实时看分、破坏硬约束标红" ready />
           <EntryCard href={`/dashboard/courses/${id}/tasks`} icon={<ListChecks className="h-5 w-5" />} title="任务与依赖" desc="AI 拆解任务 DAG、分工指派、协作契约" ready />

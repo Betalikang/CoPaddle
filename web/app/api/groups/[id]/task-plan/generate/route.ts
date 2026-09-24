@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { assertCourseRole } from '@/lib/auth/course-access';
+import { assertGroupAccess } from '@/lib/auth/task-access';
 import { db } from '@/lib/db/drizzle';
 import { groups } from '@/lib/db/schema';
 import { generateTaskPlan } from '@/lib/services/tasks';
@@ -27,6 +28,10 @@ export async function POST(request: Request, { params }: Params) {
   // 上传作业要求并触发拆解：教师/助教/队长均可（规格书 S5）
   const auth = await assertCourseRole(group.courseId, ['teacher', 'assistant', 'captain']);
   if (!auth.ok) return auth.response;
+  // 组级归属：队长/队员必须是在册组员（规格书 S5，防组间 IDOR）
+  if (!(await assertGroupAccess(groupId, auth.user, auth.membership.role))) {
+    return NextResponse.json({ error: '不属于该小组' }, { status: 403 });
+  }
 
   const parsed = generatePlanSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {

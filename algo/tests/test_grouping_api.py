@@ -30,7 +30,6 @@ def make_payload(n: int = 30, groups: int = 8, **overrides) -> dict:
         "min_group_size": 3,
         "max_group_size": 5,
         "forbidden_pairs": [],
-        "required_pairs": [],
         "weights": {"skill_cover": 1.2, "weak_tie": 0.8, "balance": 1.0, "history_avoid": 1.0},
         "time_limit_seconds": 10.0,
     }
@@ -48,18 +47,6 @@ def test_solve_returns_three_plans(client: TestClient, auth: dict[str, str]) -> 
         assert len(plan["groups"]) == 8
         assert plan["scores"]["total"] > 0
         assert plan["label"]
-
-
-def test_solve_infeasible(client: TestClient, auth: dict[str, str]) -> None:
-    r = client.post(
-        "/internal/grouping/solve",
-        json=make_payload(
-            n=4, groups=2, min_group_size=2, max_group_size=2, required_pairs=[["u1", "u2"], ["u1", "u3"]]
-        ),
-        headers=auth,
-    )
-    assert r.status_code == 200
-    assert r.json()["status"] == "infeasible"
 
 
 def test_validate_reports_violations(client: TestClient, auth: dict[str, str]) -> None:

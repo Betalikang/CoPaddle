@@ -1,0 +1,90 @@
+# 共桨生产编排：db + algo + web + caddy（HTTP:80，有域名后可开 HTTPS）
+# 仅 db/algo 走内网；对外只暴露 caddy。
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: gongjiang-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gongjiang}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-gongjiang}
+    volumes:
+      - gongjiang_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gongjiang} -d ${POSTGRES_DB:-gongjiang}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks: [gongjiang]
+    # 不映射宿主机端口，禁止公网直连
+
+  algo:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.algo
+    container_name: gongjiang-algo
+    restart: unless-stopped
+    env_file: ./.env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-gongjiang}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-gongjiang}
+      ALGO_SHARED_SECRET: ${ALGO_SHARED_SECRET}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com}
+      LLM_MODEL: ${LLM_MODEL:-deepseek-chat}
+      STORAGE_DIR: /data/storage
+    volumes:
+      - gongjiang_storage:/data/storage
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [gongjiang]
+    # 不对公网暴露 8000
+
+  web:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.web
+    container_name: gongjiang-web
+    restart: unless-stopped
+    env_file: ./.env
+    environment:
+      NODE_ENV: production
+      POSTGRES_URL: postgresql://${POSTGRES_USER:-gongjiang}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-gongjiang}
+      AUTH_SECRET: ${AUTH_SECRET}
+      ALGO_SERVICE_URL: http://algo:8000
+      ALGO_SHARED_SECRET: ${ALGO_SHARED_SECRET}
+      BASE_URL: ${BASE_URL:-http://localhost}
+    depends_on:
+      db:
+        condition: service_healthy
+      algo:
+        condition: service_started
+    networks: [gongjiang]
+    # 内部 3000，由 caddy 反代
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: gongjiang-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - gongjiang_caddy_data:/data
+      - gongjiang_caddy_config:/config
+    depends_on:
+      - web
+    networks: [gongjiang]
+
+volumes:
+  gongjiang_pgdata:
+  gongjiang_storage:
+  gongjiang_caddy_data:
+  gongjiang_caddy_config:
+
+networks:
+  gongjiang:
+    name: gongjiang

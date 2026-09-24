@@ -1,7 +1,7 @@
 'use client';
 
 import useSWR from 'swr';
-import { use, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import { Search, Upload, UserCog } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Pager } from '@/components/ui/pager';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
@@ -32,6 +33,7 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
+import { ClassShell, GroupPanelInClass } from '@/components/class-shell';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -65,18 +67,44 @@ export default function RosterPage({ params }: { params: Promise<{ id: string }>
     `/api/courses/${id}/skill-cards`,
     fetcher
   );
-  const { data: classData } = useSWR<{ classes: { id: number; name: string }[] }>(
-    `/api/courses/${id}/classes`,
-    fetcher
-  );
+  const { data: classData, mutate: mutateClasses } = useSWR<{
+    classes: { id: number; name: string; memberCount: number; groupCount: number }[];
+  }>(`/api/courses/${id}/classes`, fetcher);
 
   const enrollments = enrollData?.enrollments ?? [];
   const classes = classData?.classes ?? [];
 
+  // 班级筛选与课程页同一套；支持 ?classId= 直达（从班级卡片「名单管理」跳入）
   const [keyword, setKeyword] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [classFilter, setClassFilter] = useState('all');
   const [editing, setEditing] = useState<Enrollment | null>(null);
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get('classId');
+    if (q) setClassFilter(q);
+  }, []);
+
+  // 筛选变化回到第一页
+  useEffect(() => {
+    setPage(1);
+  }, [roleFilter, classFilter, keyword]);
+
+  /** 队长指派（P-05 理想链路）：教师点一下，该学生本号登录即有队长权限。 */
+  async function toggleCaptain(e: Enrollment, role: 'captain' | 'member') {
+    const res = await fetch(`/api/enrollments/${e.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ role })
+    });
+    if (!res.ok) {
+      window.alert((await res.json()).error ?? '操作失败');
+      return;
+    }
+    mutate();
+    mutateClasses();
+  }
 
   const filtered = useMemo(() => {
     return enrollments.filter((e) => {
@@ -94,6 +122,12 @@ export default function RosterPage({ params }: { params: Promise<{ id: string }>
     });
   }, [enrollments, roleFilter, classFilter, keyword]);
 
+  // 长名单分页（119 人规模一页放不下）
+  const PAGE_SIZE = 20;
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
   return (
     <section className="flex-1">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -101,12 +135,23 @@ export default function RosterPage({ params }: { params: Promise<{ id: string }>
           <h1 className="text-lg lg:text-2xl font-medium">名单管理</h1>
           {cardData && (
             <p className="text-sm text-muted-foreground">
-              技能卡填写进度：{cardData.filled} / {cardData.total}
+              技能卡填写进度：{cardData.filled} / {cardData.total} ·
+              学生用本人账号登录后即获得此处设置的角色权限（设谁为队长，谁的本号就是队长）
             </p>
           )}
         </div>
-        <ImportDialog courseId={id} onDone={() => mutate()} />
+        <ImportDialog courseId={id} onDone={() => { mutate(); mutateClasses(); }} />
       </div>
+
+      {/* 班级设计：与名单管理同一套 classId，班级在此维护 */}
+      <ClassPanel
+        courseId={id}
+        classes={classes}
+        onChanged={() => {
+          mutateClasses();
+          mutate();
+        }}
+      />
 
       <Card className="mb-4">
         <CardContent className="flex flex-wrap items-end gap-3 pt-6">
@@ -165,6 +210,7 @@ export default function RosterPage({ params }: { params: Promise<{ id: string }>
             </p>
           )}
           {filtered.length > 0 && (
+            <>
             <Table>
               <TableHeader>
                 <TableRow>
@@ -177,7 +223,7 @@ export default function RosterPage({ params }: { params: Promise<{ id: string }>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((e) => (
+                {paged.map((e) => (
                   <TableRow key={e.id}>
                     <TableCell className="tabular-nums">{e.user.studentNo ?? '—'}</TableCell>
                     <TableCell>{e.user.name ?? '—'}</TableCell>
@@ -189,15 +235,28 @@ export default function RosterPage({ params }: { params: Promise<{ id: string }>
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => setEditing(e)}>
-                        <UserCog className="mr-1 h-4 w-4" />
-                        编辑
-                      </Button>
+                      <div className="flex justify-end gap-1">
+                        {e.role === 'captain' ? (
+                          <Button variant="ghost" size="sm" onClick={() => toggleCaptain(e, 'member')}>
+                            取消队长
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="sm" onClick={() => toggleCaptain(e, 'captain')}>
+                            设为队长
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={() => setEditing(e)}>
+                          <UserCog className="mr-1 h-4 w-4" />
+                          编辑
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            <Pager page={safePage} pageCount={pageCount} onPage={setPage} />
+            </>
           )}
         </CardContent>
       </Card>
@@ -210,10 +269,337 @@ export default function RosterPage({ params }: { params: Promise<{ id: string }>
           onDone={() => {
             setEditing(null);
             mutate();
+            mutateClasses();
           }}
         />
       )}
     </section>
+  );
+}
+
+/** 班级管理面板：班级 + 名单 + 本班小组管理（嵌在班级卡片内）。 */
+function ClassPanel({
+  courseId,
+  classes,
+  onChanged
+}: {
+  courseId: string;
+  classes: { id: number; name: string; memberCount: number; groupCount: number }[];
+  onChanged: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+  const { data: groupsData, mutate: mutateGroups } = useSWR<{
+    groups: {
+      id: number;
+      name: string;
+      status: string;
+      classId: number | null;
+      members: { userId: number; name: string | null; duty: string }[];
+    }[];
+  }>(`/api/courses/${courseId}/groups`, fetcher);
+
+  const allGroups = groupsData?.groups ?? [];
+
+  async function create() {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setMsg('请填写班级名称');
+      return;
+    }
+    setBusy(true);
+    setMsg('');
+    try {
+      const res = await fetch(`/api/courses/${courseId}/classes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: trimmed })
+      });
+      const body = await res.json().catch(() => ({ error: '响应不是 JSON' }));
+      if (!res.ok) {
+        setMsg(body.error ?? `创建失败（HTTP ${res.status}）`);
+        return;
+      }
+      setName('');
+      setOpen(false);
+      setMsg('');
+      onChanged();
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : '网络错误，创建失败');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function rename(c: { id: number; name: string }) {
+    const next = window.prompt('班级名称', c.name);
+    if (!next || next.trim() === c.name) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/courses/${courseId}/classes/${c.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: next.trim() })
+      });
+      const body = await res.json().catch(() => ({ error: '响应不是 JSON' }));
+      if (!res.ok) setMsg(body.error ?? '改名失败');
+      else {
+        setMsg('');
+        onChanged();
+      }
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : '网络错误');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove(c: { id: number; name: string; groupCount: number }) {
+    const active = allGroups.filter((g) => g.classId === c.id && g.status === 'active').length;
+    if (active > 0) {
+      setMsg(`「${c.name}」仍有 ${active} 个进行中小组，请先在下方解散`);
+      return;
+    }
+    if (!window.confirm(`删除班级「${c.name}」？成员将回到未分班，不会移出名单。`)) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/courses/${courseId}/classes/${c.id}`, { method: 'DELETE' });
+      const body = await res.json().catch(() => ({ error: '响应不是 JSON' }));
+      if (!res.ok) setMsg(body.error ?? '删除失败');
+      else {
+        setMsg('');
+        onChanged();
+        void mutateGroups();
+      }
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : '网络错误');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function dissolveGroup(groupId: number, gname: string) {
+    if (!window.confirm(`解散「${gname}」？成员将回池，小组任务与交付物归档。`)) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/groups/${groupId}/dissolve`, { method: 'POST' });
+      const body = await res.json().catch(() => ({ error: '响应不是 JSON' }));
+      if (!res.ok) setMsg(body.error ?? '解散失败');
+      else {
+        setMsg('');
+        void mutateGroups();
+        onChanged();
+      }
+    } catch (err) {
+      setMsg(err instanceof Error ? err.message : '网络错误');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function toggleGroups(key: string) {
+    setOpenGroups((m) => ({ ...m, [key]: !m[key] }));
+  }
+
+  return (
+    <Card className="mb-4">
+      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 pb-3">
+        <CardTitle className="text-base">班级与名单（{classes.length} 班）</CardTitle>
+        <Dialog
+          open={open}
+          onOpenChange={(v) => {
+            setOpen(v);
+            if (!v) {
+              setMsg('');
+              setName('');
+            }
+          }}
+        >
+          <DialogTrigger asChild>
+            <Button type="button" size="sm" variant="outline">
+              新建班级
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>新建班级</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label htmlFor="new-class-name">班级名称</Label>
+                <Input
+                  id="new-class-name"
+                  placeholder="如：数字媒体本24-1"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      void create();
+                    }
+                  }}
+                />
+              </div>
+              {msg && <p className="text-sm text-destructive">{msg}</p>}
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+                  取消
+                </Button>
+                <Button type="button" disabled={busy || !name.trim()} onClick={() => void create()}>
+                  {busy ? '创建中…' : '创建'}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          班级、名单、小组在同一处维护：成员用编辑分班，小组管理在本班卡片内。
+        </p>
+        {msg && !open && <p className="text-sm text-destructive">{msg}</p>}
+        {classes.length === 0 && (
+          <p className="py-4 text-center text-sm text-muted-foreground">
+            还没有班级。点「新建班级」，或在 CSV 导入时带上 class_name 自动建班。
+          </p>
+        )}
+        <div className="space-y-3">
+          {classes.map((c) => {
+            const key = `c${c.id}`;
+            const groups = allGroups.filter((g) => g.classId === c.id);
+            const active = groups.filter((g) => g.status === 'active').length;
+            const dissolved = groups.filter((g) => g.status === 'dissolved').length;
+            return (
+              <ClassShell
+                key={c.id}
+                classInfo={c}
+                actions={
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2"
+                      disabled={busy}
+                      onClick={() => void rename(c)}
+                    >
+                      改名
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-destructive"
+                      disabled={busy}
+                      onClick={() => void remove(c)}
+                    >
+                      删除
+                    </Button>
+                  </>
+                }
+              >
+                <GroupPanelInClass
+                  open={openGroups[key] ?? false}
+                  onToggle={() => toggleGroups(key)}
+                  activeCount={active}
+                  dissolvedCount={dissolved}
+                >
+                  {groups.length === 0 ? (
+                    <p className="py-3 text-center text-sm text-muted-foreground">
+                      本班还没有小组。到「分组工作台」生成并选定方案。
+                    </p>
+                  ) : (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {groups.map((g) => (
+                        <div
+                          key={g.id}
+                          className="rounded-md border bg-background px-3 py-2 text-sm"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium">{g.name}</span>
+                            <Badge variant={g.status === 'active' ? 'default' : 'secondary'}>
+                              {g.status === 'active' ? '进行中' : g.status === 'dissolved' ? '已解散' : g.status}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              {g.members.length} 人
+                            </span>
+                            {g.status === 'active' && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                className="ml-auto h-7 px-2 text-destructive"
+                                disabled={busy}
+                                onClick={() => void dissolveGroup(g.id, g.name)}
+                              >
+                                解散
+                              </Button>
+                            )}
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {g.members
+                              .map((m) => `${m.name ?? `#${m.userId}`}${m.duty === 'lead' ? '（组长）' : ''}`)
+                              .join('、') || '（无成员）'}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </GroupPanelInClass>
+              </ClassShell>
+            );
+          })}
+        </div>
+        {(() => {
+          const ungrouped = allGroups.filter((g) => g.classId == null);
+          if (ungrouped.length === 0) return null;
+          const active = ungrouped.filter((g) => g.status === 'active').length;
+          const dissolved = ungrouped.filter((g) => g.status === 'dissolved').length;
+          return (
+            <ClassShell
+              classInfo={{ id: 0, name: '未分班小组', memberCount: 0, groupCount: active }}
+              hint="跨班或尚未写入班级归属的小组"
+            >
+              <GroupPanelInClass
+                open={openGroups.none ?? false}
+                onToggle={() => toggleGroups('none')}
+                activeCount={active}
+                dissolvedCount={dissolved}
+              >
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {ungrouped.map((g) => (
+                    <div key={g.id} className="rounded-md border bg-background px-3 py-2 text-sm">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium">{g.name}</span>
+                        <Badge variant={g.status === 'active' ? 'default' : 'secondary'}>
+                          {g.status === 'active' ? '进行中' : g.status === 'dissolved' ? '已解散' : g.status}
+                        </Badge>
+                        {g.status === 'active' && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="ml-auto h-7 px-2 text-destructive"
+                            disabled={busy}
+                            onClick={() => void dissolveGroup(g.id, g.name)}
+                          >
+                            解散
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </GroupPanelInClass>
+            </ClassShell>
+          );
+        })()}
+      </CardContent>
+    </Card>
   );
 }
 

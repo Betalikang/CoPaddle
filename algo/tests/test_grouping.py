@@ -19,7 +19,7 @@ def make_students(n: int, dims: tuple[str, ...] = ("编程", "写作", "数据�
     students = []
     for i in range(n):
         skills = {d: (i + j) % 6 for j, d in enumerate(dims)}
-        students.append(Student(id=f"u{i + 1}", skills=skills, class_id=f"c{i % 2}"))
+        students.append(Student(id=f"u{i + 1}", name=f"学生{i + 1}", skills=skills, class_id=f"c{i % 2}"))
     return students
 
 
@@ -91,21 +91,6 @@ def test_forbidden_pair_separated() -> None:
         assert group_of["u1"] != group_of["u2"]
 
 
-def test_required_pair_together() -> None:
-    students = make_students(8)
-    result = solve_grouping(
-        students,
-        num_groups=2,
-        min_size=4,
-        max_size=4,
-        required_pairs=[("u1", "u2")],
-    )
-    assert result.status == "ok"
-    for plan in result.plans:
-        group_of = {m: gi for gi, g in enumerate(plan.groups) for m in g}
-        assert group_of["u1"] == group_of["u2"]
-
-
 def test_same_class_constraint() -> None:
     students = make_students(8)  # class_id = c0/c1 交替
     result = solve_grouping(
@@ -129,19 +114,6 @@ def test_infeasible_size() -> None:
     assert result.detail
 
 
-def test_infeasible_required_triple() -> None:
-    """三人必须同组但规模上限 2 → 无解（规格书 S9.1：矛盾约束返回无解并指出原因）。"""
-    students = make_students(4)
-    result = solve_grouping(
-        students,
-        num_groups=2,
-        min_size=2,
-        max_size=2,
-        required_pairs=[("u1", "u2"), ("u1", "u3")],
-    )
-    assert result.status == "infeasible"
-
-
 def test_validate_plan_violations() -> None:
     students = make_students(4)
     # 超规模 + 未分配
@@ -153,6 +125,22 @@ def test_validate_plan_violations() -> None:
     assert validate_plan(ok_groups, students, num_groups=2, min_size=2, max_size=2) == []
 
 
+def test_violation_messages_use_real_names() -> None:
+    """违规提示用真实姓名，不用内部 id。"""
+    students = make_students(4)
+    groups = [["u1", "u2"], ["u3", "u4"]]
+    violations = validate_plan(
+        groups,
+        students,
+        num_groups=2,
+        min_size=2,
+        max_size=2,
+        forbidden_pairs=[("u1", "u2")],
+    )
+    assert any(v.code == "H2" and "学生1" in v.message and "学生2" in v.message for v in violations)
+    assert not any("u1" in v.message or "u2" in v.message for v in violations if v.code == "H2")
+
+
 def test_greedy_fallback_valid() -> None:
     """贪心兜底也必须满足硬约束（规格书 S4.10 快速模式）。"""
     students = make_students(10)
@@ -162,13 +150,11 @@ def test_greedy_fallback_valid() -> None:
         min_size=5,
         max_size=5,
         forbidden_pairs=[("u1", "u2")],
-        required_pairs=[("u3", "u4")],
         allow_cross_class=True,
     )
     assert groups is not None
     group_of = {m: gi for gi, g in enumerate(groups) for m in g}
     assert group_of["u1"] != group_of["u2"]
-    assert group_of["u3"] == group_of["u4"]
     assert len(group_of) == 10
 
 

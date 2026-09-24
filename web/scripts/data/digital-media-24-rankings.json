@@ -1,0 +1,1073 @@
+[
+  {
+    "studentNo": "23327202429",
+    "name": "杜毓达",
+    "sciScore": 32.4785714285714,
+    "sciRank": 114,
+    "gpaScore": 54.5985714285714,
+    "gpaRank": 112,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101401",
+    "name": "潘梓钰",
+    "sciScore": 49.7498984593838,
+    "sciRank": 32,
+    "gpaScore": 75.5734984593838,
+    "gpaRank": 27,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101402",
+    "name": "刁润卿",
+    "sciScore": 50.7547916666667,
+    "sciRank": 17,
+    "gpaScore": 78.9743916666666,
+    "gpaRank": 11,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101403",
+    "name": "郭艺炜",
+    "sciScore": 49.9887482492997,
+    "sciRank": 28,
+    "gpaScore": 76.1867482492997,
+    "gpaRank": 20,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101404",
+    "name": "李烁",
+    "sciScore": 52.2228764005602,
+    "sciRank": 6,
+    "gpaScore": 81.5092764005603,
+    "gpaRank": 5,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101405",
+    "name": "代梦飞",
+    "sciScore": 46.5593522408964,
+    "sciRank": 73,
+    "gpaScore": 70.1429522408963,
+    "gpaRank": 68,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101406",
+    "name": "周永璟",
+    "sciScore": 44.1442927170868,
+    "sciRank": 90,
+    "gpaScore": 67.2710927170868,
+    "gpaRank": 90,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101407",
+    "name": "李伊婷",
+    "sciScore": 15.2742857142857,
+    "sciRank": 118,
+    "gpaScore": 38.3042857142857,
+    "gpaRank": 118,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101408",
+    "name": "李子寒",
+    "sciScore": 52.197081582633,
+    "sciRank": 7,
+    "gpaScore": 75.6750815826331,
+    "gpaRank": 26,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101409",
+    "name": "孙素研",
+    "sciScore": 49.2674492296919,
+    "sciRank": 40,
+    "gpaScore": 73.9574492296918,
+    "gpaRank": 33,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101410",
+    "name": "高卫",
+    "sciScore": 43.2685906862745,
+    "sciRank": 96,
+    "gpaScore": 67.0105906862746,
+    "gpaRank": 91,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101411",
+    "name": "殷佳怡",
+    "sciScore": 50.4158858543417,
+    "sciRank": 22,
+    "gpaScore": 76.9970858543417,
+    "gpaRank": 17,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101412",
+    "name": "杨凤怡",
+    "sciScore": 45.934506302521,
+    "sciRank": 85,
+    "gpaScore": 69.552506302521,
+    "gpaRank": 75,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101413",
+    "name": "路凯月",
+    "sciScore": 51.0327783613445,
+    "sciRank": 14,
+    "gpaScore": 75.9707783613445,
+    "gpaRank": 23,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101414",
+    "name": "孟吉祥",
+    "sciScore": 46.4790388655462,
+    "sciRank": 74,
+    "gpaScore": 69.2770388655462,
+    "gpaRank": 78,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101415",
+    "name": "刘航宇",
+    "sciScore": 46.4236782212885,
+    "sciRank": 75,
+    "gpaScore": 74.9852782212885,
+    "gpaRank": 30,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101417",
+    "name": "张雨茜",
+    "sciScore": 16.4558928571429,
+    "sciRank": 117,
+    "gpaScore": 39.3978928571429,
+    "gpaRank": 117,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101418",
+    "name": "周广庆",
+    "sciScore": 46.2391386554622,
+    "sciRank": 81,
+    "gpaScore": 69.0867386554622,
+    "gpaRank": 79,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101419",
+    "name": "王予婷",
+    "sciScore": 49.9307545518207,
+    "sciRank": 29,
+    "gpaScore": 73.9543545518208,
+    "gpaRank": 34,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101420",
+    "name": "李墨涵",
+    "sciScore": 47.3120133053221,
+    "sciRank": 66,
+    "gpaScore": 73.8964133053221,
+    "gpaRank": 35,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101421",
+    "name": "郁悦",
+    "sciScore": 49.5495465686274,
+    "sciRank": 35,
+    "gpaScore": 76.1867465686275,
+    "gpaRank": 21,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101422",
+    "name": "林子韩",
+    "sciScore": 30.8142787114846,
+    "sciRank": 115,
+    "gpaScore": 52.6358787114846,
+    "gpaRank": 114,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101423",
+    "name": "王相民",
+    "sciScore": 42.6097023809524,
+    "sciRank": 99,
+    "gpaScore": 65.4641023809523,
+    "gpaRank": 100,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101424",
+    "name": "赵士皓",
+    "sciScore": 42.3200927871149,
+    "sciRank": 101,
+    "gpaScore": 66.0332927871148,
+    "gpaRank": 98,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101425",
+    "name": "高冉",
+    "sciScore": 38.915099789916,
+    "sciRank": 108,
+    "gpaScore": 60.4002997899159,
+    "gpaRank": 106,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101426",
+    "name": "李振",
+    "sciScore": 35.663156512605,
+    "sciRank": 112,
+    "gpaScore": 58.132356512605,
+    "gpaRank": 108,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101427",
+    "name": "张奕",
+    "sciScore": 48.6200280112045,
+    "sciRank": 48,
+    "gpaScore": 73.3980280112044,
+    "gpaRank": 40,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101429",
+    "name": "丁传瑞",
+    "sciScore": 47.4798879551821,
+    "sciRank": 64,
+    "gpaScore": 72.0090879551821,
+    "gpaRank": 55,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101430",
+    "name": "张心露",
+    "sciScore": 48.0077993697479,
+    "sciRank": 59,
+    "gpaScore": 73.8097993697479,
+    "gpaRank": 36,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101431",
+    "name": "苏文轩",
+    "sciScore": 42.135612745098,
+    "sciRank": 103,
+    "gpaScore": 66.4960127450981,
+    "gpaRank": 93,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101432",
+    "name": "劳曼秋",
+    "sciScore": 48.5217279411765,
+    "sciRank": 50,
+    "gpaScore": 71.5077279411765,
+    "gpaRank": 56,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101433",
+    "name": "魏博",
+    "sciScore": 18.9010364145658,
+    "sciRank": 116,
+    "gpaScore": 41.4102364145658,
+    "gpaRank": 116,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101434",
+    "name": "桂雨婕",
+    "sciScore": 48.0368032212885,
+    "sciRank": 58,
+    "gpaScore": 72.6108032212885,
+    "gpaRank": 47,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101435",
+    "name": "刘宸宇",
+    "sciScore": 48.2087640056022,
+    "sciRank": 55,
+    "gpaScore": 75.3819640056022,
+    "gpaRank": 28,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101436",
+    "name": "金佳欣",
+    "sciScore": 49.6131390056022,
+    "sciRank": 34,
+    "gpaScore": 73.2743390056023,
+    "gpaRank": 41,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101437",
+    "name": "石爽",
+    "sciScore": 41.6198441876751,
+    "sciRank": 105,
+    "gpaScore": 64.6738441876751,
+    "gpaRank": 103,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101438",
+    "name": "田怡",
+    "sciScore": 50.0208333333333,
+    "sciRank": 26,
+    "gpaScore": 74.5652333333334,
+    "gpaRank": 32,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101439",
+    "name": "吕芙蓉",
+    "sciScore": 47.1369590336134,
+    "sciRank": 69,
+    "gpaScore": 73.6829590336135,
+    "gpaRank": 38,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321101440",
+    "name": "张爽",
+    "sciScore": 45.2617734593837,
+    "sciRank": 88,
+    "gpaScore": 68.7309734593837,
+    "gpaRank": 82,
+    "classKey": "24-1"
+  },
+  {
+    "studentNo": "24321102401",
+    "name": "赵天明",
+    "sciScore": 46.4126120448179,
+    "sciRank": 76,
+    "gpaScore": 70.0512120431513,
+    "gpaRank": 70,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102402",
+    "name": "吴宇凡",
+    "sciScore": 49.4723651960784,
+    "sciRank": 36,
+    "gpaScore": 72.2451651944118,
+    "gpaRank": 52,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102403",
+    "name": "吴文君",
+    "sciScore": 48.3780322128852,
+    "sciRank": 52,
+    "gpaScore": 71.3148322112185,
+    "gpaRank": 58,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102404",
+    "name": "张笑涵",
+    "sciScore": 40.0341544117647,
+    "sciRank": 106,
+    "gpaScore": 58.6897544117647,
+    "gpaRank": 107,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102405",
+    "name": "姜晓涵",
+    "sciScore": 54.6943382352941,
+    "sciRank": 1,
+    "gpaScore": 85.2059382352941,
+    "gpaRank": 2,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102406",
+    "name": "刘萱",
+    "sciScore": 44.5177573529412,
+    "sciRank": 89,
+    "gpaScore": 69.8233573529411,
+    "gpaRank": 72,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102407",
+    "name": "李丹",
+    "sciScore": 42.1950070028011,
+    "sciRank": 102,
+    "gpaScore": 66.4672070011345,
+    "gpaRank": 94,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102408",
+    "name": "杜欣怡",
+    "sciScore": 47.7114443277311,
+    "sciRank": 62,
+    "gpaScore": 70.6738443277311,
+    "gpaRank": 64,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102409",
+    "name": "王博雅",
+    "sciScore": 48.6961467086835,
+    "sciRank": 46,
+    "gpaScore": 73.2421467070168,
+    "gpaRank": 43,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102410",
+    "name": "王子羿",
+    "sciScore": 49.0549982492997,
+    "sciRank": 43,
+    "gpaScore": 72.9793982509664,
+    "gpaRank": 46,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102411",
+    "name": "徐慧萍",
+    "sciScore": 50.795581232493,
+    "sciRank": 16,
+    "gpaScore": 74.6523812341596,
+    "gpaRank": 31,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102412",
+    "name": "田溪",
+    "sciScore": 51.1669397759104,
+    "sciRank": 12,
+    "gpaScore": 78.5181397742437,
+    "gpaRank": 13,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102413",
+    "name": "赵艺泽",
+    "sciScore": 45.8545955882353,
+    "sciRank": 86,
+    "gpaScore": 68.5407955882353,
+    "gpaRank": 84,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102414",
+    "name": "赵伟超",
+    "sciScore": 12.9185714285714,
+    "sciRank": 119,
+    "gpaScore": 29.5475714285714,
+    "gpaRank": 119,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102415",
+    "name": "臧金涵",
+    "sciScore": 49.0680059523809,
+    "sciRank": 42,
+    "gpaScore": 71.4516059507143,
+    "gpaRank": 57,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102416",
+    "name": "罗铭伟",
+    "sciScore": 43.9223634453782,
+    "sciRank": 93,
+    "gpaScore": 67.8817634453781,
+    "gpaRank": 87,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102417",
+    "name": "辛文祥",
+    "sciScore": 47.8681547619047,
+    "sciRank": 60,
+    "gpaScore": 75.7761547635714,
+    "gpaRank": 25,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102418",
+    "name": "韩雪萌",
+    "sciScore": 50.8090826330532,
+    "sciRank": 15,
+    "gpaScore": 73.6954826313865,
+    "gpaRank": 37,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102419",
+    "name": "于力翔",
+    "sciScore": 35.7331880252101,
+    "sciRank": 111,
+    "gpaScore": 53.5265880252101,
+    "gpaRank": 113,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102420",
+    "name": "孔祥源",
+    "sciScore": 38.5447741596639,
+    "sciRank": 109,
+    "gpaScore": 56.7397741596639,
+    "gpaRank": 110,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102421",
+    "name": "张翔宇",
+    "sciScore": 42.3883648459384,
+    "sciRank": 100,
+    "gpaScore": 68.8681648476051,
+    "gpaRank": 81,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102422",
+    "name": "韦旭良",
+    "sciScore": 33.5232843137255,
+    "sciRank": 113,
+    "gpaScore": 49.8464843120588,
+    "gpaRank": 115,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102423",
+    "name": "门铭慧",
+    "sciScore": 49.9928168767507,
+    "sciRank": 27,
+    "gpaScore": 75.965616875084,
+    "gpaRank": 24,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102424",
+    "name": "王华伟",
+    "sciScore": 43.8127941176471,
+    "sciRank": 95,
+    "gpaScore": 61.8861941176471,
+    "gpaRank": 105,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102425",
+    "name": "丛浩然",
+    "sciScore": 36.8592594537815,
+    "sciRank": 110,
+    "gpaScore": 55.1672594537815,
+    "gpaRank": 111,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102426",
+    "name": "李佳琳",
+    "sciScore": 50.5813322829132,
+    "sciRank": 19,
+    "gpaScore": 79.7255322845799,
+    "gpaRank": 9,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102427",
+    "name": "李嘉昊",
+    "sciScore": 42.942412464986,
+    "sciRank": 97,
+    "gpaScore": 68.1746124633193,
+    "gpaRank": 85,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102428",
+    "name": "赵硕",
+    "sciScore": 50.6225962885154,
+    "sciRank": 18,
+    "gpaScore": 79.9661962868487,
+    "gpaRank": 8,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102429",
+    "name": "赵婧瑶",
+    "sciScore": 51.9257825630252,
+    "sciRank": 10,
+    "gpaScore": 80.2901825630252,
+    "gpaRank": 6,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102430",
+    "name": "翟思同",
+    "sciScore": 44.0519222689076,
+    "sciRank": 91,
+    "gpaScore": 67.4079222689076,
+    "gpaRank": 89,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102431",
+    "name": "韩梦琪",
+    "sciScore": 50.4344870448179,
+    "sciRank": 21,
+    "gpaScore": 77.8608870431513,
+    "gpaRank": 15,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102432",
+    "name": "吴长宇",
+    "sciScore": 54.6279884453782,
+    "sciRank": 2,
+    "gpaScore": 83.3515884453782,
+    "gpaRank": 3,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102433",
+    "name": "陈锦凡",
+    "sciScore": 47.0851418067227,
+    "sciRank": 70,
+    "gpaScore": 70.5461418067227,
+    "gpaRank": 65,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102434",
+    "name": "侯世森",
+    "sciScore": 46.3383193277311,
+    "sciRank": 77,
+    "gpaScore": 66.3541193277311,
+    "gpaRank": 96,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102435",
+    "name": "温荣佳",
+    "sciScore": 43.9654271708684,
+    "sciRank": 92,
+    "gpaScore": 66.2350271692017,
+    "gpaRank": 97,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102436",
+    "name": "秦清华",
+    "sciScore": 48.255656512605,
+    "sciRank": 54,
+    "gpaScore": 70.3734565126051,
+    "gpaRank": 66,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102437",
+    "name": "李淑贤",
+    "sciScore": 49.6359243697479,
+    "sciRank": 33,
+    "gpaScore": 70.9683243697479,
+    "gpaRank": 61,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102438",
+    "name": "马文广",
+    "sciScore": 51.0933578431373,
+    "sciRank": 13,
+    "gpaScore": 76.9811578414706,
+    "gpaRank": 18,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102439",
+    "name": "周豪澍",
+    "sciScore": 47.2690388655462,
+    "sciRank": 68,
+    "gpaScore": 69.4230388655462,
+    "gpaRank": 76,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321102440",
+    "name": "徐好",
+    "sciScore": 50.3305269607843,
+    "sciRank": 23,
+    "gpaScore": 76.0625269591177,
+    "gpaRank": 22,
+    "classKey": "24-2"
+  },
+  {
+    "studentNo": "24321103401",
+    "name": "马晨曦",
+    "sciScore": 47.7570518207283,
+    "sciRank": 61,
+    "gpaScore": 72.1770684873949,
+    "gpaRank": 54,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103402",
+    "name": "鲁忠辉",
+    "sciScore": 45.9854656862745,
+    "sciRank": 84,
+    "gpaScore": 67.5754823529412,
+    "gpaRank": 88,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103403",
+    "name": "赵雪",
+    "sciScore": 48.5516964285714,
+    "sciRank": 49,
+    "gpaScore": 70.8917214285715,
+    "gpaRank": 62,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103404",
+    "name": "侯文博",
+    "sciScore": 52.5252906162465,
+    "sciRank": 5,
+    "gpaScore": 83.2752739495799,
+    "gpaRank": 4,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103405",
+    "name": "阎文韬",
+    "sciScore": 46.0348476890756,
+    "sciRank": 83,
+    "gpaScore": 69.8948226890756,
+    "gpaRank": 71,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103406",
+    "name": "刘析昊",
+    "sciScore": 46.3220115546219,
+    "sciRank": 80,
+    "gpaScore": 68.6420365546219,
+    "gpaRank": 83,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103407",
+    "name": "于子淼",
+    "sciScore": 46.3324142156863,
+    "sciRank": 78,
+    "gpaScore": 67.9224058823529,
+    "gpaRank": 86,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103408",
+    "name": "于文静",
+    "sciScore": 48.3185381652661,
+    "sciRank": 53,
+    "gpaScore": 70.7235298319328,
+    "gpaRank": 63,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103409",
+    "name": "孟洁君",
+    "sciScore": 46.2116929271709,
+    "sciRank": 82,
+    "gpaScore": 65.4517012605042,
+    "gpaRank": 101,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103410",
+    "name": "靳欣可",
+    "sciScore": 52.1567682072829,
+    "sciRank": 8,
+    "gpaScore": 78.6667848739496,
+    "gpaRank": 12,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103411",
+    "name": "顿娟",
+    "sciScore": 49.18956232493,
+    "sciRank": 41,
+    "gpaScore": 72.4995789915966,
+    "gpaRank": 49,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103412",
+    "name": "李佳睿",
+    "sciScore": 51.5843154761905,
+    "sciRank": 11,
+    "gpaScore": 77.1443071428571,
+    "gpaRank": 16,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103413",
+    "name": "哈雨彤",
+    "sciScore": 49.3571901260504,
+    "sciRank": 39,
+    "gpaScore": 80.1871651260504,
+    "gpaRank": 7,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103414",
+    "name": "赵路凯",
+    "sciScore": 46.9888830532213,
+    "sciRank": 71,
+    "gpaScore": 73.2638663865546,
+    "gpaRank": 42,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103415",
+    "name": "原梦晗",
+    "sciScore": 49.4565283613445,
+    "sciRank": 37,
+    "gpaScore": 72.3165033613445,
+    "gpaRank": 51,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103416",
+    "name": "陈玫旭",
+    "sciScore": 47.2863707983193,
+    "sciRank": 67,
+    "gpaScore": 71.0013957983194,
+    "gpaRank": 60,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103417",
+    "name": "张翔晖",
+    "sciScore": 50.4840633753501,
+    "sciRank": 20,
+    "gpaScore": 76.2640550420168,
+    "gpaRank": 19,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103418",
+    "name": "傅晓娜",
+    "sciScore": 48.4130864845938,
+    "sciRank": 51,
+    "gpaScore": 71.1430781512605,
+    "gpaRank": 59,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103419",
+    "name": "邵明鸣",
+    "sciScore": 48.89018732493,
+    "sciRank": 45,
+    "gpaScore": 68.9701789915966,
+    "gpaRank": 80,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103420",
+    "name": "刘思涵",
+    "sciScore": 48.8995903361345,
+    "sciRank": 44,
+    "gpaScore": 73.0195903361345,
+    "gpaRank": 45,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103421",
+    "name": "徐鸿飞",
+    "sciScore": 52.101130952381,
+    "sciRank": 9,
+    "gpaScore": 78.1711142857143,
+    "gpaRank": 14,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103422",
+    "name": "刘心语",
+    "sciScore": 42.7146883753501,
+    "sciRank": 98,
+    "gpaScore": 65.6347050420168,
+    "gpaRank": 99,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103423",
+    "name": "李康",
+    "sciScore": 53.0754114145658,
+    "sciRank": 4,
+    "gpaScore": 88.5154197478991,
+    "gpaRank": 1,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103424",
+    "name": "杨文祺",
+    "sciScore": 50.1275542717087,
+    "sciRank": 25,
+    "gpaScore": 72.237562605042,
+    "gpaRank": 53,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103425",
+    "name": "姜在敏",
+    "sciScore": 47.3580217086835,
+    "sciRank": 65,
+    "gpaScore": 69.7080050420168,
+    "gpaRank": 74,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103426",
+    "name": "杨欣霖",
+    "sciScore": 48.0451278011204,
+    "sciRank": 57,
+    "gpaScore": 69.3451361344538,
+    "gpaRank": 77,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103427",
+    "name": "张帅",
+    "sciScore": 46.3280129551821,
+    "sciRank": 79,
+    "gpaScore": 66.4630046218488,
+    "gpaRank": 95,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103428",
+    "name": "孙运雪",
+    "sciScore": 49.4489828431373,
+    "sciRank": 38,
+    "gpaScore": 72.3189911764706,
+    "gpaRank": 50,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103429",
+    "name": "巩小川",
+    "sciScore": 48.1869520308123,
+    "sciRank": 56,
+    "gpaScore": 70.096943697479,
+    "gpaRank": 69,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103430",
+    "name": "张亚迪",
+    "sciScore": 48.6835136554622,
+    "sciRank": 47,
+    "gpaScore": 75.1284886554622,
+    "gpaRank": 29,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103431",
+    "name": "谷慧静",
+    "sciScore": 50.2493539915966,
+    "sciRank": 24,
+    "gpaScore": 73.4893789915967,
+    "gpaRank": 39,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103432",
+    "name": "冷晓雪",
+    "sciScore": 49.8562237394958,
+    "sciRank": 30,
+    "gpaScore": 73.1362487394958,
+    "gpaRank": 44,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103433",
+    "name": "孙再东",
+    "sciScore": 41.6210136554622,
+    "sciRank": 104,
+    "gpaScore": 65.2760386554622,
+    "gpaRank": 102,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103434",
+    "name": "张思雯",
+    "sciScore": 46.9643329831933,
+    "sciRank": 72,
+    "gpaScore": 70.3193579831933,
+    "gpaRank": 67,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103435",
+    "name": "马天乐",
+    "sciScore": 43.849100140056,
+    "sciRank": 94,
+    "gpaScore": 62.7891168067227,
+    "gpaRank": 104,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103436",
+    "name": "周胜凯",
+    "sciScore": 54.2119520308123,
+    "sciRank": 3,
+    "gpaScore": 79.161943697479,
+    "gpaRank": 10,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103437",
+    "name": "秦宗昊",
+    "sciScore": 39.8821130952381,
+    "sciRank": 107,
+    "gpaScore": 57.2621214285714,
+    "gpaRank": 109,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103438",
+    "name": "王守顺",
+    "sciScore": 45.6365721288515,
+    "sciRank": 87,
+    "gpaScore": 66.5315554621848,
+    "gpaRank": 92,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103439",
+    "name": "蔡雨晴",
+    "sciScore": 47.5105602240896,
+    "sciRank": 63,
+    "gpaScore": 69.7105768907563,
+    "gpaRank": 73,
+    "classKey": "24-3"
+  },
+  {
+    "studentNo": "24321103440",
+    "name": "王子萌",
+    "sciScore": 49.7955759803922,
+    "sciRank": 31,
+    "gpaScore": 72.5455676470588,
+    "gpaRank": 48,
+    "classKey": "24-3"
+  }
+]

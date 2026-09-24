@@ -11,12 +11,13 @@ import {
   evidenceItems,
   groupMembers,
   groups,
+  peerReviews,
   taskAssignments,
   taskStatusEvents,
   tasks
 } from '../db/schema';
 import { AlgoServiceError, callAlgo } from '@/lib/algo/client';
-import { getPeerScoresForAttribution } from './peer-reviews';
+import { getPeerReviewDetails } from './peer-reviews';
 import { groupMemberIds, logAudit, notify } from './notifications';
 
 /** algo /internal/attribution/compute 的响应类型。 */
@@ -113,12 +114,18 @@ export async function computeGroupContributions(groupId: number) {
     .where(and(eq(tasks.groupId, groupId), sql`${tasks.deletedAt} IS NULL`));
   const cpTaskIds = taskRows.filter((t) => t.onCriticalPath).map((t) => t.id);
 
-  const assignRows = userIds.length
-    ? await db
-        .select()
-        .from(taskAssignments)
-        .where(inArray(taskAssignments.userId, userIds))
-    : [];
+  const assignRows =
+    userIds.length && taskRows.length
+      ? await db
+          .select()
+          .from(taskAssignments)
+          .where(
+            and(
+              inArray(taskAssignments.userId, userIds),
+              inArray(taskAssignments.taskId, taskRows.map((t) => t.id))
+            )
+          )
+      : [];
   const taskById = new Map(taskRows.map((t) => [t.id, t]));
 
   const eventRows = taskRows.length
@@ -140,14 +147,16 @@ export async function computeGroupContributions(groupId: number) {
     const st = stats.get(a.userId)!;
     st.leadTotal += 1;
     if (task.status === 'done') {
-      st.leadOnTime += 1; // 简化口径：完成即按期（精确口径需 S5 的 due 比对）
+      // 按期口径：无 due 或 completedAt<=dueAt 视为按期（规格书 S4.7）
+      const onTime = !task.dueAt || task.completedAt == null || task.completedAt <= task.dueAt;
+      if (onTime) st.leadOnTime += 1;
       if (cpTaskIds.includes(task.id)) st.cpDone += 1;
       processEvidence.push({
         userId: a.userId,
         refType: 'task_done',
         refId: task.id,
         value: 1,
-        note: `完成主责任务 ${task.code}`
+        note: onTime ? `按期完成主责任务 ${task.code}` : `延期完成主责任务 ${task.code}`
       });
     }
   }
@@ -167,10 +176,13 @@ export async function computeGroupContributions(groupId: number) {
     }
   }
 
-  // ---- 证据 C：同伴（最近一轮 closed/published 互评收到的原始分）----
+  // ---- 证据 C：同伴（最近一轮 closed/published 互评收到的原始分 + 真实 review id）----
   const peerScoresByUser = new Map<number, number[]>();
+  const peerDetailsByUser = new Map<number, { reviewId: number; reviewerId: number; score: number }[]>();
   for (const uid of userIds) {
-    peerScoresByUser.set(uid, await getPeerScoresForAttribution(groupId, uid));
+    const details = await getPeerReviewDetails(groupId, uid);
+    peerDetailsByUser.set(uid, details);
+    peerScoresByUser.set(uid, details.map((d) => d.score));
   }
 
   // ---- 调 algo ----
@@ -225,24 +237,24 @@ export async function computeGroupContributions(groupId: number) {
           fairShareRatio: String(m.fair_share_ratio),
           warning: m.warning || null,
           onTimeCount: stats.get(uid)?.leadOnTime ?? 0,
-          delayCount: 0,
+          delayCount: Math.max(0, (stats.get(uid)?.leadTotal ?? 0) - (stats.get(uid)?.leadOnTime ?? 0)),
           reworkCount: stats.get(uid)?.rework ?? 0,
-          reviewCount: 0
+          reviewCount: peerDetailsByUser.get(uid)?.length ?? 0
         })
         .returning();
       snapshotIds.set(uid, snap.id);
     }
 
-    // 同伴证据条目（可下钻到互评轮次）
+    // 同伴证据条目（refId = peer_reviews.id，可下钻到互评原文）
   const peerEvidence: { userId: number; refType: string; refId: number; value: number; note: string }[] = [];
-  for (const [uid, scores] of peerScoresByUser) {
-    for (const [i, sc] of scores.entries()) {
+  for (const [uid, details] of peerDetailsByUser) {
+    for (const d of details) {
       peerEvidence.push({
         userId: uid,
         refType: 'peer_review',
-        refId: i + 1, // 序号引用（下钻时展示均分与份数）
-        value: Math.round(sc * 100) / 100,
-        note: `收到第 ${i + 1} 份互评，均分 ${sc.toFixed(1)}`
+        refId: d.reviewId,
+        value: Math.round(d.score * 100) / 100,
+        note: `收到 1 份互评，均分 ${d.score.toFixed(1)}`
       });
     }
   }
@@ -356,6 +368,15 @@ export async function getSnapshotEvidence(snapshotId: number) {
     const rows = await db.select().from(tasks).where(inArray(tasks.id, taskIds));
     for (const t of rows) taskMap.set(t.id, { code: t.code, title: t.title, status: t.status });
   }
+  // 同伴证据：跳到互评原文（peer_reviews.id）
+  const peerIds = items.filter((i) => i.refType === 'peer_review').map((i) => i.refId!).filter((x) => x != null);
+  const peerMap = new Map<number, { reviewerId: number; scores: Record<string, number>; comment: string | null }>();
+  if (peerIds.length) {
+    const rows = await db.select().from(peerReviews).where(inArray(peerReviews.id, peerIds));
+    for (const r of rows) {
+      peerMap.set(r.id, { reviewerId: r.reviewerId, scores: r.scores ?? {}, comment: r.comment ?? null });
+    }
+  }
 
   return {
     snapshot,
@@ -367,7 +388,8 @@ export async function getSnapshotEvidence(snapshotId: number) {
       value: Number(i.value),
       note: i.note,
       segment: i.refId ? segmentMap.get(i.refId) ?? null : null,
-      task: i.refId ? taskMap.get(i.refId) ?? null : null
+      task: i.refId ? taskMap.get(i.refId) ?? null : null,
+      peerReview: i.refId ? peerMap.get(i.refId) ?? null : null
     }))
   };
 }

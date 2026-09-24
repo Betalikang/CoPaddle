@@ -401,6 +401,15 @@ export async function listAnomalies(roundId: number) {
  * 返回原始分数组（algo 侧做去极值中位数）。
  */
 export async function getPeerScoresForAttribution(groupId: number, userId: number): Promise<number[]> {
+  const rows = await getPeerReviewDetails(groupId, userId);
+  return rows.map((r) => r.score);
+}
+
+/** 同伴互评明细（真实 review id + 均分），供证据下钻跳转原文。 */
+export async function getPeerReviewDetails(
+  groupId: number,
+  userId: number
+): Promise<{ reviewId: number; reviewerId: number; score: number }[]> {
   const [group] = await db
     .select({ courseId: groups.courseId })
     .from(groups)
@@ -427,7 +436,8 @@ export async function getPeerScoresForAttribution(groupId: number, userId: numbe
     .where(and(eq(peerReviews.roundId, rounds[0].id), eq(peerReviews.revieweeId, userId)));
 
   return reviews.map((r) => {
-    const vals = Object.values(r.scores);
-    return vals.reduce((a, b) => a + b, 0) / Math.max(vals.length, 1);
+    const vals = Object.values(r.scores ?? {});
+    const score = vals.reduce((a, b) => a + b, 0) / Math.max(vals.length, 1);
+    return { reviewId: r.id, reviewerId: r.reviewerId, score };
   });
 }

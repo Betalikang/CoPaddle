@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { assertCourseRole } from '@/lib/auth/course-access';
+import { assertGroupAccess } from '@/lib/auth/task-access';
 import { db } from '@/lib/db/drizzle';
 import { groups } from '@/lib/db/schema';
 import { createArtifact, listArtifacts } from '@/lib/services/artifacts';
@@ -38,6 +39,10 @@ export async function GET(_request: Request, { params }: Params) {
   }
   const auth = await assertCourseRole(courseId, ['teacher', 'assistant', 'captain', 'member']);
   if (!auth.ok) return auth.response;
+  // 组级归属：队长/队员必须是在册组员（规格书 S5，防组间 IDOR）
+  if (!(await assertGroupAccess(groupId, auth.user, auth.membership.role))) {
+    return NextResponse.json({ error: '不属于该小组' }, { status: 403 });
+  }
 
   const artifacts = await listArtifacts(groupId);
   return NextResponse.json({ artifacts });

@@ -52,6 +52,7 @@ MAX_STUDENTS_FOR_CPSAT = 200
 @dataclass
 class Student:
     id: str
+    name: str = ""
     skills: dict[str, int] = field(default_factory=dict)
     class_id: str | None = None
 
@@ -74,6 +75,12 @@ class SolveResult:
 
 def _power(s: Student) -> int:
     return sum(s.skills.values())
+
+
+def _display_name(sid: str, by_id: dict[str, Student]) -> str:
+    """违规提示用真实姓名，缺姓名时回退 id。"""
+    s = by_id.get(sid)
+    return (s.name or sid) if s else sid
 
 
 def _pairs(students: list[Student]) -> int:
@@ -174,12 +181,10 @@ def validate_plan(
     min_size: int,
     max_size: int,
     forbidden_pairs: list[tuple[str, str]] | None = None,
-    required_pairs: list[tuple[str, str]] | None = None,
     allow_cross_class: bool = True,
 ) -> list[MoveViolation]:
-    """硬约束校验（H1–H5，规格书 S4.2）。返回违规清单，空列表 = 合法。"""
+    """硬约束校验（H1/H2/H4/H5，规格书 S4.2；已去掉 H3 必须同组）。返回违规清单，空列表 = 合法。"""
     forbidden_pairs = forbidden_pairs or []
-    required_pairs = required_pairs or []
     by_id = {s.id: s for s in students}
     violations: list[MoveViolation] = []
 
@@ -207,22 +212,28 @@ def validate_plan(
         for m in g:
             if m in seen:
                 violations.append(
-                    MoveViolation(code="H5", message=f"{m} 被重复分配到第 {seen[m] + 1} 组和第 {gi + 1} 组")
+                    MoveViolation(
+                        code="H5",
+                        message=f"{_display_name(m, by_id)} 被重复分配到第 {seen[m] + 1} 组和第 {gi + 1} 组",
+                    )
                 )
             seen[m] = gi
 
-    missing = [s.id for s in students if s.id not in seen]
+    missing = [s for s in students if s.id not in seen]
     if missing:
+        names = [_display_name(s.id, by_id) for s in missing[:5]]
         violations.append(
-            MoveViolation(code="H5", message=f"未分配：{'、'.join(missing[:5])}{' 等' if len(missing) > 5 else ''}")
+            MoveViolation(code="H5", message=f"未分配：{'、'.join(names)}{' 等' if len(missing) > 5 else ''}")
         )
 
     for a, b in forbidden_pairs:
         if a in seen and b in seen and seen[a] == seen[b]:
-            violations.append(MoveViolation(code="H2", message=f"{a} 与 {b} 不可同组"))
-    for a, b in required_pairs:
-        if a in seen and b in seen and seen[a] != seen[b]:
-            violations.append(MoveViolation(code="H3", message=f"{a} 与 {b} 必须同组"))
+            violations.append(
+                MoveViolation(
+                    code="H2",
+                    message=f"{_display_name(a, by_id)} 与 {_display_name(b, by_id)} 不可同组",
+                )
+            )
 
     return violations
 
@@ -233,14 +244,12 @@ def _greedy_groups(
     min_size: int,
     max_size: int,
     forbidden_pairs: list[tuple[str, str]],
-    required_pairs: list[tuple[str, str]],
     allow_cross_class: bool,
 ) -> list[list[str]] | None:
     """贪心兜底：按实力降序轮询放入第一个可行组（满足硬约束）。"""
     by_id = {s.id: s for s in students}
     forbidden_set = set(forbidden_pairs) | {(b, a) for a, b in forbidden_pairs}
     groups: list[list[str]] = [[] for _ in range(num_groups)]
-    group_of: dict[str, int] = {}
     ordered = sorted(students, key=_power, reverse=True)
 
     def feasible(gi: int, sid: str) -> bool:
@@ -262,7 +271,6 @@ def _greedy_groups(
         for gi in range(num_groups):
             if feasible(gi, s.id):
                 groups[gi].append(s.id)
-                group_of[s.id] = gi
                 placed = True
                 break
         # 第二遍：换位放置——把目标组里某个无冲突成员移到别组，腾出位置
@@ -281,8 +289,6 @@ def _greedy_groups(
                         groups[gi].remove(m)
                         groups[gj].append(m)
                         groups[gi].append(s.id)
-                        group_of[m] = gj
-                        group_of[s.id] = gi
                         placed = True
                         break
                     if placed:
@@ -292,28 +298,6 @@ def _greedy_groups(
         if not placed:
             return None
 
-    # required pairs 捆绑检查：贪心未保证同组，做一次修复交换
-    for a, b in required_pairs:
-        if group_of.get(a) == group_of.get(b):
-            continue
-        ga, gb = group_of[a], group_of[b]
-        # 找 gb 中可与 a 交换的成员
-        for m in list(groups[gb]):
-            if m == b:
-                continue
-            groups[ga].remove(a)
-            groups[gb].remove(m)
-            groups[ga].append(m)
-            groups[gb].append(a)
-            if not validate_plan(
-                groups, students, num_groups, min_size, max_size, forbidden_pairs, required_pairs, allow_cross_class
-            ):
-                group_of[a], group_of[m] = gb, ga
-                break
-            groups[ga].remove(m)
-            groups[gb].remove(a)
-            groups[ga].append(a)
-            groups[gb].append(m)
     return groups
 
 
@@ -324,7 +308,6 @@ def solve_grouping(
     max_size: int,
     weights: GroupingWeights | None = None,
     forbidden_pairs: list[tuple[str, str]] | None = None,
-    required_pairs: list[tuple[str, str]] | None = None,
     allow_cross_class: bool = True,
     edges: list[tuple[str, str, float]] | None = None,
     history_pairs: list[tuple[str, str]] | None = None,
@@ -333,9 +316,9 @@ def solve_grouping(
     """CP-SAT 求解三套分组方案（规格书 S4.2）。
 
     失败降级：超时/无解时回退贪心 + 局部交换，结果标注快速模式（S4.10）。
+    硬约束仅保留不可同组（H2），已去掉必须同组（H3）。
     """
     forbidden_pairs = forbidden_pairs or []
-    required_pairs = required_pairs or []
     edges = edges or []
     history_pairs = history_pairs or []
 
@@ -351,9 +334,12 @@ def solve_grouping(
     degraded = False
 
     # 三套方案共享同一时间预算（规格书 S4.2：10s 为总预算），每套保底 1s
+    # 三方案必须使用各自的策略预设权重（skill/weaktie/fairness），
+    # 否则 A/B/C 会退化成同一套权重的三次随机扰动（规格书 S4.2）。
+    # 入参 weights 仅用于 score/preview 的统一打分口径，不覆盖策略预设。
     per_plan_limit = max(time_limit / len(STRATEGY_PRESETS), 1.0)
     for strategy, (label, preset) in STRATEGY_PRESETS.items():
-        w = weights or preset
+        w = preset
         groups = None
         if n <= MAX_STUDENTS_FOR_CPSAT:
             groups = _solve_once(
@@ -363,7 +349,6 @@ def solve_grouping(
                 max_size,
                 w,
                 forbidden_pairs,
-                required_pairs,
                 allow_cross_class,
                 edges,
                 history_pairs,
@@ -377,7 +362,6 @@ def solve_grouping(
                 min_size,
                 max_size,
                 forbidden_pairs,
-                required_pairs,
                 allow_cross_class,
             )
             # 贪心只是兜底：必须过全部硬约束，否则视为无解（规格书 S4.10/S9.1）
@@ -388,12 +372,11 @@ def solve_grouping(
                 min_size,
                 max_size,
                 forbidden_pairs,
-                required_pairs,
                 allow_cross_class,
             ):
                 return SolveResult(
                     status="infeasible",
-                    detail="约束组合无可行解（常见原因：不可同组配对过多、必须同组人数超过组规模上限）",
+                    detail="约束组合无可行解（常见原因：不可同组配对过多）",
                 )
         scores = score_plan(groups, students, w, edges, history_pairs)
         plans.append(Plan(label=label, strategy=strategy, groups=groups, scores=scores))
@@ -408,7 +391,6 @@ def _solve_once(
     max_size: int,
     weights: GroupingWeights,
     forbidden_pairs: list[tuple[str, str]],
-    required_pairs: list[tuple[str, str]],
     allow_cross_class: bool,
     edges: list[tuple[str, str, float]],
     history_pairs: list[tuple[str, str]],
@@ -433,13 +415,10 @@ def _solve_once(
         m.Add(size[g] >= min_size)
         m.Add(size[g] <= max_size)
 
-    # H2 不可同组 / H3 必须同组
+    # H2 不可同组（H3 必须同组已去掉）
     for a, b in forbidden_pairs:
         for g in range(G):
             m.AddAtMostOne([x[a, g], x[b, g]])
-    for a, b in required_pairs:
-        for g in range(G):
-            m.Add(x[a, g] == x[b, g])
 
     # H4 同班限制：每组至多一个班级（班级计数布尔聚合，避免 O(n²·G)）
     if not allow_cross_class:

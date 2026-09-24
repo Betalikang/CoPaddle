@@ -13,6 +13,7 @@ class StudentProfile(BaseModel):
     """求解输入：单个学生的画像摘要。"""
 
     id: str
+    name: str = ""  # 真实姓名，违规提示优先展示
     skills: dict[str, int] = Field(default_factory=dict, description="能力维度 -> 0-5 水平")
     class_id: str | None = None
 
@@ -20,10 +21,10 @@ class StudentProfile(BaseModel):
 class GroupingWeights(BaseModel):
     """四维目标权重，取值 0–2（规格书 S4.2）。"""
 
-    skill_cover: float = 1.2
-    weak_tie: float = 0.8
-    balance: float = 1.0
-    history_avoid: float = 1.0
+    skill_cover: float = Field(default=1.2, ge=0, le=2)
+    weak_tie: float = Field(default=0.8, ge=0, le=2)
+    balance: float = Field(default=1.0, ge=0, le=2)
+    history_avoid: float = Field(default=1.0, ge=0, le=2)
 
 
 class GroupingSolveRequest(BaseModel):
@@ -33,11 +34,11 @@ class GroupingSolveRequest(BaseModel):
     min_group_size: int = Field(ge=1)
     max_group_size: int = Field(ge=1)
     forbidden_pairs: list[tuple[str, str]] = Field(default_factory=list)
-    required_pairs: list[tuple[str, str]] = Field(default_factory=list)
     # 社交联系图（弱连接引入度输入）与历史同组对（历史规避输入）
     edges: list[tuple[str, str, float]] = Field(default_factory=list)
     history_pairs: list[tuple[str, str]] = Field(default_factory=list)
-    weights: GroupingWeights = Field(default_factory=GroupingWeights)
+    # 仅作审计记录；三方案实际使用 STRATEGY_PRESETS 权重（规格书 S4.2）
+    weights: GroupingWeights | None = None
     time_limit_seconds: float = Field(default=10.0, gt=0, le=30)
 
 
@@ -81,11 +82,11 @@ class PreviewMoveRequest(BaseModel):
     min_group_size: int = Field(ge=1)
     max_group_size: int = Field(ge=1)
     forbidden_pairs: list[tuple[str, str]] = Field(default_factory=list)
-    required_pairs: list[tuple[str, str]] = Field(default_factory=list)
     allow_cross_class: bool = False
     edges: list[tuple[str, str, float]] = Field(default_factory=list)
     history_pairs: list[tuple[str, str]] = Field(default_factory=list)
-    weights: GroupingWeights = Field(default_factory=GroupingWeights)
+    # 打分口径权重；None 时用默认 GroupingWeights。solve 时忽略（用策略预设）
+    weights: GroupingWeights | None = None
 
 
 class MoveViolation(BaseModel):

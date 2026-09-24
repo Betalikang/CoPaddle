@@ -9,6 +9,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from ..ai.conflict import analyze_conflict as conflict_impl
 from ..ai.decompose import decompose as decompose_impl
 from ..ai.llm import LlmNotConfiguredError, LlmUnavailableError
 from ..config import get_settings
@@ -36,5 +37,12 @@ def decompose(req: DecomposeRequest) -> DecomposeResponse:
 
 @router.post("/conflict", response_model=ConflictResponse)
 def conflict(req: ConflictRequest) -> ConflictResponse:
-    """LLM 调用点 2：语义冲突归因，reason 必须引用双方原文片段。"""
-    raise HTTPException(status_code=501, detail="S5 期实现：LLM 冲突归因")
+    """LLM 调用点 2：语义冲突归因，reason 必须引用双方原文片段。
+
+    前置 rapidfuzz 筛选：重复走规则分支、无关直接无冲突，均不调用大模型。
+    LLM 失败降级为「人工判断」（规格书 S6.2 / S4.10）。
+    """
+    result = conflict_impl(req)
+    if result.model == "":
+        result.model = get_settings().llm_model
+    return result
