@@ -12,17 +12,20 @@
  *   node scripts/contrast-audit.mjs <teacherCookie> <courseId>
  * 全部达标退出 0，否则退出 1 并列出是哪段文字、什么颜色、压在哪。
  */
-import { loadChromium, normalizeSessionCookie } from './lib/playwright.mjs';
+import {
+  loadChromium,
+  normalizeSessionCookie,
+  resolveBaseUrl,
+  resolveChromePath
+} from './lib/playwright.mjs';
 
-const BASE = process.env.SHOT_BASE_URL ?? 'http://localhost:3000';
+const BASE = resolveBaseUrl();
 const [, , rawCookie, courseId = '17'] = process.argv;
 if (!rawCookie) {
   console.error('用法: node scripts/contrast-audit.mjs <teacherCookie> <courseId>');
   process.exit(2);
 }
-const CHROME =
-  process.env.CHROME_PATH ??
-  'C:/Users/浮舟/AppData/Local/ms-playwright/chromium-1243/chrome-win64/chrome.exe';
+const CHROME = resolveChromePath();
 
 const chromium = await loadChromium();
 const browser = await chromium.launch({ executablePath: CHROME });

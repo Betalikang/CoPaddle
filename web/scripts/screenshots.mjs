@@ -9,18 +9,21 @@
  *   node scripts/screenshots.mjs <teacherCookie> <courseId>
  */
 import { mkdirSync } from 'node:fs';
-import { loadChromium, normalizeSessionCookie } from './lib/playwright.mjs';
+import {
+  loadChromium,
+  normalizeSessionCookie,
+  resolveBaseUrl,
+  resolveChromePath
+} from './lib/playwright.mjs';
 
-const BASE = process.env.SHOT_BASE_URL ?? 'http://localhost:3000';
+const BASE = resolveBaseUrl();
 const [, , rawCookie, courseId = '17'] = process.argv;
 if (!rawCookie) {
   console.error('用法: node scripts/screenshots.mjs <teacherCookie> <courseId>');
   process.exit(2);
 }
 const OUT = process.env.SHOT_DIR ?? 'F:/GitHub/CoPaddle/.tmp-shots';
-const CHROME =
-  process.env.CHROME_PATH ??
-  'C:/Users/浮舟/AppData/Local/ms-playwright/chromium-1243/chrome-win64/chrome.exe';
+const CHROME = resolveChromePath();
 
 mkdirSync(OUT, { recursive: true });
 

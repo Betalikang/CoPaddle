@@ -12,10 +12,10 @@
  * 用法：node scripts/a11y-check.mjs <courseId> <teacherCookie> <captainCookie>
  * 退出码：0 = 全部 PASS，1 = 有 FAIL（可直接进 CI）。
  */
-import { loadChromium, normalizeSessionCookie } from './lib/playwright.mjs';
+import { loadChromium, normalizeSessionCookie, resolveBaseUrl } from './lib/playwright.mjs';
 
 const [, , courseId, rawTeacherCookie, rawCaptainCookie] = process.argv;
-const BASE = process.env.PERF_BASE_URL || 'http://localhost:3000';
+const BASE = resolveBaseUrl();
 
 if (!courseId || !rawTeacherCookie || !rawCaptainCookie) {
   console.error('用法: node scripts/a11y-check.mjs <courseId> <teacherCookie> <captainCookie>');
@@ -96,7 +96,12 @@ const AUDIT = `(() => {
 
 async function main() {
   const chromium = await loadChromium();
-  const browser = await chromium.launch({ channel: process.env.PERF_CHANNEL || 'chrome', headless: true });
+  const browser = await chromium.launch({
+    ...(process.env.CHROME_PATH
+      ? { executablePath: process.env.CHROME_PATH }
+      : { channel: process.env.PERF_CHANNEL || 'chrome' }),
+    headless: true
+  });
 
   // cookie 无效时每页都会落到登录页：巡检会全部「PASS」却什么也没验，所以先确认登录态
   {

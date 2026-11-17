@@ -38,6 +38,40 @@ export function normalizeSessionCookie(raw) {
   return raw.startsWith('session=') ? raw.slice('session='.length) : raw;
 }
 
+/**
+ * 验收目标站点。
+ *
+ * 历史上这里分裂过：screenshots / design-check / contrast-audit 读 SHOT_BASE_URL，
+ * a11y-check / perf-measure 读 PERF_BASE_URL。同一轮验收要导出两次不同变量，
+ * 少导一次就静默打到 localhost:3000 上，测出来的是一台没在跑的服务或者本机旧构建。
+ *
+ * 现在按 COPADDLE_BASE_URL →（旧名）SHOT_BASE_URL →（旧名）PERF_BASE_URL → localhost，
+ * 旧名保留是为了不破坏已写进 README 的用法。
+ */
+export function resolveBaseUrl() {
+  return (
+    process.env.COPADDLE_BASE_URL ||
+    process.env.SHOT_BASE_URL ||
+    process.env.PERF_BASE_URL ||
+    'http://localhost:3000'
+  );
+}
+
+/**
+ * Chromium 可执行文件路径。
+ *
+ * 不给默认值：以前这里写死过 `C:/Users/浮舟/...`，换一台机器或换个人就是
+ * ENOENT，而报错信息里看不出是「缺环境变量」还是「浏览器没装」。
+ */
+export function resolveChromePath() {
+  const chrome = process.env.CHROME_PATH;
+  if (chrome) return chrome;
+  throw new Error(
+    '缺少 CHROME_PATH。请指向 Chromium 可执行文件，例如：\n' +
+      '  $env:CHROME_PATH="C:/Users/<you>/AppData/Local/ms-playwright/chromium-1243/chrome-win64/chrome.exe"'
+  );
+}
+
 export async function loadChromium() {
   const tried = [];
 

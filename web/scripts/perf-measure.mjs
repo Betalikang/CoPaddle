@@ -11,7 +11,7 @@
  * 以及任务页「选组前 / 选组后」的 reactflow 按需加载差值。
  */
 const [, , courseId, rawTeacherCookie, rawCaptainCookie] = process.argv;
-const BASE = process.env.PERF_BASE_URL || 'http://localhost:3000';
+const BASE = resolveBaseUrl();
 
 if (!courseId || !rawTeacherCookie) {
   console.error('用法: node scripts/perf-measure.mjs <courseId> <teacherCookie> [captainCookie]');
@@ -75,11 +75,17 @@ const FLOW_SNAP = `(() => {
  * 解析 Playwright：项目没装 playwright 依赖（不为一个验收脚本引入重依赖），
  * 详见 scripts/lib/playwright.mjs 的查找顺序与 Windows 中文路径注意事项。
  */
-import { loadChromium, normalizeSessionCookie } from './lib/playwright.mjs';
+import { loadChromium, normalizeSessionCookie, resolveBaseUrl } from './lib/playwright.mjs';
 
 async function main() {
   const chromium = await loadChromium();
-  const browser = await chromium.launch({ channel: process.env.PERF_CHANNEL || 'chrome', headless: true });
+  // 优先用 CHROME_PATH 指定的浏览器；没给就退回本机已装的 Chrome 通道
+  const browser = await chromium.launch({
+    ...(process.env.CHROME_PATH
+      ? { executablePath: process.env.CHROME_PATH }
+      : { channel: process.env.PERF_CHANNEL || 'chrome' }),
+    headless: true
+  });
 
   // 先确认 cookie 真的能登录：否则每页都测成「登录页」，指标会好得离谱却毫无意义
   {

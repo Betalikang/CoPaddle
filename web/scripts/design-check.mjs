@@ -20,17 +20,20 @@
  *   $env:PERF_PLAYWRIGHT_PATH / $env:CHROME_PATH 见 scripts/lib/playwright.mjs
  * 全部通过退出 0，任一失败退出 1。
  */
-import { loadChromium, normalizeSessionCookie } from './lib/playwright.mjs';
+import {
+  loadChromium,
+  normalizeSessionCookie,
+  resolveBaseUrl,
+  resolveChromePath
+} from './lib/playwright.mjs';
 
-const BASE = process.env.SHOT_BASE_URL ?? 'http://localhost:3000';
+const BASE = resolveBaseUrl();
 const [, , rawCookie, courseId = '17'] = process.argv;
 if (!rawCookie) {
   console.error('用法: node scripts/design-check.mjs <teacherCookie> <courseId>');
   process.exit(2);
 }
-const CHROME =
-  process.env.CHROME_PATH ??
-  'C:/Users/浮舟/AppData/Local/ms-playwright/chromium-1243/chrome-win64/chrome.exe';
+const CHROME = resolveChromePath();
 
 const chromium = await loadChromium();
 const browser = await chromium.launch({ executablePath: CHROME });

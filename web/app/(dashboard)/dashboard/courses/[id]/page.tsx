@@ -292,7 +292,7 @@ function ReadinessPanel({ courseId, basePath }: { courseId: string; basePath: st
             </ul>
             <Link
               href={`${basePath}/settings`}
-              className="mt-2 inline-flex items-center gap-1 text-xs font-medium underline underline-offset-4"
+              className="mt-2 inline-flex items-center gap-1 py-1.5 text-xs font-medium underline underline-offset-4"
             >
               去改分组策略
               <ArrowRight className="size-3" aria-hidden />
