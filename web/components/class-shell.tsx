@@ -1,11 +1,13 @@
 /**
  * 班级卡片外壳：名单管理与课程页共用，保证班级设计一致。
  * 小组管理放在 ClassShell 内部（children），形成「班级 > 小组」层级。
+ *
+ * 这里刻意不用 Card 组件：ClassShell 通常嵌在 Panel 正文里，
+ * Card 自带的圆角+边框会与 Panel 形成双层框，读起来像两个同级区块。
  */
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 export type ClassSummary = {
   id: number;
@@ -30,10 +32,10 @@ export function ClassShell({
   hint?: string;
 }) {
   return (
-    <Card className="overflow-hidden">
-      <CardHeader className="flex flex-row flex-wrap items-center gap-2 space-y-0 pb-3">
+    <div className="overflow-hidden rounded-lg border bg-background">
+      <div className="flex flex-row flex-wrap items-center gap-2 px-4 py-3">
         <UsersIcon />
-        <CardTitle className="text-base">{classInfo.name}</CardTitle>
+        <h3 className="text-sm font-medium">{classInfo.name}</h3>
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge variant="secondary">{classInfo.memberCount} 人</Badge>
           <Badge variant="outline">{classInfo.groupCount} 组</Badge>
@@ -49,14 +51,14 @@ export function ClassShell({
           )}
           {actions}
         </div>
-      </CardHeader>
+      </div>
       {(hint || children) && (
-        <CardContent className="space-y-3 border-t pt-3">
+        <div className="space-y-3 border-t px-4 py-3">
           {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
           {children}
-        </CardContent>
+        </div>
       )}
-    </Card>
+    </div>
   );
 }
 
