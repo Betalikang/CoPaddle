@@ -32,9 +32,10 @@ docker compose up -d db
 
 # 2. Web 应用
 cd web
-cp .env.example .env.local   # 按注释填 DATABASE_URL / AUTH_SECRET 等
+cp .env.example .env         # 注意是 .env（不是 .env.local）；变量名是 POSTGRES_URL（不是 DATABASE_URL）
 pnpm install
-pnpm db:setup                # Drizzle 迁移 + 种子数据
+pnpm db:migrate              # 只跑 Drizzle 迁移
+pnpm db:seed                 # 再灌演示数据（按需）
 pnpm dev                     # http://localhost:3000
 
 # 3. 算法服务
@@ -44,6 +45,26 @@ pip install -r requirements.txt
 cp .env.example .env         # 填 ALGO_SHARED_SECRET（与 web 一致）、LLM_API_KEY
 uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 # 自检：http://127.0.0.1:8000/docs
+```
+
+> ⚠️ 不要用 `pnpm db:setup`：它是 fork 来的 saas-starter 脚手架遗留脚本，要 Stripe 密钥、
+> 会写一份端口 54322 的 compose 文件并整份覆盖 `.env`。该脚本现已改为打印指引后直接退出。
+> 初始化环境的正确顺序就是上面三步：`cp .env.example .env` → `pnpm db:migrate` → `pnpm db:seed`。
+
+## 登录与演示账号
+
+登录页的演示账号卡片只在**显式开启演示模式**时渲染：服务端读 `DEMO_MODE=true` 且
+`DEMO_PASSWORD` 非空才下发账号列表，客户端构建里不含口令（CI 会 grep `.next/static`
+断言这一点）。正式部署不要开 `DEMO_MODE`，也不要用种子脚本里的默认口令对外。
+
+## 质量门槛
+
+```bash
+cd web
+pnpm typecheck   # tsc --noEmit
+pnpm test        # 离线单测 + 组件测试（不需要数据库）
+pnpm test:services  # 需要 POSTGRES_URL 指向隔离库
+pnpm verify      # typecheck + test + build，提交前跑这个
 ```
 
 ## 文档索引
