@@ -114,10 +114,14 @@ export async function getCourseForUser(
   return { course: row.course, settings: row.settings, myRole: row.myRole as CourseRole };
 }
 
+/**
+ * 改课程基本信息。找不到该课程（或已被物理删除）时 returning 为空，
+ * 如实返回 undefined，由调用方按业务语义回 404——不能谎称返回 Course 再抛 500。
+ */
 export async function updateCourse(
   courseId: number,
   patch: UpdateCourseInput
-): Promise<Course> {
+): Promise<Course | undefined> {
   const [course] = await db
     .update(courses)
     .set({ ...patch, updatedAt: new Date() })

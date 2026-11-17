@@ -73,14 +73,55 @@ export async function getRound(roundId: number) {
   return round ?? null;
 }
 
+/** 轮次状态机的合法迁移（规格书 S4.8）。 */
+const ROUND_TRANSITIONS: Record<string, string[]> = {
+  scheduled: ['open'],
+  open: ['closed'],
+  closed: ['published'],
+  published: []
+};
+
+/**
+ * 按状态机流转轮次。守卫写进 UPDATE 的 WHERE：
+ * 之前 open/close/publish 都是无条件 set，重复点击或刷新重放会把已发布的轮次
+ * 拉回 published 以外、已关闭的重新「开启」再次收卷，前端只看到「操作成功」。
+ * 返回 undefined 表示前态不合法，由路由回 409。
+ */
+async function transitionRound(roundId: number, to: 'open' | 'closed' | 'published') {
+  const [round] = await db
+    .select({ id: peerReviewRounds.id, status: peerReviewRounds.status })
+    .from(peerReviewRounds)
+    .where(eq(peerReviewRounds.id, roundId))
+    .limit(1);
+  if (!round) return { ok: false as const, reason: '轮次不存在' };
+
+  const allowed = ROUND_TRANSITIONS[round.status] ?? [];
+  if (!allowed.includes(to)) {
+    return {
+      ok: false as const,
+      reason: `轮次当前是「${ROUND_LABEL[round.status] ?? round.status}」，不能执行这一步`
+    };
+  }
+  const [updated] = await db
+    .update(peerReviewRounds)
+    .set({ status: to })
+    .where(and(eq(peerReviewRounds.id, roundId), eq(peerReviewRounds.status, round.status)))
+    .returning();
+  // 并发下另一次请求先改了状态：这次 UPDATE 命中 0 行
+  if (!updated) return { ok: false as const, reason: '轮次状态已变化，请刷新后重试' };
+  return { ok: true as const, round: updated };
+}
+
+const ROUND_LABEL: Record<string, string> = {
+  scheduled: '未开始',
+  open: '进行中',
+  closed: '已关闭',
+  published: '已发布'
+};
+
 /** 开启轮次（scheduled → open）。 */
 export async function openRound(roundId: number) {
-  const [round] = await db
-    .update(peerReviewRounds)
-    .set({ status: 'open' })
-    .where(eq(peerReviewRounds.id, roundId))
-    .returning();
-  return round;
+  return transitionRound(roundId, 'open');
 }
 
 /**
@@ -88,25 +129,17 @@ export async function openRound(roundId: number) {
  * 异常只提示，不自动改分。
  */
 export async function closeRound(roundId: number) {
-  const [round] = await db
-    .update(peerReviewRounds)
-    .set({ status: 'closed' })
-    .where(eq(peerReviewRounds.id, roundId))
-    .returning();
-  if (round) {
+  const result = await transitionRound(roundId, 'closed');
+  // 只有真的从 open 关掉才跑异常检测：重复关闭不该重复检测
+  if (result.ok) {
     await detectAnomalies(roundId);
   }
-  return round;
+  return result;
 }
 
 /** 发布结果（closed → published）：学生可见自己的结果。 */
 export async function publishRound(roundId: number) {
-  const [round] = await db
-    .update(peerReviewRounds)
-    .set({ status: 'published' })
-    .where(eq(peerReviewRounds.id, roundId))
-    .returning();
-  return round;
+  return transitionRound(roundId, 'published');
 }
 
 /** 我需要评谁（同组其他成员，含已提交状态）。 */
@@ -114,10 +147,18 @@ export async function myReviewTasks(roundId: number, userId: number) {
   const round = await getRound(roundId);
   if (!round) return null;
 
+  // 只取「本轮课程里、我仍在内」的组：否则同时修两门课时会把别门课的组员列进来
   const myGroups = await db
     .select({ groupId: groupMembers.groupId })
     .from(groupMembers)
-    .where(and(eq(groupMembers.userId, userId), isNull(groupMembers.leftAt)));
+    .innerJoin(groups, eq(groups.id, groupMembers.groupId))
+    .where(
+      and(
+        eq(groupMembers.userId, userId),
+        isNull(groupMembers.leftAt),
+        eq(groups.courseId, round.courseId)
+      )
+    );
   if (myGroups.length === 0) return { round, targets: [] };
 
   const groupIds = myGroups.map((g) => g.groupId);
@@ -125,7 +166,7 @@ export async function myReviewTasks(roundId: number, userId: number) {
     .select({ userId: users.id, name: users.name, studentNo: users.studentNo })
     .from(groupMembers)
     .innerJoin(users, eq(groupMembers.userId, users.id))
-    .where(inArray(groupMembers.groupId, groupIds));
+    .where(and(inArray(groupMembers.groupId, groupIds), isNull(groupMembers.leftAt)));
 
   const submitted = await db
     .select({ revieweeId: peerReviews.revieweeId })
@@ -152,15 +193,29 @@ export async function submitReview(
     return { error: '轮次未在开放状态，无法提交' as const };
   }
 
-  // 被评人必须与评价人同组
+  // 被评人必须与评价人在**本轮课程内**同组（原来不限课程、也不排除已退出成员）
   const myGroups = await db
     .select({ groupId: groupMembers.groupId })
     .from(groupMembers)
-    .where(eq(groupMembers.userId, reviewerId));
+    .innerJoin(groups, eq(groups.id, groupMembers.groupId))
+    .where(
+      and(
+        eq(groupMembers.userId, reviewerId),
+        isNull(groupMembers.leftAt),
+        eq(groups.courseId, round.courseId)
+      )
+    );
   const theirGroups = await db
     .select({ groupId: groupMembers.groupId })
     .from(groupMembers)
-    .where(eq(groupMembers.userId, input.revieweeId));
+    .innerJoin(groups, eq(groups.id, groupMembers.groupId))
+    .where(
+      and(
+        eq(groupMembers.userId, input.revieweeId),
+        isNull(groupMembers.leftAt),
+        eq(groups.courseId, round.courseId)
+      )
+    );
   const shared = myGroups.some((g) => theirGroups.some((t) => t.groupId === g.groupId));
   if (!shared) {
     return { error: '只能评价同组成员' as const };
@@ -232,14 +287,25 @@ export async function roundResults(roundId: number) {
     .from(peerReviews)
     .where(eq(peerReviews.roundId, roundId));
 
-  const byReviewee = new Map<number, number[]>();
+  // 按「组 + 被评人」聚合：规格书要求的是组内排名，原来按全班排序
+  const byReviewee = new Map<
+    string,
+    { groupId: number; userId: number; scores: number[] }
+  >();
   for (const r of reviews) {
     const vals = Object.values(r.scores);
     const avg = vals.reduce((a, b) => a + b, 0) / Math.max(vals.length, 1);
-    byReviewee.set(r.revieweeId, [...(byReviewee.get(r.revieweeId) ?? []), avg]);
+    const key = `${r.groupId}:${r.revieweeId}`;
+    const cur = byReviewee.get(key) ?? {
+      groupId: r.groupId,
+      userId: r.revieweeId,
+      scores: []
+    };
+    cur.scores.push(avg);
+    byReviewee.set(key, cur);
   }
 
-  const rows = [...byReviewee.entries()].map(([userId, scores]) => {
+  const rows = [...byReviewee.values()].map(({ groupId, userId, scores }) => {
     const s = [...scores].sort((a, b) => a - b);
     let median: number;
     if (s.length >= 4) {
@@ -248,13 +314,23 @@ export async function roundResults(roundId: number) {
     } else {
       median = _median(s);
     }
-    return { userId, count: scores.length, median };
+    return { groupId, userId, count: scores.length, median };
   });
-  rows.sort((a, b) => b.median - a.median);
-  const rankOf = new Map(rows.map((r, i) => [r.userId, i + 1]));
+
+  // 组内排名：同一组的行按中位数降序
+  const rankOf = new Map<string, number>();
+  const byGroup = new Map<number, typeof rows>();
+  for (const r of rows) {
+    byGroup.set(r.groupId, [...(byGroup.get(r.groupId) ?? []), r]);
+  }
+  for (const list of byGroup.values()) {
+    const sorted = [...list].sort((a, b) => b.median - a.median);
+    sorted.forEach((r, i) => rankOf.set(`${r.groupId}:${r.userId}`, i + 1));
+  }
+  rows.sort((a, b) => a.groupId - b.groupId || b.median - a.median);
 
   // 补姓名
-  const ids = rows.map((r) => r.userId);
+  const ids = [...new Set(rows.map((r) => r.userId))];
   const nameById = new Map<number, { name: string | null; studentNo: string | null }>();
   if (ids.length) {
     const us = await db.select({ id: users.id, name: users.name, studentNo: users.studentNo }).from(users).where(inArray(users.id, ids));
@@ -265,11 +341,12 @@ export async function roundResults(roundId: number) {
     round,
     results: rows.map((r) => ({
       userId: r.userId,
+      groupId: r.groupId,
       name: nameById.get(r.userId)?.name ?? null,
       studentNo: nameById.get(r.userId)?.studentNo ?? null,
       count: r.count,
       median: Math.round(r.median * 100) / 100,
-      rank: rankOf.get(r.userId) ?? 0
+      rank: rankOf.get(`${r.groupId}:${r.userId}`) ?? 0
     }))
   };
 }

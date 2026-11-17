@@ -12,7 +12,7 @@ import {
   uniqueIndex,
   index,
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { relations, sql } from 'drizzle-orm';
 
 // ============================================================
 // 基座表（nextjs/saas-starter，登录流依赖，保留原样）
@@ -401,7 +401,12 @@ export const groupMembers = pgTable('group_members', {
   leftAt: timestamp('left_at'),
   leaveReason: text('leave_reason'),
 }, (t) => [
-  uniqueIndex('group_members_active_uniq').on(t.groupId, t.userId, t.leftAt),
+  // 「在册」唯一：旧写法 unique(group_id, user_id, left_at) 在 Postgres 下等于没约束——
+  // NULL 在唯一索引里互不相等，所以 left_at 为空的（即在册）重复行可以无限插。
+  // 改成带 WHERE 的部分唯一索引，真正保证「一个人在一个组里最多一条在册记录」。
+  uniqueIndex('group_members_active_uniq')
+    .on(t.groupId, t.userId)
+    .where(sql`${t.leftAt} is null`),
   index('group_members_user_idx').on(t.userId),
 ]);
 
@@ -466,7 +471,12 @@ export const taskDeps = pgTable('task_deps', {
   dependsOnId: integer('depends_on_id')
     .notNull()
     .references(() => tasks.id, { onDelete: 'cascade' }),
-}, (t) => [index('task_deps_task_idx').on(t.taskId)]);
+}, (t) => [
+  // 同一条依赖边只能存一次：没有这个唯一索引时 `onConflictDoNothing()` 无冲突可撞，
+  // 重复加边会写进重复行，健康度的阻塞判定与环检测都会被重复边污染。
+  uniqueIndex('task_deps_edge_uniq').on(t.taskId, t.dependsOnId),
+  index('task_deps_task_idx').on(t.taskId),
+]);
 
 export const taskAssignments = pgTable('task_assignments', {
   id: serial('id').primaryKey(),

@@ -193,24 +193,32 @@ async function writeEnvFile(envVars: Record<string, string>) {
   console.log('.env file created with the necessary variables.');
 }
 
+/**
+ * ⚠️ 这个文件是脚手架遗留（原 next-saas-starter 的交互式初始化），**不适用于 CoPaddle**：
+ *   - 它会往 web/ 下写一份 postgres 端口 54322 的 docker-compose.yml，和本仓库 deploy/ 的编排冲突；
+ *   - 它会交互式索要 Stripe 密钥，而 CoPaddle 没有任何计费代码在用 Stripe
+ *     （只有 schema 里 users 表留着三个 stripe_* 列）；
+ *   - 它最后会整份覆写 .env，把 POSTGRES_URL 指到错误的库上。
+ * 保留文件是为了不打断任何已有的本地习惯，但执行时直接中止并指向正确入口。
+ */
+function abortScaffoldSetup(): never {
+  console.error(
+    [
+      '`pnpm db:setup` 是脚手架遗留的初始化器，不会为 CoPaddle 正确配置环境，已中止。',
+      '',
+      '请改用：',
+      '  1. cp web/.env.example web/.env  # 填 POSTGRES_URL / AUTH_SECRET',
+      '  2. pnpm db:migrate               # 建表（幂等，deploy 脚本里也用这条）',
+      '  3. pnpm db:seed                  # 可选：灌演示数据（需要 DEMO_PASSWORD）',
+      '',
+      '以上三条对应 deploy/README.md 的流程；生产环境请直接跑 deploy/deploy.sh。'
+    ].join('\n')
+  );
+  process.exit(1);
+}
+
 async function main() {
-  await checkStripeCLI();
-
-  const POSTGRES_URL = await getPostgresURL();
-  const STRIPE_SECRET_KEY = await getStripeSecretKey();
-  const STRIPE_WEBHOOK_SECRET = await createStripeWebhook();
-  const BASE_URL = 'http://localhost:3000';
-  const AUTH_SECRET = generateAuthSecret();
-
-  await writeEnvFile({
-    POSTGRES_URL,
-    STRIPE_SECRET_KEY,
-    STRIPE_WEBHOOK_SECRET,
-    BASE_URL,
-    AUTH_SECRET,
-  });
-
-  console.log('🎉 Setup completed successfully!');
+  abortScaffoldSetup();
 }
 
 main().catch(console.error);

@@ -1,6 +1,7 @@
 import { and, eq, isNull } from 'drizzle-orm';
+import { NextResponse } from 'next/server';
 import { db } from '../db/drizzle';
-import { groupMembers, groups, taskAssignments, tasks } from '../db/schema';
+import { artifacts, groupMembers, groups, taskAssignments, tasks } from '../db/schema';
 import type { CourseRole } from '../db/schema';
 
 /**
@@ -16,6 +17,26 @@ export async function getTaskCourseId(taskId: number): Promise<number | null> {
     .where(eq(tasks.id, taskId))
     .limit(1);
   return row?.courseId ?? null;
+}
+
+/** 任务所属小组 id。 */
+export async function getTaskGroupId(taskId: number): Promise<number | null> {
+  const [row] = await db
+    .select({ groupId: tasks.groupId })
+    .from(tasks)
+    .where(eq(tasks.id, taskId))
+    .limit(1);
+  return row?.groupId ?? null;
+}
+
+/** 交付物所属小组 id。 */
+export async function getArtifactGroupId(artifactId: number): Promise<number | null> {
+  const [row] = await db
+    .select({ groupId: artifacts.groupId })
+    .from(artifacts)
+    .where(eq(artifacts.id, artifactId))
+    .limit(1);
+  return row?.groupId ?? null;
 }
 
 /** 是否是该任务的 lead 主责人。 */
@@ -61,6 +82,18 @@ export async function assertGroupAccess(
 ): Promise<boolean> {
   if (courseRole === 'teacher' || courseRole === 'assistant') return true;
   return isGroupMember(groupId, user.id);
+}
+
+/**
+ * assertGroupAccess 的路由便捷封装：通过返回 null，否则返回 403 响应。
+ * 用法：`const denied = await guardGroup(groupId, auth); if (denied) return denied;`
+ */
+export async function guardGroup(
+  groupId: number,
+  auth: { user: { id: number }; membership: { role: string } }
+): Promise<NextResponse | null> {
+  if (await assertGroupAccess(groupId, auth.user, auth.membership.role)) return null;
+  return NextResponse.json({ error: '不属于该小组' }, { status: 403 });
 }
 
 export type { CourseRole };

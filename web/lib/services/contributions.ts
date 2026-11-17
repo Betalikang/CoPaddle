@@ -18,7 +18,7 @@ import {
 } from '../db/schema';
 import { AlgoServiceError, callAlgo } from '@/lib/algo/client';
 import { getPeerReviewDetails } from './peer-reviews';
-import { groupMemberIds, logAudit, notify } from './notifications';
+import { logAudit, notify } from './notifications';
 
 /** algo /internal/attribution/compute 的响应类型。 */
 type AlgoAttributionResponse = {
@@ -34,6 +34,23 @@ type AlgoAttributionResponse = {
   }[];
   peer_missing: boolean;
 };
+
+/**
+ * 把 algo 返回的区间夹紧到合法百分比。
+ *
+ * algo 的 low = point - uncertainty、high = point + uncertainty 都没有边界，会给出负百分比或 >100%，
+ * 直接落库会让账本出现「-3.20% ~ 118.00%」这种不可展示的区间。
+ * 处理顺序：先把 low / point / high 各自夹到 [0,100]，再保证 low <= point <= high。
+ * 注意 point 只参与边界校正、绝不落库（系统只存区间是铁律）。
+ */
+function clampPercentRange(low: number, high: number, point: number): { low: number; high: number } {
+  const clamp = (v: number) => (Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : 0);
+  const p = clamp(point);
+  const lo = Math.min(clamp(low), p);
+  const hi = Math.max(clamp(high), p);
+  // numeric(5,2) 只保留两位小数，先四舍五入避免 pg 隐式截断产生 low > high
+  return { low: Math.round(lo * 100) / 100, high: Math.round(hi * 100) / 100 };
+}
 
 /**
  * 计算并落库全组贡献快照（规格书 B-14 / S4.7）。
@@ -223,6 +240,8 @@ export async function computeGroupContributions(groupId: number) {
 
     for (const m of result.members) {
       const uid = Number(m.user_id);
+      // 落库前夹紧：algo 的 low/high 无上下限，且必须保证 low <= point <= high（夹紧后再排序）。
+      const range = clampPercentRange(m.low, m.high, m.point);
       const [snap] = await tx
         .insert(contributionSnapshots)
         .values({
@@ -231,8 +250,8 @@ export async function computeGroupContributions(groupId: number) {
           snapshotAt: now,
           comp: m.comp,
           // 系统只存区间，永不存点估价（铁律）
-          lowPct: String(m.low),
-          highPct: String(m.high),
+          lowPct: String(range.low),
+          highPct: String(range.high),
           confidence: m.confidence,
           fairShareRatio: String(m.fair_share_ratio),
           warning: m.warning || null,
@@ -246,20 +265,20 @@ export async function computeGroupContributions(groupId: number) {
     }
 
     // 同伴证据条目（refId = peer_reviews.id，可下钻到互评原文）
-  const peerEvidence: { userId: number; refType: string; refId: number; value: number; note: string }[] = [];
-  for (const [uid, details] of peerDetailsByUser) {
-    for (const d of details) {
-      peerEvidence.push({
-        userId: uid,
-        refType: 'peer_review',
-        refId: d.reviewId,
-        value: Math.round(d.score * 100) / 100,
-        note: `收到 1 份互评，均分 ${d.score.toFixed(1)}`
-      });
+    const peerEvidence: { userId: number; refType: string; refId: number; value: number; note: string }[] = [];
+    for (const [uid, details] of peerDetailsByUser) {
+      for (const d of details) {
+        peerEvidence.push({
+          userId: uid,
+          refType: 'peer_review',
+          refId: d.reviewId,
+          value: Math.round(d.score * 100) / 100,
+          note: `收到 1 份互评，均分 ${d.score.toFixed(1)}`
+        });
+      }
     }
-  }
 
-  for (const ev of [...artifactEvidence, ...processEvidence, ...peerEvidence]) {
+    for (const ev of [...artifactEvidence, ...processEvidence, ...peerEvidence]) {
       const snapshotId = snapshotIds.get(ev.userId);
       if (!snapshotId) continue;
       await tx.insert(evidenceItems).values({
@@ -310,7 +329,14 @@ export async function getGroupLedger(groupId: number) {
     })
     .from(contributionSnapshots)
     .leftJoin(attributionReviews, eq(attributionReviews.snapshotId, contributionSnapshots.id))
-    .where(eq(contributionSnapshots.snapshotAt, latest.snapshotAt))
+    // 必须带 groupId：同一批次计算会让多个组共享同一个 snapshot_at，
+    // 只按时间过滤会把别组的账本行也捞进本组视图。
+    .where(
+      and(
+        eq(contributionSnapshots.groupId, groupId),
+        eq(contributionSnapshots.snapshotAt, latest.snapshotAt)
+      )
+    )
     .orderBy(contributionSnapshots.userId);
 
   const members = await db
@@ -394,54 +420,75 @@ export async function getSnapshotEvidence(snapshotId: number) {
   };
 }
 
-/** 教师终审：调整区间并填写评语（系统只给区间，最终值由教师确定）。 */
+/**
+ * 教师终审：调整区间并填写评语（系统只给区间，最终值由教师确定）。
+ *
+ * 返回类型是 review 行 + `applied` / `error`（而不是 `{ error }` 联合类型）：
+ * - 调用方 `web/scripts/demo-rehearsal.ts` 会直接读 `review.adjustedLow`，联合类型会让它类型检查失败；
+ * - 调用路由 `web/app/api/contributions/[snapshotId]/review/route.ts` 没有 try/catch 也没有错误分支，
+ *   抛错会被 Next 变成 500 —— 业务拒绝不能伪装成服务端故障。所以「已锁定」时返回既有行原值 +
+ *   `applied: false` + 明确文案，由前端/日志如实展示。
+ *
+ * 审计与通知对「首次评审」和「修改评审」一视同仁：两者都属于五类必审的调分操作。
+ */
 export async function reviewSnapshot(
   snapshotId: number,
   reviewerId: number,
   input: { adjustedLow?: number | null; adjustedHigh?: number | null; finalNote?: string }
-) {
+): Promise<typeof attributionReviews.$inferSelect & { applied: boolean; error?: string }> {
   const [existing] = await db
     .select()
     .from(attributionReviews)
     .where(eq(attributionReviews.snapshotId, snapshotId))
     .limit(1);
 
-  if (existing) {
-    const [updated] = await db
-      .update(attributionReviews)
-      .set({
-        adjustedLow: input.adjustedLow != null ? String(input.adjustedLow) : existing.adjustedLow,
-        adjustedHigh: input.adjustedHigh != null ? String(input.adjustedHigh) : existing.adjustedHigh,
-        finalNote: input.finalNote ?? existing.finalNote,
-        reviewedAt: new Date()
-      })
-      .where(eq(attributionReviews.id, existing.id))
-      .returning();
-    return updated;
+  // 已锁定 = 已定稿：不再允许改分，且不做任何写入（既不写库也不发通知）
+  if (existing?.isLocked) {
+    return {
+      ...existing,
+      applied: false,
+      error: '该终审结果已锁定，不能再修改；如需变更请由教师先解除锁定'
+    };
   }
 
-  const [review] = await db
-    .insert(attributionReviews)
-    .values({
-      snapshotId,
-      reviewerId,
-      adjustedLow: input.adjustedLow != null ? String(input.adjustedLow) : null,
-      adjustedHigh: input.adjustedHigh != null ? String(input.adjustedHigh) : null,
-      finalNote: input.finalNote ?? null
-    })
-    .returning();
+  const [row] = existing
+    ? await db
+        .update(attributionReviews)
+        .set({
+          adjustedLow: input.adjustedLow != null ? String(input.adjustedLow) : existing.adjustedLow,
+          adjustedHigh: input.adjustedHigh != null ? String(input.adjustedHigh) : existing.adjustedHigh,
+          finalNote: input.finalNote ?? existing.finalNote,
+          reviewedAt: new Date()
+        })
+        .where(eq(attributionReviews.id, existing.id))
+        .returning()
+    : await db
+        .insert(attributionReviews)
+        .values({
+          snapshotId,
+          reviewerId,
+          adjustedLow: input.adjustedLow != null ? String(input.adjustedLow) : null,
+          adjustedHigh: input.adjustedHigh != null ? String(input.adjustedHigh) : null,
+          finalNote: input.finalNote ?? null
+        })
+        .returning();
+  // 理论不可达（行刚写入），仅满足 noUncheckedIndexedAccess
+  if (!row) throw new Error('终审结果写入失败');
 
-  // 审计（五类必审操作之一：调分）
+  // 审计（五类必审操作之一：调分）——新建与更新都要写，并保留改前值
   await logAudit({
     actorId: reviewerId,
     actorRole: 'teacher',
     action: 'attribution_review',
     targetType: 'contribution_snapshot',
     targetId: snapshotId,
-    after: { adjustedLow: review.adjustedLow, adjustedHigh: review.adjustedHigh, finalNote: review.finalNote }
+    before: existing
+      ? { adjustedLow: existing.adjustedLow, adjustedHigh: existing.adjustedHigh, finalNote: existing.finalNote }
+      : null,
+    after: { adjustedLow: row.adjustedLow, adjustedHigh: row.adjustedHigh, finalNote: row.finalNote }
   });
 
-  // 通知该成员：教师终审完成
+  // 通知该成员：教师终审完成（含二次调分，学生需要知道自己被改过）
   const [snap] = await db
     .select({ groupId: contributionSnapshots.groupId, userId: contributionSnapshots.userId })
     .from(contributionSnapshots)
@@ -450,14 +497,14 @@ export async function reviewSnapshot(
   if (snap) {
     await notify([snap.userId], {
       type: 'review_done',
-      title: '教师已完成你的贡献终审',
+      title: existing ? '教师更新了你的贡献终审' : '教师已完成你的贡献终审',
       body: '请查看贡献账本中的终审区间与评语。',
       link: `/dashboard/contributions`,
       groupId: snap.groupId,
       priority: 'normal'
     });
   }
-  return review;
+  return { ...row, applied: true };
 }
 
 /** 批量锁定终审结果。 */
@@ -468,19 +515,32 @@ export async function lockGroupSnapshots(groupId: number, reviewerId: number) {
     .where(eq(contributionSnapshots.groupId, groupId))
     .orderBy(desc(contributionSnapshots.snapshotAt))
     .limit(1);
-  if (!latest[0]) return { locked: 0 };
+  const batch = latest[0];
+  if (!batch) return { locked: 0 };
 
-  // 先取该批 snapshot id（drizzle inArray 不接受子查询）
+  // 「同一批」= 本组 + 同一个 snapshotAt。这里必须带 groupId：
+  // snapshotAt 是算分时间戳，两个组在同一毫秒算分会得到相同值，只按时间过滤会连别组的终审一起锁掉。
   const snaps = await db
     .select({ id: contributionSnapshots.id })
     .from(contributionSnapshots)
-    .where(eq(contributionSnapshots.snapshotAt, latest[0].snapshotAt));
+    .where(
+      and(
+        eq(contributionSnapshots.groupId, groupId),
+        eq(contributionSnapshots.snapshotAt, batch.snapshotAt)
+      )
+    );
   if (snaps.length === 0) return { locked: 0 };
 
+  // 只更新未锁定的行：重复点击返回 0，`locked` 表示「本次新锁定条数」，前端文案才不会虚报
   const rows = await db
     .update(attributionReviews)
     .set({ isLocked: true })
-    .where(inArray(attributionReviews.snapshotId, snaps.map((s) => s.id)))
+    .where(
+      and(
+        inArray(attributionReviews.snapshotId, snaps.map((s) => s.id)),
+        eq(attributionReviews.isLocked, false)
+      )
+    )
     .returning();
   await logAudit({
     actorId: reviewerId,

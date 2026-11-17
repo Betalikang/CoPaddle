@@ -1,15 +1,86 @@
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { db } from '../db/drizzle';
-import { courseTeacherId, groupMemberIds, notify } from './notifications';
 import {
+  courses,
   groupMembers,
   groups,
+  notificationSettings,
+  notifications,
   replanEvents,
   replanOptions,
   taskAssignments,
   tasks,
   users
 } from '../db/schema';
+import { cancelTaskInTx } from './tasks';
+
+/**
+ * 事务连接类型（从 db.transaction 的回调参数推导，不手写泛型）。
+ * 下面 *_tx 系列函数的意义：notifications.ts 的 notify / groupMemberIds / courseTeacherId
+ * 内部硬绑定全局 db，事务还没提交就已把通知写出去——一旦回滚，通知就变成了「说了但没做」。
+ * 那三个函数不在本次可改范围内，所以在这里按同样语义接收 tx 重写一份；
+ * 数据库侧改动统一由 tx 承载，回滚时通知一并回滚。
+ */
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+type NotifyInput = {
+  type: string;
+  title: string;
+  body?: string;
+  link?: string;
+  channel?: 'inapp' | 'email' | 'wechat';
+  priority?: 'low' | 'normal' | 'urgent';
+  courseId?: number;
+  groupId?: number;
+};
+
+/** 小组在册成员 id（事务内版本）。 */
+async function groupMemberIdsTx(tx: Tx, groupId: number): Promise<number[]> {
+  const rows = await tx
+    .select({ userId: groupMembers.userId })
+    .from(groupMembers)
+    .where(and(eq(groupMembers.groupId, groupId), isNull(groupMembers.leftAt)));
+  return rows.map((r) => r.userId);
+}
+
+/** 课程教师 id（事务内版本）。 */
+async function courseTeacherIdTx(tx: Tx, courseId: number): Promise<number | null> {
+  const [c] = await tx
+    .select({ teacherId: courses.teacherId })
+    .from(courses)
+    .where(eq(courses.id, courseId))
+    .limit(1);
+  return c?.teacherId ?? null;
+}
+
+/** 发通知（事务内版本，含免打扰过滤）。 */
+async function notifyTx(tx: Tx, userIds: number[], input: NotifyInput) {
+  const ids = [...new Set(userIds)].filter((x) => Number.isFinite(x) && x > 0);
+  if (ids.length === 0) return;
+
+  const muted = await tx
+    .select({ userId: notificationSettings.userId, muteTypes: notificationSettings.muteTypes })
+    .from(notificationSettings)
+    .where(inArray(notificationSettings.userId, ids));
+  const mutedMap = new Map(muted.map((m) => [m.userId, m.muteTypes ?? []]));
+
+  const rows = ids
+    .filter((uid) => !(mutedMap.get(uid) ?? []).includes(input.type))
+    .map((uid) => ({
+      userId: uid,
+      type: input.type,
+      title: input.title,
+      body: input.body ?? null,
+      link: input.link ?? null,
+      channel: input.channel ?? 'inapp',
+      priority: input.priority ?? 'normal',
+      courseId: input.courseId ?? null,
+      groupId: input.groupId ?? null
+    }));
+  if (rows.length) {
+    await tx.insert(notifications).values(rows);
+  }
+}
 
 /**
  * 滚动重规划（规格书 B-12 / S4.5）：产品真正的护城河。
@@ -189,10 +260,11 @@ export async function triggerReplan(
         estImpactDays: String(opt.est_impact_days)
       });
     }
-    // 通知：重规划待决策 → 队长（紧迫）；涉教师授权的知会教师
-    const members = await groupMemberIds(groupId);
+    // 通知：重规划待决策 → 队长（紧迫）；涉教师授权的知会教师。
+    // 必须用 tx：通知与事件、方案在同一个事务里，回滚时一起撤回。
+    const memberIds = await groupMemberIdsTx(tx, groupId);
     const link = `/dashboard/courses/${groupRow.courseId}/replans`;
-    await notify(members, {
+    await notifyTx(tx, memberIds, {
       type: 'replan_pending',
       title: '重规划决策包待处理',
       body: `${TRIGGER_LABEL[triggerType]}触发，已生成三方案与代价说明，请及时决策。`,
@@ -200,9 +272,9 @@ export async function triggerReplan(
       priority: 'urgent',
       groupId
     });
-    const teacherId = await courseTeacherId(groupRow.courseId);
+    const teacherId = await courseTeacherIdTx(tx, groupRow.courseId);
     if (teacherId) {
-      await notify([teacherId], {
+      await notifyTx(tx, [teacherId], {
         type: 'replan_pending',
         title: '有小组触发重规划',
         body: '「缩减范围/组间补位」方案需要你授权。',
@@ -381,9 +453,21 @@ export async function listCourseReplanEvents(
 }
 
 /**
+ * 「缩小范围」一个任务都砍不动时用来中断事务的内部信号。
+ * 抛出 → db.transaction 回滚 → 事件状态仍是 pending，教师可以换别的方案；
+ * 在 adoptOption 里被捕获并翻译成普通错误返回，不泄漏到路由层。
+ */
+class ScopeCutRejected extends Error {
+  constructor(readonly reasons: string[]) {
+    super(`没有任务可以取消：${reasons.join('；')}`);
+    this.name = 'ScopeCutRejected';
+  }
+}
+
+/**
  * 采纳方案并执行（规格书 B-12 adopt）：
  * - redistribute：改 task_assignments（转移主责）
- * - scope_cut：任务标记 cancelled
+ * - scope_cut：任务经状态机流转为 cancelled（写状态事件与进度信号）
  * - borrow_member：记录 payload，等待教师授权确认
  */
 export async function adoptOption(
@@ -410,8 +494,25 @@ export async function adoptOption(
     return { error: '方案不存在' as const };
   }
 
-  return db.transaction(async (tx) => {
-    const payload = (option.payload ?? []) as Record<string, unknown>[];
+  return db
+    .transaction(async (tx) => {
+      const payload = (option.payload ?? []) as Record<string, unknown>[];
+
+    // 先抢占事件状态再执行副作用：并发的两次采纳只会有一次 UPDATE 命中，
+    // 另一次拿到 0 行直接退化为「已处理」，不会再重复转移主责/砍任务。
+    const [claimed] = await tx
+      .update(replanEvents)
+      .set({
+        status: 'adopted',
+        adoptedOptionId: optionId,
+        handledBy: actorId,
+        handledAt: new Date()
+      })
+      .where(and(eq(replanEvents.id, eventId), eq(replanEvents.status, 'pending')))
+      .returning({ id: replanEvents.id });
+    if (!claimed) {
+      return { error: '该重规划已处理' as const };
+    }
 
     if (option.action === 'redistribute') {
       for (const item of payload) {
@@ -430,31 +531,37 @@ export async function adoptOption(
         });
       }
     } else if (option.action === 'scope_cut') {
+      // 原先这里直接 .set({status:'cancelled'})：绕过状态机（连 done 都能被改成 cancelled），
+      // 也不写 task_status_events / progress_signals，审计查不到谁砍的、健康度看不到这次变更。
+      // 改走与手动流转同一套合法转换 + 事件/信号记录，砍不动的任务要如实报出来。
+      const blocked: string[] = [];
       for (const item of payload) {
         const taskId = Number(item.task_id);
         if (!taskId) continue;
-        await tx
-          .update(tasks)
-          .set({ status: 'cancelled' })
-          .where(eq(tasks.id, taskId));
+        const r = await cancelTaskInTx(tx, taskId, actorId, '重规划：缩小范围');
+        if (!r.ok) blocked.push(r.reason);
       }
+      // 一个任务都砍不动就整体回滚（保留 pending 供教师重选方案），
+      // 而不是留下一个「已采纳但什么也没改」的事件。
+      if (blocked.length > 0 && blocked.length === payload.filter((i) => Number(i.task_id)).length) {
+        throw new ScopeCutRejected(blocked);
+      }
+      return { ok: true as const, action: option.action, blocked };
     }
 
-    await tx
-      .update(replanEvents)
-      .set({
-        status: 'adopted',
-        adoptedOptionId: optionId,
-        handledBy: actorId,
-        handledAt: new Date()
-      })
-      .where(eq(replanEvents.id, eventId));
-
     return { ok: true as const, action: option.action };
-  });
+    })
+    .catch((err: unknown) => {
+      // ScopeCutRejected 是「一个都砍不动」，翻译成普通错误返回；
+      // 其余异常（数据库不可用等）继续抛给路由层，不能静默成「采纳成功」。
+      if (err instanceof ScopeCutRejected) {
+        return { error: err.message as string };
+      }
+      throw err;
+    });
 }
 
-/** 拒绝方案（必须填理由，进审计）。 */
+/** 拒绝方案（必须填理由，进审计）。只有待决策（pending）的事件可以驳回。 */
 export async function rejectEvent(eventId: number, actorId: number, reason: string) {
   const [existing] = await db
     .select()
@@ -462,6 +569,7 @@ export async function rejectEvent(eventId: number, actorId: number, reason: stri
     .where(eq(replanEvents.id, eventId))
     .limit(1);
   if (!existing) return { error: '事件不存在' as const };
+  // 已采纳／已驳回的事件不能再改判：状态守卫写进 WHERE，避免读后写之间的并发窗口
   const [event] = await db
     .update(replanEvents)
     .set({
@@ -470,7 +578,10 @@ export async function rejectEvent(eventId: number, actorId: number, reason: stri
       handledAt: new Date(),
       triggerPayload: { ...(existing.triggerPayload ?? {}), reject_reason: reason }
     })
-    .where(eq(replanEvents.id, eventId))
+    .where(and(eq(replanEvents.id, eventId), eq(replanEvents.status, 'pending')))
     .returning();
+  if (!event) {
+    return { error: '该重规划已处理，无法驳回' as const };
+  }
   return { event };
 }

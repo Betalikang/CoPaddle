@@ -2,6 +2,7 @@ import { compare, hash } from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { NewUser } from '@/lib/db/schema';
+import { sessionCookieSecure } from './cookie-policy';
 
 const key = new TextEncoder().encode(process.env.AUTH_SECRET);
 const SALT_ROUNDS = 10;
@@ -53,8 +54,8 @@ export async function setSession(user: NewUser) {
   (await cookies()).set('session', encryptedSession, {
     expires: expiresInOneDay,
     httpOnly: true,
-    // 纯 HTTP 部署（裸 IP 演示环境）浏览器会拒收 Secure cookie，需设 COOKIE_SECURE=false
-    secure: process.env.COOKIE_SECURE !== 'false',
+    // 与 middleware 续期共用同一条策略，避免「登录成功、续期后被踢」
+    secure: sessionCookieSecure(),
     sameSite: 'lax',
   });
 }

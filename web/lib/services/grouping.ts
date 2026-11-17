@@ -6,6 +6,7 @@ import {
   classes,
   courseMemberships,
   courseSettings,
+  courses,
   groupingPlans,
   groupingRuns,
   groups,
@@ -190,7 +191,13 @@ async function prepareInput(courseId: number) {
       .map((c) => [String(c.memberA), String(c.memberB)] as [string, string]),
     // 必须同组（must_same_group / H3）已去掉，不再作为硬约束参与求解
     edges: edges.map((e) => [String(e.userA), String(e.userB), Number(e.weight)] as [string, string, number]),
-    historyPairs: [] as [string, string][]
+    // 历史同组配对（第四维 history_avoid 的唯一输入）。
+    // 表里早就有 edge_type='same_group' 的边（种子数据也在写），但这里一直传空数组，
+    // 于是 algo 的 score_hist 恒为 100 —— 「尽量不打散老朋友」这个维度看起来永远满分，
+    // 实际上从没参与过优化。四维里有一维是假的，方案排序因此失真。
+    historyPairs: edges
+      .filter((e) => e.edgeType === 'same_group')
+      .map((e) => [String(e.userA), String(e.userB)] as [string, string])
   };
 }
 
@@ -247,6 +254,8 @@ export async function runGrouping(courseId: number, teacherId: number) {
         forbidden_pairs: input.forbiddenPairs,
         edges: input.edges,
         history_pairs: input.historyPairs,
+        // 审计 #37：混班开关必须传给求解器，否则关闭混班的课程照样生成混班方案（一拖动就报 H4）
+        allow_cross_class: settings.allowCrossClass,
         weights: {
           skill_cover: Number(settings.wSkillCover),
           weak_tie: Number(settings.wWeakTie),
@@ -349,7 +358,20 @@ function buildPlanSnapshots(base: number[][]): Record<string, number[][]> {
   return { skill_first: skill, weaktie_first: weaktie, fairness_first: fairness };
 }
 
-/** 最近一次成功的 run（工作台默认打开）。 */
+/**
+ * 最近一次成功的 run（工作台默认打开）。
+ *
+ * 返回值里的 `synthesizedPlanIds` 是**必须透传给 UI 的降级标记**：
+ * 下面的自愈逻辑会为旧数据的空方案现场拼出 B/C 快照，这些分组不是求解器
+ * 产出的（只是「已落库小组 + 轮换/互换」构造出来的），页面必须据此标注
+ * 「该方案为占位」，否则教师会把拼出来的分组当成求解器推荐，直接选定后
+ * 应用到课程。
+ *
+ * 但**分数必须是真的**：回填前会对快照跑一次真实硬约束校验与四维评分
+ * （`scoreGroups` → algo `/internal/grouping/score`）。算法服务不可用、
+ * 或快照违反硬约束时**拒绝回填**，宁可让旧方案继续显示为空，也不写一份
+ * 「有分组、没算过」的快照进库——那等于替求解器编造推荐结果。
+ */
 export async function getLatestRun(courseId: number) {
   const runs = await db
     .select()
@@ -363,6 +385,7 @@ export async function getLatestRun(courseId: number) {
   // 自愈：旧种子/历史数据可能把 plan.groups 写成 []，导致工作台预览空白。
   // 用已落库小组回填三方案快照，保证拖动与预览可用。
   const emptyPlans = data.plans.filter((p) => !(p.groups ?? []).some((g) => (g?.length ?? 0) > 0));
+  const synthesizedPlanIds: number[] = [];
   if (emptyPlans.length > 0) {
     const formed = await listGroups(courseId);
     const base = formed
@@ -373,16 +396,43 @@ export async function getLatestRun(courseId: number) {
       const snaps = buildPlanSnapshots(base);
       for (const p of emptyPlans) {
         const snap = snaps[p.strategy] ?? snaps.skill_first ?? base;
+        // 占位分组也必须过真实评分：分数不可比就等于给了教师一个假的推荐依据。
+        // 算法不可用或快照违反硬约束时整条跳过（不落库、不露给 UI）。
+        let scored: Awaited<ReturnType<typeof scoreGroups>>;
+        try {
+          scored = await scoreGroups(courseId, snap, p.weights ?? {});
+        } catch {
+          continue;
+        }
+        if (scored.violations.length > 0) continue;
+        const note = '（占位方案：由已落库分组回填，分组未经求解器优化，分数按当前数据重算）';
+        const s = scored.scores;
         await db
           .update(groupingPlans)
-          .set({ groups: snap, originalGroups: snap })
+          .set({
+            groups: snap,
+            originalGroups: snap,
+            totalScore: String(s.total),
+            scoreSkillCover: String(s.skill_cover),
+            scoreWeakTie: String(s.weak_tie),
+            scoreBalance: String(s.balance),
+            scoreHistoryAvoid: String(s.history_avoid),
+            explanation: p.explanation ? `${p.explanation}\n${note}` : note
+          })
           .where(eq(groupingPlans.id, p.id));
         p.groups = snap;
         p.originalGroups = snap;
+        p.totalScore = String(s.total);
+        p.scoreSkillCover = String(s.skill_cover);
+        p.scoreWeakTie = String(s.weak_tie);
+        p.scoreBalance = String(s.balance);
+        p.scoreHistoryAvoid = String(s.history_avoid);
+        p.explanation = p.explanation ? `${p.explanation}\n${note}` : note;
+        synthesizedPlanIds.push(p.id);
       }
     }
   }
-  return data;
+  return { ...data, synthesizedPlanIds };
 }
 
 // ---- 预览与应用（规格书 S4.3：绝不重新求解，内存重算，<= 50ms）----
@@ -561,78 +611,137 @@ export async function resetPlan(planId: number) {
 }
 
 /**
+ * 事务内的「业务拒绝」：抛出以回滚事务，由 selectPlan 在事务外转成业务返回值。
+ * 业务拒绝不能变成 500，也不能在抢占了方案行之后留下「标了选定但没有组」的半成品。
+ */
+class PlanSelectRejected extends Error {}
+
+/**
  * 选定方案并落库（规格书 B-06 select）：
  * 生成 groups + group_members；已有进行中的分组时拒绝（需先解散）。
+ *
+ * 并发（双击「选定方案」）：事务外那次存在性检查只看得到已提交的数据，拦不住
+ * 两个并发请求，所以一致性判断必须发生在事务内——先 select ... for update
+ * 抢占方案行（同一方案的并发请求在此排队），再复检课程是否已有进行中的分组，
+ * 最后才插组。注意 group_members 的（部分）唯一索引把 NULL left_at 视为互不相同，
+ * 数据库层面拦不住重复插入，只能靠这里的串行化。
  */
 export async function selectPlan(planId: number, teacherId: number) {
   const plan = await getPlan(planId);
 
   const [existing] = await db
-    .select()
+    .select({ id: groups.id, planId: groups.planId })
     .from(groups)
     .where(and(eq(groups.courseId, plan.courseId), eq(groups.status, 'active')))
     .limit(1);
   if (existing) {
-    return { error: '该课程已有进行中的分组，请先解散后再选定新方案' as const };
+    // 快速失败：已提交的既有分组（并发窗口内的重复请求由事务内的复检兜住）
+    return {
+      error:
+        existing.planId === planId
+          ? '该方案已应用，无需重复选定'
+          : '该课程已有进行中的分组，请先解散后再选定新方案'
+    };
   }
 
-  return db.transaction(async (tx) => {
-    await tx
-      .update(groupingPlans)
-      .set({ isSelected: false })
-      .where(eq(groupingPlans.runId, plan.runId));
+  try {
+    return await db.transaction(async (tx) => {
+      // 1) 原子抢占课程行：锁方案行只能挡「同一方案」的并发，同一课程选定两个不同方案仍会各插一套组，
+      //    所以这里再锁一次课程行，让同课程的所有选定请求串行化（审计 #26 残留窗口）。
+      const [courseLock] = await tx
+        .select({ id: courses.id })
+        .from(courses)
+        .where(eq(courses.id, plan.courseId))
+        .limit(1)
+        .for('update');
+      if (!courseLock) throw new PlanSelectRejected('课程不存在');
 
-    await tx
-      .update(groupingPlans)
-      .set({ isSelected: true, selectedAt: new Date(), selectedBy: teacherId })
-      .where(eq(groupingPlans.id, planId));
+      // 2) 原子抢占方案行：并发的同方案请求串行化，行不存在则拒绝
+      const [claimed] = await tx
+        .select({ id: groupingPlans.id })
+        .from(groupingPlans)
+        .where(eq(groupingPlans.id, planId))
+        .limit(1)
+        .for('update');
+      if (!claimed) throw new PlanSelectRejected('方案不存在');
 
-    for (let gi = 0; gi < plan.groups.length; gi++) {
-      const memberIds = plan.groups[gi];
-      if (memberIds.length === 0) continue;
-      // 小组挂在班级下：取成员多数班级；跨班则 classId 为空（班级设计与名单一致）
-      const memberClasses = await tx
-        .select({ classId: courseMemberships.classId })
-        .from(courseMemberships)
-        .where(
-          and(
-            eq(courseMemberships.courseId, plan.courseId),
-            inArray(courseMemberships.userId, memberIds)
-          )
+      // 2) 抢到锁后复检：此刻能看到上一个请求刚提交的组，双击的第二次在这里被挡下
+      const [conflict] = await tx
+        .select({ id: groups.id, planId: groups.planId })
+        .from(groups)
+        .where(and(eq(groups.courseId, plan.courseId), eq(groups.status, 'active')))
+        .limit(1);
+      if (conflict) {
+        throw new PlanSelectRejected(
+          conflict.planId === planId
+            ? '该方案已应用，无需重复选定'
+            : '该课程已有进行中的分组，请先解散后再选定新方案'
         );
-      const votes = new Map<number, number>();
-      for (const m of memberClasses) {
-        if (m.classId == null) continue;
-        votes.set(m.classId, (votes.get(m.classId) ?? 0) + 1);
       }
-      let classId: number | null = null;
-      let best = 0;
-      for (const [cid, n] of votes) {
-        if (n > best) {
-          best = n;
-          classId = cid;
+
+      await tx
+        .update(groupingPlans)
+        .set({ isSelected: false })
+        .where(eq(groupingPlans.runId, plan.runId));
+
+      await tx
+        .update(groupingPlans)
+        .set({ isSelected: true, selectedAt: new Date(), selectedBy: teacherId })
+        .where(eq(groupingPlans.id, planId));
+
+      for (let gi = 0; gi < plan.groups.length; gi++) {
+        const memberIds = plan.groups[gi];
+        if (!memberIds || memberIds.length === 0) continue;
+        // 小组挂在班级下：取成员多数班级；跨班则 classId 为空（班级设计与名单一致）
+        const memberClasses = await tx
+          .select({ classId: courseMemberships.classId })
+          .from(courseMemberships)
+          .where(
+            and(
+              eq(courseMemberships.courseId, plan.courseId),
+              inArray(courseMemberships.userId, memberIds)
+            )
+          );
+        const votes = new Map<number, number>();
+        for (const m of memberClasses) {
+          if (m.classId == null) continue;
+          votes.set(m.classId, (votes.get(m.classId) ?? 0) + 1);
         }
+        let classId: number | null = null;
+        let best = 0;
+        for (const [cid, n] of votes) {
+          if (n > best) {
+            best = n;
+            classId = cid;
+          }
+        }
+        const [group] = await tx
+          .insert(groups)
+          .values({
+            courseId: plan.courseId,
+            classId,
+            planId,
+            name: `第${gi + 1}组`,
+            status: 'active'
+          })
+          .returning();
+        await tx.insert(groupMembers).values(
+          memberIds.map((userId) => ({
+            groupId: group.id,
+            userId,
+            duty: 'contributor' as const
+          }))
+        );
       }
-      const [group] = await tx
-        .insert(groups)
-        .values({
-          courseId: plan.courseId,
-          classId,
-          planId,
-          name: `第${gi + 1}组`,
-          status: 'active'
-        })
-        .returning();
-      await tx.insert(groupMembers).values(
-        memberIds.map((userId) => ({
-          groupId: group.id,
-          userId,
-          duty: 'contributor' as const
-        }))
-      );
+      return { ok: true as const };
+    });
+  } catch (err) {
+    // 业务拒绝：保持 route 期望的 { error } 形状（它据此返回 400，不是 500）
+    if (err instanceof PlanSelectRejected) {
+      return { error: err.message };
     }
-    return { ok: true as const };
-  });
+    throw err;
+  }
 }
 
 /** 课程的小组列表（含成员与班级归属）。classId 传入时只返回该班小组。 */
@@ -713,6 +822,13 @@ export async function dissolveGroup(groupId: number, teacherId: number) {
     return { error: '小组已解散' as const };
   }
 
+  // 通知收件人：只取仍在册的成员（left_at is null）。必须在解散事务之前取快照——
+  // 事务会把在册成员的 left_at 置为当前时间，之后再按 left_at is null 过滤就一个都取不到。
+  const members = await db
+    .select({ userId: groupMembers.userId })
+    .from(groupMembers)
+    .where(and(eq(groupMembers.groupId, groupId), isNull(groupMembers.leftAt)));
+
   await db.transaction(async (tx) => {
     await tx
       .update(groups)
@@ -733,21 +849,12 @@ export async function dissolveGroup(groupId: number, teacherId: number) {
     targetId: groupId,
     before: { status: group.status }
   });
-  // 通知原成员：小组已解散，回池待重新分组
-  const [row] = await db
-    .select({ courseId: groups.courseId })
-    .from(groups)
-    .where(eq(groups.id, groupId))
-    .limit(1);
-  const members = await db
-    .select({ userId: groupMembers.userId })
-    .from(groupMembers)
-    .where(eq(groupMembers.groupId, groupId));
+  // 通知原在册成员：小组已解散，回池待重新分组（已退出成员不在上面的快照里）
   await notify(members.map((m) => m.userId), {
     type: 'group_dissolved',
     title: '你所在的小组已解散',
     body: '你已回池，教师重新分组后会自动归入新小组。',
-    link: row ? `/dashboard/courses/${row.courseId}` : '/dashboard',
+    link: `/dashboard/courses/${group.courseId}`,
     priority: 'urgent',
     groupId
   });

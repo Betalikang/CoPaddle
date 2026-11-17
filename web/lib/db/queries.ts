@@ -4,6 +4,19 @@ import { activityLogs, teamMembers, teams, users } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 
+export type PublicUser = Omit<typeof users.$inferSelect, 'passwordHash'>;
+
+/**
+ * 用户对象出库/出厂前必须经过这里：password_hash 绝不能进 API 响应，
+ * 也不能进 RSC 序列化载荷（见 app/layout.tsx 的 SWR fallback）。
+ */
+export function toPublicUser(
+  user: typeof users.$inferSelect
+): PublicUser {
+  const { passwordHash: _passwordHash, ...safe } = user;
+  return safe;
+}
+
 export async function getUser() {
   const sessionCookie = (await cookies()).get('session');
   if (!sessionCookie || !sessionCookie.value) {
@@ -68,7 +81,8 @@ export async function getActivityLogs() {
     .leftJoin(users, eq(activityLogs.userId, users.id))
     .where(eq(activityLogs.userId, user.id))
     .orderBy(desc(activityLogs.timestamp))
-    .limit(10);
+    // 页面按 20 条一页分页；原来只取 10 条会让分页条永远不出现
+    .limit(200);
 }
 
 export async function getTeamForUser() {

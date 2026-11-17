@@ -7,19 +7,34 @@ export const generatePlanSchema = z.object({
   confirmRegenerate: z.boolean().optional()
 });
 
-export const updateTaskSchema = z.object({
-  title: z.string().min(1).max(200).optional(),
-  description: z.string().max(5000).optional(),
-  estHours: z.number().min(0).max(200).optional(),
-  dueAt: z.string().datetime().nullable().optional(),
-  priority: z.enum(['low', 'normal', 'high', 'critical']).optional(),
-  deliverableType: z.enum(['document', 'figure', 'table', 'code', 'slide', 'dataset']).optional(),
-  milestone: z.string().max(100).nullable().optional(),
-  orderIndex: z.number().int().min(0).optional()
-});
+export const updateTaskSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(5000).optional(),
+    // 工时必须为正：0 会让关键路径与工时占比失去意义（原来 min(0) 允许 0）
+    estHours: z.number().gt(0).max(200).optional(),
+    dueAt: z.string().datetime().nullable().optional(),
+    priority: z.enum(['low', 'normal', 'high', 'critical']).optional(),
+    deliverableType: z.enum(['document', 'figure', 'table', 'code', 'slide', 'dataset']).optional(),
+    milestone: z.string().max(100).nullable().optional(),
+    orderIndex: z.number().int().min(0).optional()
+  })
+  // 空 PATCH（含只有未知键的 PATCH）会让 db.update().set({}) 抛
+  // "No values to set at updateTask"，原来直接 500
+  .refine((v) => Object.keys(v).length > 0, { message: '没有需要修改的字段' });
 
 export const addDepSchema = z.object({
   dependsOnId: z.number().int().positive()
+});
+
+/** 手工新建单个任务（AI 不可用时的降级入口）：只有标题必填，其余给默认值。 */
+export const createTaskSchema = z.object({
+  title: z.string().trim().min(1, '任务标题不能为空').max(200),
+  // 与 updateTaskSchema 一致：工时必须为正，0 会让工时占比与关键路径失去意义
+  estHours: z.number().gt(0).max(200).optional(),
+  deliverableType: z
+    .enum(['document', 'figure', 'table', 'code', 'slide', 'dataset'])
+    .optional()
 });
 
 export const assignSchema = z.object({

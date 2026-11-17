@@ -189,21 +189,33 @@ export async function generateTaskPlan(
     }
 
     // 关键路径回写（演示第 3 步加粗 + 归因关键路径信用）
+    // 必须传 tx：计划与任务还没提交，走全局 db 的另一条连接读不到（首次生成读空、
+    // 重新生成时被事务刚软删的旧行行锁挡住）。
     try {
-      await markCriticalPath(groupId);
+      await markCriticalPath(groupId, tx);
     } catch {
-      // 算法服务不可用时不影响计划生成（页面可手动重算）
+      // 算法服务不可用/依赖成环时不影响计划生成（页面可手动重算）
     }
     return { planId: plan.id, problems: result.validation_problems };
   });
 }
 
 /**
+ * 事务内/外通用的连接类型：只依赖 select/update，既能接全局 db（NodePgDatabase），
+ * 也能接 db.transaction 的 tx（PgTransaction extends PgDatabase）。
+ */
+type DbConn = Pick<typeof db, 'select' | 'update'>;
+
+/**
  * 计算关键路径并回写 tasks.on_critical_path（演示第 3 步「关键路径加粗」
  * 与归因 cp_credit 的数据来源）。任务计划生成后、依赖变更后调用。
+ *
+ * conn 用于事务内调用：计划写入尚未提交，走全局 db 的另一条连接既读不到
+ * 未提交的任务（首次生成时任务列表为空 → 直接 return，关键路径永远为空），
+ * 重新生成时又会被事务刚软删的旧行行锁挡住（应用层死锁）。事务内必须传 tx。
  */
-export async function markCriticalPath(groupId: number) {
-  const taskRows = await db
+export async function markCriticalPath(groupId: number, conn: DbConn = db) {
+  const taskRows = await conn
     .select()
     .from(tasks)
     .where(and(eq(tasks.groupId, groupId), isNull(tasks.deletedAt)))
@@ -211,7 +223,7 @@ export async function markCriticalPath(groupId: number) {
   if (taskRows.length === 0) return { path: [] as string[], totalHours: 0 };
 
   const taskIds = taskRows.map((t) => t.id);
-  const depRows = await db
+  const depRows = await conn
     .select()
     .from(taskDeps)
     .where(inArray(taskDeps.taskId, taskIds));
@@ -222,7 +234,12 @@ export async function markCriticalPath(groupId: number) {
     depsByTask.set(d.taskId, [...(depsByTask.get(d.taskId) ?? []), String(d.dependsOnId)]);
   }
 
-  const result = await callAlgo<{ path: string[]; total_hours: number }>(
+  const result = await callAlgo<{
+    path: string[];
+    total_hours: number;
+    /** 依赖成环等无法计算时由算法服务返回（字段可能不存在，按可选读取） */
+    error?: string | null;
+  }>(
     '/internal/graph/critical-path',
     {
       tasks: taskRows.map((t) => ({
@@ -237,15 +254,20 @@ export async function markCriticalPath(groupId: number) {
     { groupId }
   );
 
+  // 依赖成环时不能把关键路径清零当成正常结果：清零会让 on_critical_path 全变 false、
+  // 归因侧 cp_total 归零（学分被凭空抹掉）。这里直接报错并保持既有标记与 cp_total 不变，
+  // 由上层提示「依赖成环，请先修正依赖」。
+  const algoError = result.error?.trim();
+  if (algoError) {
+    throw new AlgoServiceError(`关键路径计算失败：${algoError}`);
+  }
+
   const pathIds = new Set(result.path.map(Number));
   // 全量重置后按路径标记（避免残留）
   for (const t of taskRows) {
     const shouldBe = pathIds.has(t.id);
     if (t.onCriticalPath !== shouldBe) {
-      await db
-        .update(tasks)
-        .set({ onCriticalPath: shouldBe })
-        .where(eq(tasks.id, t.id));
+      await conn.update(tasks).set({ onCriticalPath: shouldBe }).where(eq(tasks.id, t.id));
     }
   }
   return { path: result.path, totalHours: result.total_hours };
@@ -297,6 +319,11 @@ export async function updateTask(taskId: number, patch: UpdateTaskInput) {
   if (patch.dueAt !== undefined) {
     set.dueAt = patch.dueAt === null ? null : new Date(patch.dueAt);
   }
+  // 兜底：没有任何列要写时 drizzle 会抛 "No values to set"，直接返回当前行
+  if (Object.keys(set).length === 0) {
+    const [current] = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
+    return current;
+  }
   const [row] = await db.update(tasks).set(set).where(eq(tasks.id, taskId)).returning();
   return row;
 }
@@ -307,10 +334,108 @@ export async function deleteTask(taskId: number) {
   await db.delete(taskDeps).where(or(eq(taskDeps.taskId, taskId), eq(taskDeps.dependsOnId, taskId)));
 }
 
+/**
+ * 手工新建单个任务（规格书 S4.10 / B-08 的降级入口：AI 不可用时队长仍能把活拆开）。
+ *
+ * 为什么需要「计划」：tasks.plan_id 是 NOT NULL，任务必须挂在某个 task_plan 下。
+ * 所以首次手工创建时按需建一个空计划（llmModel 为 null 以区别于 AI 拆解），
+ * 已有计划则直接挂到当前计划下，不会覆盖 AI 已生成的任务。
+ *
+ * code 由服务端生成（T1/T2…），取当前计划内最大编号 +1：LLM 也用 T<n> 形式，
+ * 手工补的任务沿用同一套编号，依赖面板里能连续引用。
+ */
+export async function createTask(
+  groupId: number,
+  actorId: number,
+  input: { title: string; estHours?: number; deliverableType?: string }
+) {
+  const [group] = await db
+    .select({ id: groups.id })
+    .from(groups)
+    .where(eq(groups.id, groupId))
+    .limit(1);
+  if (!group) return { ok: false as const, reason: '小组不存在' };
+
+  return db.transaction(async (tx) => {
+    // 复用当前计划；没有就建一个「手工计划」（llmModel 留空 = 非 AI 产物）
+    const [existingPlan] = await tx
+      .select({ id: taskPlans.id })
+      .from(taskPlans)
+      .where(eq(taskPlans.groupId, groupId))
+      .orderBy(desc(taskPlans.generatedAt))
+      .limit(1);
+
+    let planId = existingPlan?.id;
+    if (!planId) {
+      const [plan] = await tx
+        .insert(taskPlans)
+        .values({
+          groupId,
+          assignmentTitle: '手工任务',
+          // 手工计划没有 AI 拆解，但后置校验问题为空 = 合法
+          validated: true
+        })
+        .returning();
+      planId = plan.id;
+    }
+
+    // 现有任务的最大序号：既决定 orderIndex，也决定新 code 的编号
+    const siblings = await tx
+      .select({ code: tasks.code, orderIndex: tasks.orderIndex })
+      .from(tasks)
+      .where(and(eq(tasks.groupId, groupId), isNull(tasks.deletedAt)));
+
+    let maxNo = 0;
+    for (const s of siblings) {
+      const m = /^T(\d+)$/.exec(s.code);
+      if (m) maxNo = Math.max(maxNo, Number(m[1]));
+    }
+    // 同计划内 code 唯一（tasks_plan_code_uniq）；被软删的同号任务也算占用，
+    // 所以用 maxNo+1 而不是 siblings.length+1，避免与已存在的 T3 撞号。
+    const code = `T${maxNo + 1}`;
+    const orderIndex = siblings.reduce((max, s) => Math.max(max, s.orderIndex), -1) + 1;
+
+    const [row] = await tx
+      .insert(tasks)
+      .values({
+        planId,
+        groupId,
+        code,
+        title: input.title.slice(0, 200),
+        estHours: String(input.estHours ?? 2),
+        deliverableType: input.deliverableType ?? 'document',
+        orderIndex,
+        createdBy: actorId
+      })
+      .returning();
+
+    // 新任务可能改变关键路径，但算法服务不可用不能阻塞建任务（与 AI 拆解同样的取舍）
+    try {
+      await markCriticalPath(groupId, tx);
+    } catch {
+      // 忽略：页面可手动重算关键路径
+    }
+    return { ok: true as const, task: row };
+  });
+}
+
 /** 加依赖（写入前环检测，成环拒绝并返回环上任务）。 */
 export async function addDep(taskId: number, dependsOnId: number) {
   if (taskId === dependsOnId) {
     return { ok: false as const, reason: '任务不能依赖自己' };
+  }
+  // 前置必须是本组任务：跨组依赖会污染 DAG，且环检测按组遍历看不到它
+  const rows = await db
+    .select({ id: tasks.id, groupId: tasks.groupId })
+    .from(tasks)
+    .where(inArray(tasks.id, [taskId, dependsOnId]));
+  const self = rows.find((r) => r.id === taskId);
+  const other = rows.find((r) => r.id === dependsOnId);
+  if (!self || !other) {
+    return { ok: false as const, reason: '任务不存在' };
+  }
+  if (self.groupId !== other.groupId) {
+    return { ok: false as const, reason: '只能依赖本组的任务' };
   }
   const cycle = await findCycle(taskId, dependsOnId);
   if (cycle) {
@@ -379,6 +504,9 @@ export async function assignTask(taskId: number, userId: number, raci: string, a
     .onConflictDoNothing()
     .returning();
 
+  // 重复指派被 on_conflict_do_nothing 吞掉时 returning 为空：不是新指派，不重复发通知
+  if (!row) return null;
+
   // 通知被指派人（新任务分派）
   const [task] = await db
     .select({ groupId: tasks.groupId, title: tasks.title, code: tasks.code })
@@ -396,7 +524,7 @@ export async function assignTask(taskId: number, userId: number, raci: string, a
       priority: 'normal'
     });
   }
-  return row ?? null;
+  return row;
 }
 
 export async function unassign(assignmentId: number) {
@@ -444,6 +572,59 @@ export async function changeTaskStatus(
     payload: { from: task.status, to: input.toStatus }
   });
   return { ok: true as const, task: updated };
+}
+
+/**
+ * 在调用方的事务里把任务流转到某个状态（复用同一套状态机与副作用）。
+ *
+ * 存在的理由：重规划的「缩小范围」原先在 replan.ts 里直接
+ * `.update(tasks).set({status:'cancelled'})`，绕过了状态机，也不写
+ * task_status_events / progress_signals —— 结果是 done 任务被悄悄改成 cancelled、
+ * 审计里查不到谁砍的、健康度也算不出这次变更。这里把合法转换与两类记录集中到一处，
+ * 事务连接由调用方传入，保证砍任务与采纳事件在同一个事务里原子生效。
+ */
+export async function cancelTaskInTx(
+  tx: Pick<typeof db, 'select' | 'update' | 'insert'>,
+  taskId: number,
+  actorId: number,
+  note?: string
+) {
+  const [task] = await tx.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
+  if (!task) return { ok: false as const, reason: '任务不存在' };
+  // 已删除的任务不参与状态流转
+  if (task.deletedAt) return { ok: false as const, reason: '任务已删除' };
+
+  const allowed = TASK_TRANSITIONS[task.status] ?? [];
+  if (!allowed.includes('cancelled')) {
+    return {
+      ok: false as const,
+      reason: `任务 ${task.code} 当前状态「${task.status}」不允许取消`
+    };
+  }
+  if (task.status === 'cancelled') {
+    return { ok: true as const, task, unchanged: true as const };
+  }
+
+  const [updated] = await tx
+    .update(tasks)
+    .set({ status: 'cancelled', blockedReason: null })
+    .where(eq(tasks.id, taskId))
+    .returning();
+  await tx.insert(taskStatusEvents).values({
+    taskId,
+    fromStatus: task.status,
+    toStatus: 'cancelled',
+    actorId,
+    note: note ?? null
+  });
+  await tx.insert(progressSignals).values({
+    groupId: task.groupId,
+    taskId,
+    userId: actorId,
+    signalType: 'status_changed',
+    payload: { from: task.status, to: 'cancelled' }
+  });
+  return { ok: true as const, task: updated, unchanged: false as const };
 }
 
 /** 「我的部分」（规格书 M-02）：我的任务、依赖谁、截止时间（跨课程）。 */
@@ -547,11 +728,21 @@ export async function publishContract(groupId: number, publisherId: number) {
   return updated;
 }
 
-/** 成员确认签署。 */
+/**
+ * 成员确认签署（幂等）。
+ * 注意：contract_acceptances 目前没有主键/唯一约束，`onConflictDoNothing()` 不会生效，
+ * 所以这里先查后写，避免重复签署插入重复行（否则「N 人已签署」会被虚高）。
+ */
 export async function acceptContract(contractId: number, userId: number) {
-  await db
-    .insert(contractAcceptances)
-    .values({ contractId, userId })
-    .onConflictDoNothing();
-  return { ok: true as const };
+  const [existing] = await db
+    .select({ userId: contractAcceptances.userId })
+    .from(contractAcceptances)
+    .where(
+      and(eq(contractAcceptances.contractId, contractId), eq(contractAcceptances.userId, userId))
+    )
+    .limit(1);
+  if (existing) return { ok: true as const, already: true as const };
+
+  await db.insert(contractAcceptances).values({ contractId, userId });
+  return { ok: true as const, already: false as const };
 }
