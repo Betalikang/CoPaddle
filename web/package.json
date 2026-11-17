@@ -11,6 +11,12 @@
     "dev": "cross-env NEXT_DIST_DIR=.next-dev next dev --turbopack",
     "build": "next build",
     "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest run --project ui",
+    "test:services": "vitest run --config vitest.services.config.ts",
+    "verify": "cross-env NEXT_TELEMETRY_DISABLED=1 pnpm typecheck && pnpm test && pnpm build",
     "db:setup": "npx tsx lib/db/setup.ts",
     "db:seed": "npx tsx lib/db/seed.ts",
     "db:generate": "drizzle-kit generate",
@@ -52,7 +58,10 @@
     "zod": "^3.24.4"
   },
   "devDependencies": {
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
     "cross-env": "^10.1.0",
+    "happy-dom": "^21.0.4",
     "tsx": "^4.23.15",
     "vitest": "^5.0.1"
   }
