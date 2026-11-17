@@ -50,14 +50,10 @@ web/.next-dev/
 # ---- 内部彩排脚本(不入库) ----
 docs/共桨-演示脚本*.md
 
-# ---- 本地验收产物与临时文件（截图/令牌/探针目录，不入库）----
-.tmp-shots/
-.tmp-token.txt
-.tmp-cap.txt
-.tmp-b8.md
-.tmp_preview/
-.tmp_probe/
-.tmp_probe.png
+# ---- 本地验收产物与临时文件（截图/令牌/探针/一次性运维脚本，不入库）----
+# 统一前缀匹配：.tmp-shots/ .tmp-token.txt .tmp_probe/ .tmp-check.sql 都被覆盖
+.tmp-*
+.tmp_*
 
 # ---- 演示物料（大体积二进制，不入库；交付走网盘）----
 .ppt-src/
