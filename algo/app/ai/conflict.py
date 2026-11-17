@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Any
 
 import jieba
 from rapidfuzz import fuzz
@@ -21,7 +20,6 @@ from rapidfuzz import fuzz
 from ..schemas import (
     ConflictRequest,
     ConflictResponse,
-    ContractGlossaryItem,
 )
 from .llm import LlmUnavailableError, chat_json
 
@@ -80,7 +78,11 @@ def _build_user_prompt(req: ConflictRequest, similarity: float) -> str:
 
 
 def _parse(content: str, similarity: float) -> ConflictResponse:
-    data: dict[str, Any] = json.loads(strip_code_fence(content))
+    data = json.loads(strip_code_fence(content))
+    # 模型可能返回数组 / null / 标量：必须先确认是 JSON 对象再取键，
+    # 否则 data.get 会抛 AttributeError（路由没捕获 → 500）。
+    if not isinstance(data, dict):
+        raise ValueError(f"模型输出不是 JSON 对象（实际为 {type(data).__name__}）")
     kind = str(data.get("kind") or "无冲突")
     allowed = {"口径不一致", "接口不匹配", "结论实质矛盾", "内容重复", "无冲突"}
     if kind not in allowed:
@@ -140,6 +142,10 @@ def analyze_conflict(req: ConflictRequest) -> ConflictResponse:
                 suggestion="可稍后重试分析，或直接人工处理。",
                 merged_text="",
                 model="",
+                # 降级标记：kind/severity 必须留在既有取值集合内（调用方按五值集合解析），
+                # 真实判定与降级占位的区别由 degraded 承担，不能再靠 model="" 隐式表达
+                # （router 旧代码会把空 model 覆盖成默认模型名，痕迹就此丢失）。
+                degraded=True,
             )
         try:
             result = _parse(content, sim)
@@ -160,4 +166,5 @@ def analyze_conflict(req: ConflictRequest) -> ConflictResponse:
         suggestion="可稍后重试分析，或直接人工处理。",
         merged_text="",
         model="",
+        degraded=True,
     )

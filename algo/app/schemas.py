@@ -4,6 +4,8 @@
 权威数据结构以规格书 S1（47 表）与 S2（9 个内部接口）为准。
 """
 
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 # ---------- 分组（B-06 支撑）----------
@@ -40,6 +42,9 @@ class GroupingSolveRequest(BaseModel):
     # 仅作审计记录；三方案实际使用 STRATEGY_PRESETS 权重（规格书 S4.2）
     weights: GroupingWeights | None = None
     time_limit_seconds: float = Field(default=10.0, gt=0, le=30)
+    # 是否允许跨班分组（H4）：默认 True 保持既有行为；
+    # 关闭混班的课程必须显式传 False，否则求解会生成混班方案。
+    allow_cross_class: bool = True
 
 
 class GroupingPlanScores(BaseModel):
@@ -113,7 +118,9 @@ class TaskNode(BaseModel):
     deps: list[str] = Field(default_factory=list)
     est_hours: float = Field(default=1.0, ge=0)
     status: str = "todo"
-    due_at: str | None = None
+    # pydantic 的 datetime 类型即校验 ISO 8601：JSON 里仍传字符串，
+    # 非法值（如 "not-a-date"）在入口被判 422，而不是在算法层抛 ValueError → 500。
+    due_at: datetime | None = None
     # 调度字段（健康度/重规划用）
     skills: list[str] = Field(default_factory=list)
     assignee_id: str | None = None
@@ -129,6 +136,10 @@ class CriticalPathRequest(BaseModel):
 class CriticalPathResponse(BaseModel):
     path: list[str]
     total_hours: float
+    # 算法侧的业务错误（目前只有「依赖成环，无法计算关键路径」）。
+    # 可选且默认 None，保持向后兼容：不传时老调用方行为不变；
+    # 传了则调用方不能再把 path=[] / total_hours=0 当成「没有关键路径」。
+    error: str | None = None
 
 
 class ImpactRequest(BaseModel):
@@ -140,6 +151,8 @@ class ImpactRequest(BaseModel):
 class ImpactResponse(BaseModel):
     affected: list[str]
     est_delay_days: float
+    # 与 CriticalPathResponse 同口径：业务错误不再被静默丢掉（如「任务不存在」）
+    error: str | None = None
 
 
 # ---------- 健康度 / 归因 / LLM ----------
@@ -149,9 +162,10 @@ class HealthComputeRequest(BaseModel):
     group_id: str
     tasks: list[TaskNode] = Field(default_factory=list)
     member_ids: list[str] = Field(default_factory=list)
-    last_signal_at: dict[str, str] = Field(default_factory=dict, description="user_id -> ISO 时间")
+    # 值为 ISO 8601 字符串（web 侧发 toISOString()），用 datetime 类型做入口校验
+    last_signal_at: dict[str, datetime] = Field(default_factory=dict, description="user_id -> ISO 时间")
     idle_trigger_days: int = Field(default=3, ge=1)
-    now_iso: str | None = None
+    now_iso: datetime | None = None
 
 
 class HealthComputeResponse(BaseModel):
@@ -300,5 +314,10 @@ class ConflictResponse(BaseModel):
     suggestion: str = ""
     merged_text: str = ""
     model: str = ""
+    # 降级标记：True = 本次判定不是模型给出的结论（AI 不可用 / 输出无法解析，
+    # 已降级为人工判断）。保持 kind 取值集合不变，所以老调用方不会误读；
+    # web 侧应读该字段（为 True 时不要把 kind="无冲突" 当成真实判定，
+    # 也不要把 model 显示成模型名）——配套改动见 routers/ai.py 注释。
+    degraded: bool = False
     prompt_tokens: int = 0
     completion_tokens: int = 0

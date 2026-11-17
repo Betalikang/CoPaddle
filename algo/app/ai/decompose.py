@@ -136,14 +136,28 @@ def decompose(req: DecomposeRequest) -> DecomposeResponse:
     for _attempt in range(2):  # 首次 + 带反馈重试 1 次
         content, usage = chat_json(SYSTEM_PROMPT, _build_user_prompt(req, feedback))
         try:
-            data: dict[str, Any] = json.loads(strip_code_fence(content))
+            data = json.loads(strip_code_fence(content))
         except json.JSONDecodeError as err:
             last_parse_error = f"输出不是合法 JSON：{err}"
             feedback = [last_parse_error]
             continue
 
+        # 模型可能返回数组 / null / 标量：json.loads 之后若不校验类型就直接取键，
+        # 会抛 AttributeError（路由只捕 LlmNotConfiguredError/LlmUnavailableError → 500）。
+        # 这里把结构非法统一记成 last_parse_error，走「带反馈重试 → 抛
+        # LlmUnavailableError」的既有降级路径（路由映射成 503）。
+        if not isinstance(data, dict):
+            last_parse_error = f"输出不是 JSON 对象（实际为 {type(data).__name__}），无法解析 tasks/contract"
+            feedback = [last_parse_error]
+            continue
+
         raw_tasks = data.get("tasks") or []
         raw_contract = data.get("contract") or {}
+        if not isinstance(raw_tasks, list) or not isinstance(raw_contract, dict):
+            last_parse_error = "输出结构不符合约定：tasks 必须是数组、contract 必须是对象"
+            feedback = [last_parse_error]
+            continue
+
         try:
             tasks = [DecomposedTask.model_validate(t) for t in raw_tasks]
             contract_items = [ContractGlossaryItem.model_validate(g) for g in raw_contract.get("glossary") or []]

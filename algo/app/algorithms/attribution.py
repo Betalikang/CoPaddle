@@ -118,9 +118,15 @@ def compute_attribution(req: AttributionComputeRequest) -> AttributionComputeRes
         cp_credit = m.cp_done / m.cp_total if m.cp_total > 0 else 0.0
         rework_penalty = 1 - min(1.0, m.rework_count / (2 * m.lead_total)) if m.lead_total > 0 else 1.0
         help_credit = min(1.0, m.help_count / 3)
-        on_time_part = p_score * 0.35 * on_time_rate + p_score * 0.30 * cp_credit
-        rework_part = p_score * 0.20 * rework_penalty
-        help_part = p_score * 0.15 * help_credit
+        # 过程证据对 point 的实际贡献 = w_process × p_score，再按内部权重
+        # 0.35（按期）/0.30（关键路径）/0.20（返工）/0.15（补位）拆成四项，内部权重和为 1。
+        # 旧代码三个分项都漏乘 w_process（只乘了 p_score），与产出物项（:124）
+        # 和互评项（:133，都乘了 w_a / w_peer）口径不一致，导致 comp 里过程分被高估
+        # 约 1/w_process 倍（w_process=0.3 时约 3.3 倍；p_raw=0.6 时过程分虚高一倍多）。
+        process_part = w_p * p_score
+        on_time_part = process_part * (0.35 * on_time_rate + 0.30 * cp_credit)
+        rework_part = process_part * 0.20 * rework_penalty
+        help_part = process_part * 0.15 * help_credit
         main_part = w_a * a_score * (w_main[uid] / w_total[uid]) if w_total[uid] > 0 else 0.0
         coop_part = w_a * a_score * (w_coop[uid] / w_total[uid]) if w_total[uid] > 0 else 0.0
 

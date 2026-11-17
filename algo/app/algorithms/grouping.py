@@ -7,7 +7,9 @@
   * 弱连接引入：组内「非强连接对数」最大（强连接对用 AND 变量线性化）；
   * 组间均衡：组实力 max−min 最小（hi/lo 变量）；
   * 历史规避：组内「非历史同组对数」最大；
-- 组内总对数用 size·(size−1) 表达（避免除法，偶数性由乘法天然保证）；
+- 弱连接/历史规避的展示口径（score_plan）是「1 − 不良对数 / 组内总对数」这种
+  规模中性的比率，所以目标里只惩罚强连接/历史配对本身，组规模另用
+  Σ|size_g − target| 显式惩罚（理由见目标函数处的注释）；
 - 班内限制（H4）用班级计数布尔聚合，避免 O(n²·G) 约束；
 - 超时/失败降级：贪心 + 局部交换（规格书 S4.10），结果标注快速模式。
 
@@ -246,46 +248,78 @@ def _greedy_groups(
     forbidden_pairs: list[tuple[str, str]],
     allow_cross_class: bool,
 ) -> list[list[str]] | None:
-    """贪心兜底：按实力降序轮询放入第一个可行组（满足硬约束）。"""
+    """贪心兜底：先定每组目标人数，再按实力降序轮询放入最空的可行组。
+
+    目标人数 = 均分 + 余数（`divmod(n, G)`，前 rem 组各多 1 人）：调用方已保证
+    n ∈ [G·min_size, G·max_size]，均分值必然落在 [min_size, max_size] 内，因此
+    兜底结果天然满足 H1。旧实现只看 `len(g) >= max_size` 且从第 0 组开始填满，
+    n=12/G=3/min=3/max=5 会产出 [5,5,2] 而被 validate_plan 判 H1 违规 → 假 infeasible。
+    """
     by_id = {s.id: s for s in students}
+    if num_groups <= 0:
+        return None
     forbidden_set = set(forbidden_pairs) | {(b, a) for a, b in forbidden_pairs}
     groups: list[list[str]] = [[] for _ in range(num_groups)]
     ordered = sorted(students, key=_power, reverse=True)
 
-    def feasible(gi: int, sid: str) -> bool:
-        g = groups[gi]
-        if len(g) >= max_size:
-            return False
-        s = by_id[sid]
-        if not allow_cross_class and g:
-            if any(by_id[m].class_id != s.class_id for m in g):
-                return False
-        for m in g:
-            if (sid, m) in forbidden_set:
-                return False
-        return True
+    base, rem = divmod(len(students), num_groups)
+    target = [base + (1 if gi < rem else 0) for gi in range(num_groups)]
+
+    def class_ok(pool: list[str]) -> bool:
+        """H4：不混班时同一组只能有一个班级（空组/单人组总是可以）。"""
+        if allow_cross_class or len(pool) <= 1:
+            return True
+        cls = by_id[pool[0]].class_id
+        return all(by_id[m].class_id == cls for m in pool[1:])
+
+    def fits(pool: list[str], sid: str) -> bool:
+        """sid 放进 pool 后 H2（不可同组）与 H4（班级）都成立。"""
+        return class_ok([*pool, sid]) and all((sid, m) not in forbidden_set for m in pool)
+
+    def has_room(gi: int) -> bool:
+        return len(groups[gi]) < target[gi]
+
+    def fill_key(gi: int, sid: str) -> tuple[int, int, int]:
+        """第一遍的选组优先级：先收拢同班，再均衡人数。
+
+        禁混班时必须让「已含本班」严格优先于「空组」——否则两个班会被均衡地
+        摊成各半（a0→g0、a1→g1…），随后两组的班级都与新同学不符，
+        明明 [4 个 c0][4 个 c1] 可行却报无解。
+        三个档位：0=已含本班，1=空组（可起头），2=异班（fits 会拒）。
+        """
+        if allow_cross_class:
+            return (0, len(groups[gi]), gi)
+        pool = groups[gi]
+        if not pool:
+            return (1, 0, gi)
+        if by_id[pool[0]].class_id == by_id[sid].class_id:
+            return (0, len(pool), gi)
+        return (2, len(pool), gi)
 
     for s in ordered:
         placed = False
-        # 第一遍：直接放入第一个可行组
-        for gi in range(num_groups):
-            if feasible(gi, s.id):
-                groups[gi].append(s.id)
-                placed = True
-                break
-        # 第二遍：换位放置——把目标组里某个无冲突成员移到别组，腾出位置
+        # 第一遍：放进「最空且可行」的组（同时均衡各组实力）。
+        # 禁混班时要先优先「已含本班」的组，否则两个班会被均衡地摊成各半，
+        # 随后两组的班级都与新同学不符 → 明明 [4 个 c0][4 个 c1] 可行却报无解。
+        # 第一遍：按 fill_key 选组（禁混班先收拢同班，否则最空优先以均衡实力）
+        for gi in sorted(range(num_groups), key=lambda g: fill_key(g, s.id)):
+            if not has_room(gi) or not fits(groups[gi], s.id):
+                continue
+            groups[gi].append(s.id)
+            placed = True
+            break
+        # 第二遍：把目标组里「与 s 冲突」的成员移到还有空位的别组，腾出位置。
+        # 注意移走的是冲突者本身（旧实现按 `not in forbidden_set` 取，移走的恰好是
+        # 不冲突的人，冲突者留在组里再 append s → H2 违规，又一类假 infeasible）。
         if not placed:
             for gi in range(num_groups):
-                movable = [m for m in groups[gi] if (s.id, m) not in forbidden_set]
-                for m in movable:
+                for m in [x for x in groups[gi] if (s.id, x) in forbidden_set]:
+                    rest = [x for x in groups[gi] if x != m]
+                    if not fits(rest, s.id):
+                        continue  # 该组还有别的冲突者，移走一个不够
                     for gj in range(num_groups):
-                        if gj == gi or len(groups[gj]) >= max_size:
+                        if gj == gi or not has_room(gj) or not fits(groups[gj], m):
                             continue
-                        if any((m, x) in forbidden_set for x in groups[gj]):
-                            continue
-                        if not allow_cross_class and groups[gj]:
-                            if any(by_id[x].class_id != by_id[m].class_id for x in groups[gj]):
-                                continue
                         groups[gi].remove(m)
                         groups[gj].append(m)
                         groups[gi].append(s.id)
@@ -295,9 +329,49 @@ def _greedy_groups(
                         break
                 if placed:
                     break
+        # 第三遍：唯一还有空位的组恰好就是 s 冲突的那组、其余组都已满——
+        # 此时需要三向轮换：gi 的冲突者 m 换到满组 gj，gj 的 x 换进 gi，s 也进 gi
+        # （gi 净 +1 达到目标人数，gj 人数不变）。没有这一步，n 人 n-1 落位的收尾
+        # 会大量误报 infeasible。
+        if not placed:
+            for gi in range(num_groups):
+                if not has_room(gi):
+                    continue
+                for m in [x for x in groups[gi] if (s.id, x) in forbidden_set]:
+                    rest = [x for x in groups[gi] if x != m]
+                    if any((s.id, x) in forbidden_set for x in rest):
+                        continue
+                    for gj in range(num_groups):
+                        if gj == gi or has_room(gj):
+                            continue
+                        for x in groups[gj]:
+                            tail = [y for y in groups[gj] if y != x]
+                            if (m, x) in forbidden_set or (s.id, x) in forbidden_set:
+                                continue
+                            if not fits(rest, x) or not fits([*rest, x], s.id):
+                                continue
+                            if not fits(tail, m):
+                                continue
+                            groups[gi].remove(m)
+                            groups[gj].remove(x)
+                            groups[gi].extend([x, s.id])
+                            groups[gj].append(m)
+                            placed = True
+                            break
+                        if placed:
+                            break
+                    if placed:
+                        break
+                if placed:
+                    break
         if not placed:
             return None
 
+    # 兜底结果自检：H1 规模与 H5 全员覆盖（人数守恒由「每人只放一次」保证）
+    if sum(len(g) for g in groups) != len(students):
+        return None
+    if any(not (min_size <= len(g) <= max_size) for g in groups):
+        return None
     return groups
 
 
@@ -416,7 +490,11 @@ def _solve_once(
         m.Add(size[g] <= max_size)
 
     # H2 不可同组（H3 必须同组已去掉）
+    # forbidden_pairs 可能指向已不再 active（不在本次 students 里）的学生，
+    # x 只有 (student.id, g) 键，直接取会抛 KeyError → 与下方 pair_and_terms 一致先过滤。
     for a, b in forbidden_pairs:
+        if a not in by_id or b not in by_id:
+            continue
         for g in range(G):
             m.AddAtMostOne([x[a, g], x[b, g]])
 
@@ -434,12 +512,16 @@ def _solve_once(
                 cg_vars.append(cg)
             m.Add(sum(cg_vars) <= 1)
 
-    # 组内总对数（2×C(size,2) = size·(size−1)），乘法等式由 CP-SAT 线性化
-    pairs2 = {}
+    # 组规模偏差项：展示口径的四维得分都是比率，组规模本身不应出现在目标里。
+    # target 用 n // G（余数由均衡项与偏差项自然分摊），dev 取 |size_g − target|
+    # 的线性化上界（dev ≥ ±(size_g − target)）。
+    target_size = n // G
+    size_dev_terms = []
     for g in range(G):
-        p2 = m.NewIntVar(0, n * n, f"pairs2_{g}")
-        m.AddMultiplicationEquality(p2, [size[g], size[g] - 1])
-        pairs2[g] = p2
+        dev = m.NewIntVar(0, n, f"size_dev_{g}")
+        m.Add(dev >= size[g] - target_size)
+        m.Add(dev >= target_size - size[g])
+        size_dev_terms.append(dev)
 
     # ---- 维度 1：技能覆盖（布尔覆盖变量）----
     cover_terms = []
@@ -473,9 +555,17 @@ def _solve_once(
     hist_pairs = {frozenset((a, b)) for a, b in history_pairs}
     strong_terms = pair_and_terms(strong_pairs)
     hist_pair_terms = pair_and_terms(hist_pairs)
-    # 组内「非强连接对数」= 组内总对数 − 2×强连接对数（pairs2 已是 2×C(size,2)）
-    weak_expr = sum(pairs2.values()) - 2 * sum(strong_terms)
-    hist_expr = sum(pairs2.values()) - 2 * sum(hist_pair_terms)
+    # 展示口径（score_plan）是规模中性的比率：
+    #   weak_tie = 1 − 强连接对数 / 组内总对数，history_avoid = 1 − 历史同组对数 / 组内总对数。
+    # 旧目标写的是 sum(pairs2) − 2×强连接对数，把凸项 Σ size_g·(size_g−1) 以正号
+    # 计入目标两次（弱连接与历史各一次），等价于奖励规模不均：12 人 3 组会偏向
+    # [5,4,3]（Σ size² = 50）而不是 [4,4,4]（Σ size² = 48），而后者在展示口径下更高。
+    # 现在两项只保留「惩罚不良配对」的部分（与比率的分子同向），
+    # 规模中性由下面的 abs_dev 项显式承担：
+    #   目标 = w_skill·覆盖 − w_weak·强连接对数 − w_hist·历史对数
+    #          − w_balance·(max P − min P) − (w_weak + w_hist)·Σ|size_g − target|
+    weak_expr = -2 * sum(strong_terms)
+    hist_expr = -2 * sum(hist_pair_terms)
 
     # ---- 维度 3：组间均衡（max−min 最小化）----
     tot = {g: sum(x[s.id, g] * _power(s) for s in students) for g in range(G)}
@@ -494,8 +584,18 @@ def _solve_once(
     weak_coef = round(SCALE * w.weak_tie * 1000 / all_pairs)
     hist_coef = round(SCALE * w.history_avoid * 1000 / all_pairs)
     balance_coef = round(SCALE * w.balance * 1000 / total_power)
+    # 规模偏差项的归一化与 pair 项同一口径（all_pairs = n(n−1) = 2×总对数），
+    # 权重取 weak_tie + history_avoid：与旧目标里两处凸项的杠杆同量级，
+    # 但符号反过来——旧目标奖励规模不均，新目标惩罚规模不均。
+    size_coef = round(SCALE * (w.weak_tie + w.history_avoid) * 1000 / all_pairs)
 
-    obj = skill_coef * sum(cover_terms) + weak_coef * weak_expr + hist_coef * hist_expr - balance_coef * spread
+    obj = (
+        skill_coef * sum(cover_terms)
+        + weak_coef * weak_expr
+        + hist_coef * hist_expr
+        - balance_coef * spread
+        - size_coef * sum(size_dev_terms)
+    )
     m.Maximize(obj)
 
     solver = cp_model.CpSolver()

@@ -11,9 +11,35 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
-from datetime import UTC
+from datetime import UTC, datetime
 from typing import Any
+
+# 每人每天可投入工时（过载判定口径，规格书 S4.4）
+DAILY_CAPACITY_HOURS = 6.0
+
+
+def _coerce_dt(value: datetime | str | None) -> datetime | None:
+    """把 datetime 或 ISO 8601 字符串统一成带时区的 datetime；无法解析返回 None。
+
+    ISO 校验的主战场在 schema 层：`app/schemas.py` 的 `TaskNode.due_at`、
+    `HealthComputeRequest.last_signal_at` / `now_iso` 都已改成 pydantic 的
+    `datetime` 类型，请求里传 "not-a-date" 会在入口被判 422 而不是 500。
+    这里再兜一层，是因为算法函数可以被直接调用（测试与脚本就是直接传 ISO
+    字符串），避免 `datetime.fromisoformat` 抛 ValueError 冒泡成 500：
+    解析不了就按「该时间缺失」处理（due_at 缺失 → 不参与阻塞/过载判定）。
+    """
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        dt = value
+    else:
+        try:
+            dt = datetime.fromisoformat(value)
+        except ValueError:
+            return None
+    return dt if dt.tzinfo is not None else dt.replace(tzinfo=UTC)
 
 
 @dataclass
@@ -23,7 +49,7 @@ class Task:
     deps: list[str] = field(default_factory=list)
     est_hours: float = 1.0
     status: str = "todo"  # todo|doing|blocked|reviewing|done|cancelled
-    due_at: str | None = None
+    due_at: datetime | str | None = None
     skills: list[str] = field(default_factory=list)
     assignee_id: str | None = None
     remaining_hours: float | None = None
@@ -132,16 +158,12 @@ def _max_depth(tasks: list[Task], start: str, scope: set[str]) -> int:
 def health(
     tasks: list[Task],
     member_ids: list[str],
-    last_signal_at: dict[str, str],
+    last_signal_at: dict[str, datetime | str],
     idle_trigger_days: int = 3,
-    now_iso: str | None = None,
+    now_iso: datetime | str | None = None,
 ) -> dict[str, Any]:
     """三维健康度（0–100，越高越好）+ 综合分 + 诊断条目。"""
-    from datetime import datetime
-
-    now = datetime.fromisoformat(now_iso) if now_iso else datetime.now(UTC)
-    if now.tzinfo is None:
-        now = now.replace(tzinfo=UTC)
+    now = _coerce_dt(now_iso) or datetime.now(UTC)
 
     open_tasks = [t for t in tasks if t.status not in ("done", "cancelled")]
 
@@ -152,46 +174,46 @@ def health(
         if t.status == "blocked":
             blocked.append(t.id)
             continue
-        if t.due_at:
-            due = datetime.fromisoformat(t.due_at)
-            if due.tzinfo is None:
-                due = due.replace(tzinfo=UTC)
-            if now > due and any(d not in done_ids for d in t.deps):
-                blocked.append(t.id)
+        due = _coerce_dt(t.due_at)
+        if due is not None and now > due and any(d not in done_ids for d in t.deps):
+            blocked.append(t.id)
     blocked_score = 100 * (1 - len(blocked) / max(len(open_tasks), 1))
 
     # 失联：近 idle_trigger_days 天无任何信号的成员
     idle_members: list[str] = []
     for uid in member_ids:
-        last = last_signal_at.get(uid)
-        if not last:
+        ts = _coerce_dt(last_signal_at.get(uid))
+        if ts is None:
             idle_members.append(uid)
             continue
-        ts = datetime.fromisoformat(last)
-        if ts.tzinfo is None:
-            ts = ts.replace(tzinfo=UTC)
         if (now - ts).days >= idle_trigger_days:
             idle_members.append(uid)
     idle_score = 100 * (1 - len(idle_members) / max(len(member_ids), 1))
 
-    # 过载：剩余工时 > 距截止剩余天数 × 6 小时/天（按任务的 due_at 计算）
+    # 过载：剩余工时 > 距截止的可投入工时（每天 DAILY_CAPACITY_HOURS 小时）
     overload_members: list[str] = []
     per_member_hours: dict[str, float] = {}
-    per_member_days: dict[str, float] = {}
+    per_member_capacity: dict[str, float] = {}
     for t in open_tasks:
         # 过载判定需要截止时间：无 due_at 的任务不参与（没有 deadline 无从判断）
         if not t.assignee_id or not t.due_at:
             continue
+        due = _coerce_dt(t.due_at)
+        if due is None:
+            continue
         rem = t.remaining_hours if t.remaining_hours is not None else t.est_hours
         per_member_hours[t.assignee_id] = per_member_hours.get(t.assignee_id, 0.0) + rem
-        due = datetime.fromisoformat(t.due_at)
-        if due.tzinfo is None:
-            due = due.replace(tzinfo=UTC)
-        days_left = max((due - now).days, 0)
-        per_member_days[t.assignee_id] = max(per_member_days.get(t.assignee_id, 0.0), days_left)
-    for uid, hours in per_member_hours.items():
-        days = per_member_days.get(uid, 0)
-        if hours > days * 6:
+        # 小时精度 + 向上取整到天：旧代码用 (due - now).days 向下取整，
+        # 「今天 18:00 到期、12:00 评估」（还剩 6 小时）会被算成 0 天 → 容量 0 小时
+        # → est_hours=2 也被误判过载。现在按 ceil(剩余小时/24) 天计。
+        hours_left = max((due - now).total_seconds() / 3600.0, 0.0)
+        capacity = math.ceil(hours_left / 24.0) * DAILY_CAPACITY_HOURS
+        per_member_capacity[t.assignee_id] = max(per_member_capacity.get(t.assignee_id, 0.0), capacity)
+    # 只统计本题 member_ids 内的成员：per_member_hours 的键是 t.assignee_id，
+    # 可能包含已离组/非本组的人，旧代码直接用它的长度做分子会让
+    # overload_score = 100 × (1 − 分子/分母) 变成负数。
+    for uid in dict.fromkeys(member_ids):
+        if per_member_hours.get(uid, 0.0) > per_member_capacity.get(uid, 0.0):
             overload_members.append(uid)
     overload_score = 100 * (1 - len(overload_members) / max(len(member_ids), 1))
 

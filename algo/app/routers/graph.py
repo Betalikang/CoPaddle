@@ -34,13 +34,19 @@ def _to_tasks(req: CriticalPathRequest | ImpactRequest) -> list[Task]:
 
 @router.post("/critical-path", response_model=CriticalPathResponse)
 def critical_path_ep(req: CriticalPathRequest) -> CriticalPathResponse:
-    """关键路径：任务 DAG 上 est_hours 之和最大的一条链（拓扑排序 + 最长路径）。"""
+    """关键路径：任务 DAG 上 est_hours 之和最大的一条链（拓扑排序 + 最长路径）。
+
+    成环时算法返回 error 而不抛异常，这里必须透传：否则调用方只会看到
+    path=[] / total_hours=0，把「算不出来」误当成「没有关键路径」。
+    """
     result = critical_path(_to_tasks(req))
     path_val = result.get("path")
     hours_val = result.get("total_hours")
+    err_val = result.get("error")
     return CriticalPathResponse(
         path=[str(x) for x in path_val] if isinstance(path_val, list) else [],
         total_hours=float(hours_val) if isinstance(hours_val, (int, float)) else 0.0,
+        error=str(err_val) if isinstance(err_val, str) and err_val else None,
     )
 
 
@@ -50,7 +56,9 @@ def impact_ep(req: ImpactRequest) -> ImpactResponse:
     result = impact(_to_tasks(req), req.delayed_task_id, req.delay_days)
     affected_val = result.get("affected")
     days_val = result.get("est_delay_days")
+    err_val = result.get("error")
     return ImpactResponse(
         affected=[str(x) for x in affected_val] if isinstance(affected_val, list) else [],
         est_delay_days=float(days_val) if isinstance(days_val, (int, float)) else 0.0,
+        error=str(err_val) if isinstance(err_val, str) and err_val else None,
     )

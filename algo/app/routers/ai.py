@@ -40,9 +40,13 @@ def conflict(req: ConflictRequest) -> ConflictResponse:
     """LLM 调用点 2：语义冲突归因，reason 必须引用双方原文片段。
 
     前置 rapidfuzz 筛选：重复走规则分支、无关直接无冲突，均不调用大模型。
-    LLM 失败降级为「人工判断」（规格书 S6.2 / S4.10）。
+    LLM 失败降级为「人工判断」（规格书 S6.2 / S4.10）：降级时 `degraded=True`
+    且 `model` 保持空串，由调用方据此区分「真实判定」与「降级占位」。
+
+    注意：这里只在 `degraded=False` 时才把空的 model 补成默认模型名——
+    旧代码无条件覆盖，把降级唯一可识别的痕迹（model=""）也抹掉了。
     """
     result = conflict_impl(req)
-    if result.model == "":
+    if result.model == "" and not result.degraded:
         result.model = get_settings().llm_model
     return result

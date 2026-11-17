@@ -77,6 +77,7 @@ def solve(req: GroupingSolveRequest) -> GroupingSolveResponse:
         max_size=req.max_group_size,
         weights=req.weights,
         forbidden_pairs=list(req.forbidden_pairs),
+        allow_cross_class=req.allow_cross_class,
         edges=list(req.edges),
         history_pairs=list(req.history_pairs),
         time_limit=req.time_limit_seconds,
