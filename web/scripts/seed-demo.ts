@@ -5,10 +5,10 @@
  * 前置：db + algo(:8000) 运行（任务拆解走真实 DeepSeek，约 5-10s）。
  * 运行：pnpm tsx scripts/seed-demo.ts
  *
- * 产出账号（密码均为 copaddle123）：
- *   教师 teacher@copaddle.local —— 课程教师，可见全部门入口
- *   队长 captain@copaddle.local —— 第 1 组队长（课程角色 captain + 组内 lead）
- *   队员 member@copaddle.local  —— 第 2 组普通队员
+ * 产出账号（口令取 DEMO_PASSWORD，未设置时回退本地演示口令，见 demo-credentials.ts）：
+ *   教师 工号 20210001（邮箱 teacher@copaddle.local）—— 课程教师，可见全部门入口
+ *   队长 学号 20260001（邮箱 captain@copaddle.local）—— 第 1 组队长（课程角色 captain + 组内 lead）
+ *   队员 学号 20260002（邮箱 member@copaddle.local）—— 第 2 组普通队员
  */
 import { eq, inArray, like } from 'drizzle-orm';
 import { db } from '../lib/db/drizzle';
@@ -26,8 +26,9 @@ import { addEnrollment } from '../lib/services/enrollments';
 import { upsertSkillCard } from '../lib/services/skill-cards';
 import { createArtifact, saveVersion } from '../lib/services/artifacts';
 import { computeGroupContributions } from '../lib/services/contributions';
+import { resolveDemoPassword } from './demo-credentials';
 
-const DEMO_PASSWORD = 'copaddle123';
+const DEMO_PASSWORD = resolveDemoPassword();
 const DOMAIN = '@copaddle.local';
 
 const DIMS = ['编程', '写作', '设计', '表达', '数据分析', '调研', '领导力'];
@@ -74,7 +75,7 @@ async function main() {
   // ---- 教师 ----
   const [teacher] = await db
     .insert(users)
-    .values({ email: `teacher${DOMAIN}`, name: '王教授', passwordHash, role: 'member', studentNo: 'T001' })
+    .values({ email: `teacher${DOMAIN}`, name: '王教授', passwordHash, role: 'member', studentNo: '20210001' })
     .returning();
   console.log(`教师账号：teacher${DOMAIN}`);
 

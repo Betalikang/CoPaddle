@@ -95,7 +95,7 @@ async function main() {
   check('每方案有代价说明', event!.options.every((o) => o.costSummary && o.costSummary.length > 0));
   const redistribute = event!.options.find((o) => o.action === 'redistribute')!;
   const adopted = await adoptOption(eventId, redistribute.id, teacher.id);
-  check('采纳重新分配', 'ok' in adopted && adopted.ok, JSON.stringify(adopted));
+  check('采纳重新分配', 'ok' in adopted && !!adopted.ok, JSON.stringify(adopted));
   const after = await getReplanEvent(eventId);
   check('事件状态 adopted', after!.event.status === 'adopted');
 

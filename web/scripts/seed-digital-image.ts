@@ -6,9 +6,10 @@
  * 运行：cd web && pnpm tsx scripts/seed-digital-image.ts
  * 前置：db(:5433) 与 algo(:8000) 运行（贡献/健康度调用 algo；失败则写占位快照）。
  *
- * 演示账号（密码均为 copaddle123）：
- *   teacher@copaddle.local / captain@copaddle.local / member@copaddle.local
- *   学生：s{学号}@copaddle.local
+ * 演示账号（口令取 DEMO_PASSWORD，未设置时回退本地演示口令，见 demo-credentials.ts）：
+ *   教师：工号 20210001（也可用邮箱 teacher@copaddle.local 登录）
+ *   队长 / 队员：用本人学号登录（另留 captain@ / member@copaddle.local 邮箱别名）
+ *   学生：s{学号}@copaddle.local，登录时直接输学号即可
  */
 import { and, eq, inArray, like, sql } from 'drizzle-orm';
 import { readFileSync } from 'node:fs';
@@ -64,6 +65,7 @@ import { computeGroupContributions } from '../lib/services/contributions';
 import { computeGroupHealth } from '../lib/services/health';
 import { detectConflicts, resolveConflict } from '../lib/services/conflicts';
 import { triggerReplan, adoptOption } from '../lib/services/replan';
+import { resolveDemoPassword } from './demo-credentials';
 import {
   createRound,
   openRound,
@@ -73,7 +75,7 @@ import {
   detectAnomalies
 } from '../lib/services/peer-reviews';
 
-const DEMO_PASSWORD = 'copaddle123';
+const DEMO_PASSWORD = resolveDemoPassword();
 const DOMAIN = '@copaddle.local';
 const COURSE_CODE = 'DIGI201';
 const CLASS_META = {
@@ -124,6 +126,37 @@ const TASK_TEMPLATE: {
   { code: 'T8', title: '撰写报告并统一口径', deps: ['T6', 'T7'], estHours: 12, skills: ['写作'], milestone: '终期', deliverable: '报告初稿' },
   { code: 'T9', title: '答辩 PPT 与复现说明', deps: ['T8'], estHours: 6, skills: ['表达'], milestone: '终期', deliverable: 'PPT + README' }
 ];
+
+/**
+ * 关键路径（按 estHours 求最长链）。口径与 algo 的 /internal/graph/critical-path 一致：
+ * 逐任务取「上游最长链 + 自身工时」，严格大于才替换，因此平局时保留先遇到的（T4 与 T5 同为 14h → 取 T4）。
+ * 硬编码会随模板改动漂移（曾经写死 T3/T6/T8/T9，与真实链 T1→T2→T3→T4→T6→T8→T9 不符，
+ * 画布上的红色关键链因此断成两截），所以这里从模板自身推导。
+ * 权威口径仍以 markCriticalPath() 为准，重算见 scripts/recompute-critical-path.ts。
+ */
+const CRITICAL_CODES = ((): Set<string> => {
+  const byCode = new Map(TASK_TEMPLATE.map((t) => [t.code, t]));
+  const memo = new Map<string, { hours: number; path: string[] }>();
+  const walk = (code: string): { hours: number; path: string[] } => {
+    const hit = memo.get(code);
+    if (hit) return hit;
+    const t = byCode.get(code)!;
+    let best: { hours: number; path: string[] } = { hours: 0, path: [] };
+    for (const d of t.deps) {
+      const sub = walk(d);
+      if (sub.hours > best.hours) best = sub;
+    }
+    const res = { hours: best.hours + t.estHours, path: [...best.path, code] };
+    memo.set(code, res);
+    return res;
+  };
+  let top: { hours: number; path: string[] } = { hours: 0, path: [] };
+  for (const t of TASK_TEMPLATE) {
+    const r = walk(t.code);
+    if (r.hours > top.hours) top = r;
+  }
+  return new Set(top.path);
+})();
 
 const GLOSSARY = [
   { term: 'PSNR', definition: '峰值信噪比，衡量重建/增强图像质量', unit: 'dB' },
@@ -282,7 +315,7 @@ async function main() {
       name: '王教授',
       passwordHash,
       role: 'member',
-      studentNo: 'T001',
+      studentNo: '20210001',
       status: 'active'
     })
     .returning();
@@ -551,7 +584,8 @@ async function main() {
           courseId: course.id,
           classId: classIdByKey.get(key)!,
           planId: selectedPlanId,
-          name: `${CLASS_META[key].name.slice(-2)}-${String(gIndex % 8 + 1).padStart(2, '0')}`,
+          // 组名用班级 key（如 24-1）+ 两位序号；原来用 name.slice(-2) 得到 "-1"，组名成了 "-1-01"
+          name: `${key}-${String(gIndex % 8 + 1).padStart(2, '0')}`,
           status: 'active',
           formedAt: new Date(Date.now() - 28 * 86400000),
           milestoneProgress: wave === 'smooth' ? '0.75' : wave === 'congested' ? '0.52' : '0.38'
@@ -658,7 +692,7 @@ async function main() {
           startedAt: status === 'todo' ? null : new Date(now - (21 - i) * 86400000),
           completedAt: status === 'done' ? new Date(now - (10 - i) * 86400000) : null,
           blockedReason: status === 'blocked' ? '等待上游数据/口径对齐' : null,
-          onCriticalPath: t.code === 'T3' || t.code === 'T6' || t.code === 'T8' || t.code === 'T9',
+          onCriticalPath: CRITICAL_CODES.has(t.code),
           createdBy: g.captainId
         })
         .returning();

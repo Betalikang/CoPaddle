@@ -180,7 +180,7 @@ async function main() {
     check('三方案 + 代价说明', ev!.options.length === 3 && ev!.options.every((o) => (o.costSummary ?? '').length > 0));
     const redist = ev!.options.find((o) => o.action === 'redistribute')!;
     const adopted = await adoptOption(replan.eventId, redist.id, teacher.id);
-    check('采纳重新分配', 'ok' in adopted && adopted.ok);
+    check('采纳重新分配', 'ok' in adopted && !!adopted.ok);
   }, 50000);
 
   // ============ 06 贡献账本 + 终审（70s） ============
