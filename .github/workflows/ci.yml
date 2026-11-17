@@ -1,0 +1,150 @@
+name: CI
+
+# 门禁顺序与 docs/项目优化计划-前端优先.md 第 8 项一致：
+#   类型检查 → 离线单测 → 隔离临时库服务测试 → 生产构建 → 三角色冒烟
+#
+# 离线两步（typecheck / offline-tests）不依赖任何外部服务，任何 PR 都必须先过；
+# 需要数据库的两步在带 postgres service 的 job 里跑，用一次性临时库。
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: web
+
+jobs:
+  # 1+2：不依赖数据库的门槛，跑得最快，先挂先修
+  static-and-offline:
+    name: 类型检查与离线单测
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 类型检查
+        run: pnpm typecheck
+
+      # 只跑离线套件（tests/api、tests/lib、tests/ui），不连库
+      - name: 离线单测
+        run: pnpm test
+
+  # 3+5：需要数据库与服务进程，跑在带 postgres 的 job 里
+  integration:
+    name: 服务层测试与三角色冒烟
+    runs-on: ubuntu-latest
+    needs: static-and-offline
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: gongjiang
+          POSTGRES_PASSWORD: gongjiang
+          POSTGRES_DB: gongjiang
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      POSTGRES_URL: postgresql://gongjiang:gongjiang@localhost:5433/gongjiang
+      AUTH_SECRET: ci-only-not-a-real-secret-0000000000
+      BASE_URL: http://localhost:3000
+      # 冒烟脚本要起 dev server 才能发真实 HTTP 请求
+      SMOKE_BASE: http://localhost:3000
+      # 演示口令在 CI 里显式关掉：这里跑的是隔离库，不需要也不应该用演示账号
+      DEMO_MODE: 'false'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 建表
+        run: pnpm db:migrate
+
+      - name: 服务层测试（隔离临时库）
+        run: pnpm test:services
+
+      - name: 起应用（生产构建产物）
+        run: |
+          pnpm build
+          pnpm start &
+          npx wait-on http://localhost:3000/sign-in --timeout 120000
+
+      # 三角色冒烟：教师 / 队长 / 队员各用自己的隔离数据走主路径
+      - name: 三角色冒烟
+        run: pnpm tsx scripts/smoke-roles.ts
+
+  # 4：生产构建单独成 job，失败时能一眼看出是构建问题还是测试问题
+  build:
+    name: 生产构建
+    runs-on: ubuntu-latest
+    needs: static-and-offline
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: 安装依赖
+        run: pnpm install --frozen-lockfile
+
+      - name: 构建
+        run: pnpm build
+        env:
+          # 构建期不该需要数据库；给占位值避免代码路径报错
+          POSTGRES_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          AUTH_SECRET: ci-build-placeholder-000000000000000000
+          BASE_URL: http://localhost:3000
+          DEMO_MODE: 'false'
+
+      # P0 安全门槛的回归断言：正式构建的客户端包里不能出现演示账号口令。
+      # 这条在本地人工验过一次，放这里防止以后被人改回去。
+      - name: 断言客户端包不含演示口令
+        run: |
+          if grep -rIl "copaddle.local" .next/static 2>/dev/null; then
+            echo "::error::客户端构建产物中出现演示账号域名，演示数据泄漏进了正式构建"
+            exit 1
+          fi
+          echo "客户端包未包含演示账号：通过"
