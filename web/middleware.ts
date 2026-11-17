@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { signToken, verifyToken } from '@/lib/auth/session';
+import { sessionCookieSecure } from '@/lib/auth/cookie-policy';
 
 const protectedRoutes = '/dashboard';
 
@@ -94,7 +95,10 @@ export async function middleware(request: NextRequest) {
           expires: expiresInOneDay.toISOString(),
         }),
         httpOnly: true,
-        secure: true,
+        // 与 lib/auth/session.ts 的 setSession() 共用同一条策略；
+        // 这里曾经硬编码 secure: true，导致 COOKIE_SECURE=false 的 HTTP 部署下
+        // 「登录成功、第一次续期就被踢回登录页」。
+        secure: sessionCookieSecure(),
         sameSite: "lax",
         expires: expiresInOneDay,
       });
