@@ -3,8 +3,10 @@ import { and, eq, isNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { assertCourseRole } from '@/lib/auth/course-access';
 import { db } from '@/lib/db/drizzle';
-import { courseMemberships, groupMembers, groups } from '@/lib/db/schema';
+import { classes, courseMemberships, groupMembers, groups } from '@/lib/db/schema';
+import type { CourseRole } from '@/lib/db/schema';
 import { courseRoleSchema } from '@/lib/validation/courses';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -22,8 +24,8 @@ const patchSchema = z.object({
  */
 export async function PATCH(request: Request, { params }: Params) {
   const { id } = await params;
-  const membershipId = Number.parseInt(id, 10);
-  if (!Number.isFinite(membershipId)) {
+  const membershipId = parseId(id);
+  if (membershipId === null) {
     return NextResponse.json({ error: 'membership id 无效' }, { status: 400 });
   }
 
@@ -37,7 +39,7 @@ export async function PATCH(request: Request, { params }: Params) {
     return NextResponse.json({ error: '成员不存在' }, { status: 404 });
   }
 
-  const auth = await assertCourseRole(existing.courseId, ['teacher', 'assistant']);
+  const auth = await assertCourseRole(existing.courseId, ['teacher', 'assistant'], { write: true });
   if (!auth.ok) return auth.response;
 
   const parsed = patchSchema.safeParse(await request.json().catch(() => null));
@@ -49,6 +51,54 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   const next = parsed.data;
+
+  // zod 会剥掉未知键：空 patch 走到 db.update().set({}) 会抛
+  // 「No values to set」变成 500，这里显式拒绝。
+  if (Object.keys(next).length === 0) {
+    return NextResponse.json({ error: '没有需要修改的字段' }, { status: 400 });
+  }
+
+  const callerRole = auth.membership.role as CourseRole;
+  const isSelf = existing.userId === auth.membership.userId;
+
+  // 任何人都不能改自己的角色/状态：否则助教可自我提权成教师，教师也能自降
+  if (isSelf && (next.role !== undefined || next.status !== undefined)) {
+    return NextResponse.json(
+      { error: '不能修改自己的角色或状态' },
+      { status: 403 }
+    );
+  }
+
+  // 助教只能管学生（队长/成员）：不能授予教师/助教，也不能碰教师/助教的记录
+  if (callerRole === 'assistant') {
+    if (next.role === 'teacher' || next.role === 'assistant') {
+      return NextResponse.json(
+        { error: '助教不能授予教师或助教角色' },
+        { status: 403 }
+      );
+    }
+    if (existing.role === 'teacher' || existing.role === 'assistant') {
+      return NextResponse.json(
+        { error: '助教不能修改教师或助教的成员记录' },
+        { status: 403 }
+      );
+    }
+  }
+
+  // 班级必须属于本课程：否则能把学生挂到别的课程的班级上
+  if (next.classId !== undefined && next.classId !== null) {
+    const [klass] = await db
+      .select({ id: classes.id })
+      .from(classes)
+      .where(
+        and(eq(classes.id, next.classId), eq(classes.courseId, existing.courseId))
+      )
+      .limit(1);
+    if (!klass) {
+      return NextResponse.json({ error: '班级不属于该课程' }, { status: 400 });
+    }
+  }
+
   const roleChanged = next.role !== undefined && next.role !== existing.role;
 
   if (roleChanged) {

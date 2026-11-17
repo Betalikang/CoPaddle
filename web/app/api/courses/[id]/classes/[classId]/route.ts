@@ -5,6 +5,7 @@ import { db } from '@/lib/db/drizzle';
 import { classes } from '@/lib/db/schema';
 import { deleteClass, getClassCourseId, updateClass } from '@/lib/services/classes';
 import { z } from 'zod';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string; classId: string }> };
 
@@ -13,7 +14,7 @@ async function authorize(classId: number) {
   if (courseId === null) {
     return { ok: false as const, response: NextResponse.json({ error: '班级不存在' }, { status: 404 }) };
   }
-  const auth = await assertCourseRole(courseId, ['teacher', 'assistant']);
+  const auth = await assertCourseRole(courseId, ['teacher', 'assistant'], { write: true });
   if (!auth.ok) return { ok: false as const, response: auth.response };
   return { ok: true as const, courseId };
 }
@@ -28,8 +29,8 @@ const updateSchema = z.object({
 /** 改班级信息（与名单管理同一套 classId）。 */
 export async function PATCH(request: Request, { params }: Params) {
   const { classId: cid } = await params;
-  const classId = Number.parseInt(cid, 10);
-  if (!Number.isFinite(classId)) {
+  const classId = parseId(cid);
+  if (classId === null) {
     return NextResponse.json({ error: '班级 id 无效' }, { status: 400 });
   }
   const auth = await authorize(classId);
@@ -50,8 +51,8 @@ export async function PATCH(request: Request, { params }: Params) {
 /** 删除班级：成员回「未分班」，该班小组解除归属；有进行中小组则拒绝。 */
 export async function DELETE(_request: Request, { params }: Params) {
   const { classId: cid } = await params;
-  const classId = Number.parseInt(cid, 10);
-  if (!Number.isFinite(classId)) {
+  const classId = parseId(cid);
+  if (classId === null) {
     return NextResponse.json({ error: '班级 id 无效' }, { status: 400 });
   }
   const auth = await authorize(classId);

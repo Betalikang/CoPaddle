@@ -6,14 +6,15 @@ import { db } from '@/lib/db/drizzle';
 import { groups } from '@/lib/db/schema';
 import { generateTaskPlan } from '@/lib/services/tasks';
 import { generatePlanSchema } from '@/lib/validation/tasks';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
 /** 生成任务计划（规格书 B-08：队长/教师触发，LLM 调用点 1）。 */
 export async function POST(request: Request, { params }: Params) {
   const { id } = await params;
-  const groupId = Number.parseInt(id, 10);
-  if (!Number.isFinite(groupId)) {
+  const groupId = parseId(id);
+  if (groupId === null) {
     return NextResponse.json({ error: '小组 id 无效' }, { status: 400 });
   }
 
@@ -26,7 +27,7 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: '小组不存在' }, { status: 404 });
   }
   // 上传作业要求并触发拆解：教师/助教/队长均可（规格书 S5）
-  const auth = await assertCourseRole(group.courseId, ['teacher', 'assistant', 'captain']);
+  const auth = await assertCourseRole(group.courseId, ['teacher', 'assistant', 'captain'], { write: true });
   if (!auth.ok) return auth.response;
   // 组级归属：队长/队员必须是在册组员（规格书 S5，防组间 IDOR）
   if (!(await assertGroupAccess(groupId, auth.user, auth.membership.role))) {
@@ -46,9 +47,13 @@ export async function POST(request: Request, { params }: Params) {
     );
   }
   if ('aiUnavailable' in result) {
-    // 规格书 S4.10：AI 暂不可用，提供手工创建入口
+    // 规格书 S4.10：AI 暂不可用，提供手工创建入口。
+    // 手工入口是真实存在的（POST /api/groups/[id]/tasks），不是空头承诺。
     return NextResponse.json(
-      { error: `AI 暂不可用：${result.message}。可手工创建任务。`, aiUnavailable: true },
+      {
+        error: `AI 暂不可用：${result.message}。可以用「手工新增任务」继续拆解，或稍后重试。`,
+        aiUnavailable: true
+      },
       { status: 503 }
     );
   }

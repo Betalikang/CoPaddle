@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { assertCourseRole } from '@/lib/auth/course-access';
-import { assertGroupAccess } from '@/lib/auth/task-access';
+import { assertGroupAccess, guardGroup } from '@/lib/auth/task-access';
 import { db } from '@/lib/db/drizzle';
 import { groups } from '@/lib/db/schema';
 import { detectConflicts, listConflicts } from '@/lib/services/conflicts';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -20,8 +21,8 @@ async function getGroupCourseId(groupId: number): Promise<number | null> {
 /** 冲突列表（组内可读）。 */
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
-  const groupId = Number.parseInt(id, 10);
-  if (!Number.isFinite(groupId)) {
+  const groupId = parseId(id);
+  if (groupId === null) {
     return NextResponse.json({ error: '小组 id 无效' }, { status: 400 });
   }
 
@@ -43,8 +44,8 @@ export async function GET(_request: Request, { params }: Params) {
 /** 手动触发冲突检测（队长/教师；系统也会定时自动跑）。 */
 export async function POST(_request: Request, { params }: Params) {
   const { id } = await params;
-  const groupId = Number.parseInt(id, 10);
-  if (!Number.isFinite(groupId)) {
+  const groupId = parseId(id);
+  if (groupId === null) {
     return NextResponse.json({ error: '小组 id 无效' }, { status: 400 });
   }
 
@@ -52,8 +53,11 @@ export async function POST(_request: Request, { params }: Params) {
   if (courseId === null) {
     return NextResponse.json({ error: '小组不存在' }, { status: 404 });
   }
-  const auth = await assertCourseRole(courseId, ['teacher', 'assistant', 'captain']);
+  const auth = await assertCourseRole(courseId, ['teacher', 'assistant', 'captain'], { write: true });
   if (!auth.ok) return auth.response;
+  // 组级归属：队长只能检测自己组（GET 有、POST 原来漏了 → 可向别组写冲突）
+  const denied = await guardGroup(groupId, auth);
+  if (denied) return denied;
 
   const result = await detectConflicts(groupId, 'manual');
   return NextResponse.json(result);

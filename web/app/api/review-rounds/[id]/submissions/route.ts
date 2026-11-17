@@ -5,6 +5,7 @@ import { assertCourseRole } from '@/lib/auth/course-access';
 import { db } from '@/lib/db/drizzle';
 import { peerReviewRounds } from '@/lib/db/schema';
 import { submitReview } from '@/lib/services/peer-reviews';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -17,8 +18,8 @@ const submitSchema = z.object({
 /** 提交评价（五维评分 + 文字评语；提交后不可改——覆盖写需教师重置，S6 从简）。 */
 export async function POST(request: Request, { params }: Params) {
   const { id } = await params;
-  const roundId = Number.parseInt(id, 10);
-  if (!Number.isFinite(roundId)) {
+  const roundId = parseId(id);
+  if (roundId === null) {
     return NextResponse.json({ error: '轮次 id 无效' }, { status: 400 });
   }
 
@@ -30,7 +31,7 @@ export async function POST(request: Request, { params }: Params) {
   if (!round) {
     return NextResponse.json({ error: '轮次不存在' }, { status: 404 });
   }
-  const auth = await assertCourseRole(round.courseId, ['captain', 'member', 'teacher', 'assistant']);
+  const auth = await assertCourseRole(round.courseId, ['captain', 'member', 'teacher', 'assistant'], { write: true });
   if (!auth.ok) return auth.response;
 
   const parsed = submitSchema.safeParse(await request.json().catch(() => null));

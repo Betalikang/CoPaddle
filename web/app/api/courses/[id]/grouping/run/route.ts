@@ -2,18 +2,19 @@ import { NextResponse } from 'next/server';
 import { assertCourseRole } from '@/lib/auth/course-access';
 import { AlgoServiceError } from '@/lib/algo/client';
 import { runGrouping } from '@/lib/services/grouping';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
 /** 触发生成分组方案（教师/助教）。同步求解 ≤10s，超时走贪心兜底。 */
 export async function POST(_request: Request, { params }: Params) {
   const { id } = await params;
-  const courseId = Number.parseInt(id, 10);
-  if (!Number.isFinite(courseId)) {
+  const courseId = parseId(id);
+  if (courseId === null) {
     return NextResponse.json({ error: '课程 id 无效' }, { status: 400 });
   }
 
-  const auth = await assertCourseRole(courseId, ['teacher', 'assistant']);
+  const auth = await assertCourseRole(courseId, ['teacher', 'assistant'], { write: true });
   if (!auth.ok) return auth.response;
 
   try {

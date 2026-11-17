@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { assertCourseRole } from '@/lib/auth/course-access';
-import { assertGroupAccess } from '@/lib/auth/task-access';
+import { assertGroupAccess, guardGroup } from '@/lib/auth/task-access';
 import { db } from '@/lib/db/drizzle';
 import { groups } from '@/lib/db/schema';
 import { AlgoServiceError } from '@/lib/algo/client';
 import { computeGroupContributions, getGroupLedger } from '@/lib/services/contributions';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -21,8 +22,8 @@ async function getGroupCourseId(groupId: number): Promise<number | null> {
 /** 全组账本（组内可读；他人区间默认不可见由前端按权限裁剪，规格书 S5）。 */
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
-  const groupId = Number.parseInt(id, 10);
-  if (!Number.isFinite(groupId)) {
+  const groupId = parseId(id);
+  if (groupId === null) {
     return NextResponse.json({ error: '小组 id 无效' }, { status: 400 });
   }
 
@@ -44,8 +45,8 @@ export async function GET(_request: Request, { params }: Params) {
 /** 触发贡献计算（队长；提交终稿后也应自动触发，S6 期接定时任务）。 */
 export async function POST(_request: Request, { params }: Params) {
   const { id } = await params;
-  const groupId = Number.parseInt(id, 10);
-  if (!Number.isFinite(groupId)) {
+  const groupId = parseId(id);
+  if (groupId === null) {
     return NextResponse.json({ error: '小组 id 无效' }, { status: 400 });
   }
 
@@ -53,8 +54,11 @@ export async function POST(_request: Request, { params }: Params) {
   if (courseId === null) {
     return NextResponse.json({ error: '小组不存在' }, { status: 404 });
   }
-  const auth = await assertCourseRole(courseId, ['teacher', 'assistant', 'captain']);
+  const auth = await assertCourseRole(courseId, ['teacher', 'assistant', 'captain'], { write: true });
   if (!auth.ok) return auth.response;
+  // 组级归属：队长只能给自己组算贡献（GET 有、POST 原来漏了 → 可向别组写快照）
+  const denied = await guardGroup(groupId, auth);
+  if (denied) return denied;
 
   try {
     const result = await computeGroupContributions(groupId);

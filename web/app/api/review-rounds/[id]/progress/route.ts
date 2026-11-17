@@ -4,14 +4,15 @@ import { assertCourseRole } from '@/lib/auth/course-access';
 import { db } from '@/lib/db/drizzle';
 import { peerReviewRounds } from '@/lib/db/schema';
 import { roundProgress } from '@/lib/services/peer-reviews';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
 /** 完成率统计（教师端）。 */
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
-  const roundId = Number.parseInt(id, 10);
-  if (!Number.isFinite(roundId)) {
+  const roundId = parseId(id);
+  if (roundId === null) {
     return NextResponse.json({ error: '轮次 id 无效' }, { status: 400 });
   }
   const [round] = await db

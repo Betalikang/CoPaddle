@@ -19,8 +19,13 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: '未登录' }, { status: 401 });
   }
-  const body = await request.json().catch(() => ({}));
-  const ids = body.ids === 'all' || !Array.isArray(body.ids) ? 'all' : (body.ids as number[]);
+  const body = await request.json().catch(() => null);
+  // 只有显式传 'all' 才全标已读；坏 body / 缺字段一律 400，
+  // 原来 `!Array.isArray(body.ids)` 会把「请求体写错」当成「全部已读」。
+  if (body?.ids !== 'all' && !Array.isArray(body?.ids)) {
+    return NextResponse.json({ error: '参数错误：ids 需为数组或 "all"' }, { status: 400 });
+  }
+  const ids = body.ids === 'all' ? 'all' : (body.ids as number[]);
   const result = await markRead(user.id, ids);
   return NextResponse.json(result);
 }

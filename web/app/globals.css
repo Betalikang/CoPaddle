@@ -1,233 +1,122 @@
 @import "tailwindcss";
-/*
-  ---break---
-*/
-@custom-variant dark (&:is(.dark *));
-
 @import "tw-animate-css";
 
-@variant dark (&:is(.dark *));
-
-@theme {
-  --color-background: hsl(var(--background));
-  --color-foreground: hsl(var(--foreground));
-
-  --color-card: hsl(var(--card));
-  --color-card-foreground: hsl(var(--card-foreground));
-
-  --color-popover: hsl(var(--popover));
-  --color-popover-foreground: hsl(var(--popover-foreground));
-
-  --color-primary: hsl(var(--primary));
-  --color-primary-foreground: hsl(var(--primary-foreground));
-
-  --color-secondary: hsl(var(--secondary));
-  --color-secondary-foreground: hsl(var(--secondary-foreground));
-
-  --color-muted: hsl(var(--muted));
-  --color-muted-foreground: hsl(var(--muted-foreground));
-
-  --color-accent: hsl(var(--accent));
-  --color-accent-foreground: hsl(var(--accent-foreground));
-
-  --color-destructive: hsl(var(--destructive));
-  --color-destructive-foreground: hsl(var(--destructive-foreground));
-
-  --color-border: hsl(var(--border));
-  --color-input: hsl(var(--input));
-  --color-ring: hsl(var(--ring));
-
-  --color-chart-1: hsl(var(--chart-1));
-  --color-chart-2: hsl(var(--chart-2));
-  --color-chart-3: hsl(var(--chart-3));
-  --color-chart-4: hsl(var(--chart-4));
-  --color-chart-5: hsl(var(--chart-5));
-
-  --color-sidebar: hsl(var(--sidebar-background));
-  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
-  --color-sidebar-primary: hsl(var(--sidebar-primary));
-  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
-  --color-sidebar-accent: hsl(var(--sidebar-accent));
-  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
-  --color-sidebar-border: hsl(var(--sidebar-border));
-  --color-sidebar-ring: hsl(var(--sidebar-ring));
-
-  --radius-lg: var(--radius);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-sm: calc(var(--radius) - 4px);
-}
-
 /*
-  The default border color has changed to `currentColor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
+  主题变量只在这里定义一次。
+  历史遗留：shadcn CLI 反复初始化曾把三套变量（@theme + triplet + hsl()）叠在同一文件里，
+  靠「后写的覆盖先写的」才勉强生效；侧栏一套变量从未被任何组件使用，已删除。
 
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
+  ===== 视觉方向：一份可以被查看的调度记录 =====
+  这套界面上一版是「白底 + 三张同构圆角卡 + 橙色点缀」，也就是任何 SaaS 后台的默认样子。
+  问题不在好不好看，而在于它没有表达产品是什么：CoPaddle 的核心资产是**约束求解的分组方案、
+  任务 DAG、贡献区间账本**——都是可以摊开逐条核对的东西。
+
+  所以底色不用中性白，改成偏冷的「纸」(200° 冷灰白)，文字用带蓝的墨色而不是 #0B0B0B 的近黑，
+  强调色只留一支桨橙，并且只用在「需要看的那一处」。整套色板靠 WCAG 反推而来，
+  不是凭感觉调的——下面每组 token 后面都标了实测对比度。
+
+  为什么强调色要压暗到 40% 亮度：上一版的 --brand 是 hsl(25 95% 53%)，
+  它当文字色铺在白底上只有 **2.78:1**，全站每一处 `text-brand` 其实都不过 AA。
+  现在换成 hsl(18 92% 40%)：纸底 4.82:1、白底 5.13:1，白字压在它上面也是 5.13:1，
+  一个值同时满足「当文字」和「当填充」。改色前请先复算，别再退回亮橙。
 */
-@layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentColor);
-  }
-}
 
-@layer utilities {
-  body {
-    font-family: "Manrope", Arial, Helvetica, sans-serif;
-  }
-}
-
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-}
-
-/*
-  ---break---
-*/
+@custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: hsl(0 0% 100%);
-  --foreground: hsl(240 10% 3.9%);
+  /* 纸与墨：对比 15.5:1 */
+  --background: hsl(200 30% 97%);
+  --foreground: hsl(206 44% 12%);
+  /* 卡片是纯白，靠「比纸更亮」而不是靠阴影浮起来 */
   --card: hsl(0 0% 100%);
-  --card-foreground: hsl(240 10% 3.9%);
+  --card-foreground: hsl(206 44% 12%);
   --popover: hsl(0 0% 100%);
-  --popover-foreground: hsl(240 10% 3.9%);
-  --primary: hsl(240 5.9% 10%);
-  --primary-foreground: hsl(0 0% 98%);
-  --secondary: hsl(240 4.8% 95.9%);
-  --secondary-foreground: hsl(240 5.9% 10%);
-  --muted: hsl(240 4.8% 95.9%);
-  --muted-foreground: hsl(240 3.8% 46.1%);
-  --accent: hsl(240 4.8% 95.9%);
-  --accent-foreground: hsl(240 5.9% 10%);
-  --destructive: hsl(0 84.2% 60.2%);
-  --destructive-foreground: hsl(0 0% 98%);
-  --border: hsl(240 5.9% 90%);
-  --input: hsl(240 5.9% 90%);
-  --ring: hsl(240 10% 3.9%);
-  --chart-1: hsl(12 76% 61%);
-  --chart-2: hsl(173 58% 39%);
-  --chart-3: hsl(197 37% 24%);
-  --chart-4: hsl(43 74% 66%);
-  --chart-5: hsl(27 87% 67%);
-  --radius: 0.6rem;
+  --popover-foreground: hsl(206 44% 12%);
+  /* 主色 = 墨色。按钮默认是墨底浅字（15.8:1），不是品牌橙：
+     一屏里的橙色必须稀缺，否则「需要看的那一处」就不成立了。 */
+  --primary: hsl(206 44% 12%);
+  --primary-foreground: hsl(200 30% 98%);
+  --secondary: hsl(200 28% 94%);
+  --secondary-foreground: hsl(206 44% 12%);
+  --muted: hsl(200 28% 94%);
+  --muted-foreground: hsl(205 16% 40%);
+  --accent: hsl(200 28% 93%);
+  --accent-foreground: hsl(206 44% 12%);
+  --destructive: hsl(0 72% 45%);
+  --destructive-foreground: hsl(0 0% 100%);
+  --border: hsl(203 20% 87%);
+  --input: hsl(203 20% 84%);
+  --ring: hsl(206 44% 12%);
+  /* 桨橙：纸底 4.82:1 / 白底 5.13:1 / 白字压其上 5.13:1 */
+  --brand: hsl(18 92% 40%);
+  --brand-foreground: hsl(0 0% 100%);
+  /* 桨橙 10% 淡底，用于「值得注意但不是错误」的底纹 */
+  --brand-soft: hsl(18 92% 40% / 0.1);
+  /*
+    语义色（成功 / 警告 / 危险）与 --destructive 分工不同：
+    --destructive 是「填充色」，配红底白字的按钮和徽章；
+    这三个是「文字色」，取值按 WCAG AA 反推——浅色取 700 档、深色取 400 档，
+    这样同一个 `text-success` 在两种主题下都过 4.5:1，不必再写 dark: 变体。
+    实测（纸底）：success 5.46 / warning 5.66 / danger 6.07。
+  */
+  --success: hsl(158 74% 26%);
+  --warning: hsl(28 92% 32%);
+  --danger: hsl(0 72% 42%);
+  /* 图表：白底全部 >= 3.89:1，色相拉开（暖橙 / 青 / 深蓝 / 琥珀 / 红），
+     不只是深浅差一档——色盲与灰度打印下也能区分 */
+  --chart-1: hsl(18 88% 42%);
+  --chart-2: hsl(190 85% 28%);
+  --chart-3: hsl(206 44% 30%);
+  --chart-4: hsl(35 92% 38%);
+  --chart-5: hsl(0 72% 45%);
+  /* 圆角收紧：上一版 0.6rem 让所有层级看起来一样软。
+     账本/表格类界面用 0.375rem 更利落，按钮与输入框共用同一个值。 */
+  --radius: 0.375rem;
 }
-
-/*
-  ---break---
-*/
 
 .dark {
-  --background: hsl(240 10% 3.9%);
-  --foreground: hsl(0 0% 98%);
-  --card: hsl(240 10% 3.9%);
-  --card-foreground: hsl(0 0% 98%);
-  --popover: hsl(240 10% 3.9%);
-  --popover-foreground: hsl(0 0% 98%);
-  --primary: hsl(0 0% 98%);
-  --primary-foreground: hsl(240 5.9% 10%);
-  --secondary: hsl(240 3.7% 15.9%);
-  --secondary-foreground: hsl(0 0% 98%);
-  --muted: hsl(240 3.7% 15.9%);
-  --muted-foreground: hsl(240 5% 64.9%);
-  --accent: hsl(240 3.7% 15.9%);
-  --accent-foreground: hsl(0 0% 98%);
-  --destructive: hsl(0 62.8% 30.6%);
-  --destructive-foreground: hsl(0 0% 98%);
-  --border: hsl(240 3.7% 15.9%);
-  --input: hsl(240 3.7% 15.9%);
-  --ring: hsl(240 4.9% 83.9%);
-  --chart-1: hsl(220 70% 50%);
-  --chart-2: hsl(160 60% 45%);
-  --chart-3: hsl(30 80% 55%);
-  --chart-4: hsl(280 65% 60%);
-  --chart-5: hsl(340 75% 55%);
+  /* 深色不是把浅色反过来，而是「夜里的仪表盘」：底比黑更蓝，卡片比底亮一档 */
+  --background: hsl(205 42% 8%);
+  --foreground: hsl(200 30% 96%);
+  --card: hsl(205 34% 12%);
+  --card-foreground: hsl(200 30% 96%);
+  --popover: hsl(205 34% 12%);
+  --popover-foreground: hsl(200 30% 96%);
+  --primary: hsl(200 30% 96%);
+  --primary-foreground: hsl(205 42% 8%);
+  --secondary: hsl(205 30% 16%);
+  --secondary-foreground: hsl(200 30% 96%);
+  --muted: hsl(205 30% 16%);
+  --muted-foreground: hsl(203 18% 64%);
+  --accent: hsl(205 30% 18%);
+  --accent-foreground: hsl(200 30% 96%);
+  --destructive: hsl(0 84% 68%);
+  --destructive-foreground: hsl(205 42% 8%);
+  --border: hsl(205 24% 20%);
+  --input: hsl(205 24% 24%);
+  --ring: hsl(200 30% 96%);
+  /* 深色下桨橙提亮到 60%：卡片上 7.0:1，墨底字压其上 7.76:1 */
+  --brand: hsl(26 96% 60%);
+  --brand-foreground: hsl(205 42% 8%);
+  --brand-soft: hsl(26 96% 60% / 0.14);
+  --success: hsl(158 62% 58%);
+  --warning: hsl(35 96% 62%);
+  --danger: hsl(0 84% 68%);
+  --chart-1: hsl(26 96% 60%);
+  --chart-2: hsl(186 72% 52%);
+  --chart-3: hsl(205 40% 72%);
+  --chart-4: hsl(38 96% 62%);
+  --chart-5: hsl(0 84% 70%);
 }
 
 /*
-  ---break---
+  深色模式的 destructive 原先沿用 shadcn 默认值 hsl(0 62.8% 30.6%)。
+  那个亮度是给「红色填充按钮 + 白字」调的，但本站把 --destructive 大量当作
+  **文字色**用（30 处 `text-destructive` 的错误提示）。30.6% 亮度在 #0a0a0b
+  背景上对比度只有约 2:1，等于看不见。这里抬到 red-400 一档（实测卡片上 5.49:1）：
+  - `text-destructive` 作文字：约 5.5:1，过 AA；
+  - 按钮/徽章的 `dark:bg-destructive/60` 上深色字：约 6.1:1。
+  若哪天要改回去，先数一遍 text-destructive 的用处。
 */
 
 @theme inline {
@@ -250,26 +139,141 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-}
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
 
-/*
-  ---break---
-*/
+  /* 字阶：中文没有 x-height 优势，靠字号与字重拉开层级，
+     行高整体比西文排版紧一档（中文方框感更强，1.7 会散） */
+  --text-display: clamp(2.35rem, 6.2vw, 4.1rem);
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.02em;
+  --text-title: clamp(1.5rem, 2.6vw, 2rem);
+  --text-title--line-height: 1.25;
+  --text-title--letter-spacing: -0.01em;
+}
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
+  /*
+    Manrope 只带 latin 子集，中文原先全靠浏览器兜底（Windows 上会落到宋体）。
+    这里显式给出中文首选，标题与正文不再观感割裂。
+  */
   body {
     @apply bg-background text-foreground;
+    font-family:
+      "Manrope",
+      "PingFang SC",
+      "Microsoft YaHei",
+      "Noto Sans SC",
+      system-ui,
+      sans-serif;
+    /* 中文正文行高略高于西文常用值：方块字没有下行字母撑开视觉密度 */
+    line-height: 1.65;
+  }
+
+  /* 标题用同一支字体的更重字重 + 更紧字距来建立层级，
+     而不是换字体：中文 webfont 动辄数 MB，靠字重/字号/字距才是可交付的做法 */
+  h1,
+  h2,
+  h3 {
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  /* 数字对齐：区间、分数、工时在表格里不要跳动 */
+  .tabular-nums,
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /*
+    键盘可达性兜底。shadcn 的 Button/Input/Select 自带 focus-visible:ring，
+    但 next/link 的 <a>、原生 <select>、面包屑链接什么都没有，
+    Tab 走过去完全看不到焦点落点。这里只补这些「裸」元素；
+    已自带 focus-visible:ring 的组件用 :not() 排除，免得环外面再套一个框。
+  */
+  a:focus-visible:not([class*='focus-visible:ring']):not([class*='focus-visible:outline']),
+  select:focus-visible,
+  summary:focus-visible {
+    @apply outline-ring/60 rounded-sm outline-2 outline-offset-2;
+  }
+
+  /* 首选减少动效的用户：hero 的航道线直接显示终态，不要先缩再展 */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  /*
+    全站唯一的一处进场动效：落地页航道线从左展开。
+    刻意只做这一下——每段都 fade-in-up、每张卡都 hover 抬起，是生成式页面的典型痕迹。
+  */
+  @keyframes lane-draw {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  .animate-lane {
+    transform-origin: left center;
+    animation: lane-draw 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* 航道上的节点：延迟一点，让人看见「线先走，点再亮」 */
+  @keyframes lane-dot {
+    from {
+      opacity: 0;
+      transform: scale(0.4);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .animate-lane-dot {
+    animation: lane-dot 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /*
+    分组工作台的雷达图。recharts 把颜色写成 SVG 呈现属性（presentation attribute），
+    而呈现属性的优先级低于任何 CSS 规则，所以这里能用一条规则盖住它——
+    这正是我们要的：颜色必须跟着主题走。
+    原先组件里写死 stroke="#f97316"（旧品牌橙）：深色主题下 --brand 会提亮到 60% 的橙，
+    写死的值在夜底上偏刺眼，而且换色板时它不会跟着变——改色那天最容易漏掉的一处。
+    填充透明度比原来（0.35）略降，是因为新橙本身更深，0.35 会把网格线糊掉。
+  */
+  .recharts-radar-polygon {
+    stroke: var(--brand);
+    fill: var(--brand);
+    fill-opacity: 0.24;
+    stroke-width: 2;
   }
 }

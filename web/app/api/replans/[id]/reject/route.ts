@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { assertCourseRole } from '@/lib/auth/course-access';
+import { assertGroupAccess } from '@/lib/auth/task-access';
 import { db } from '@/lib/db/drizzle';
 import { groups, replanEvents } from '@/lib/db/schema';
 import { rejectEvent } from '@/lib/services/replan';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -15,8 +17,8 @@ const rejectSchema = z.object({
 /** 拒绝方案（必须填理由，进审计；队长/教师）。 */
 export async function POST(request: Request, { params }: Params) {
   const { id } = await params;
-  const eventId = Number.parseInt(id, 10);
-  if (!Number.isFinite(eventId)) {
+  const eventId = parseId(id);
+  if (eventId === null) {
     return NextResponse.json({ error: '事件 id 无效' }, { status: 400 });
   }
 
@@ -36,8 +38,12 @@ export async function POST(request: Request, { params }: Params) {
   if (!group) {
     return NextResponse.json({ error: '事件不存在' }, { status: 404 });
   }
-  const auth = await assertCourseRole(group.courseId, ['teacher', 'assistant', 'captain']);
+  const auth = await assertCourseRole(group.courseId, ['teacher', 'assistant', 'captain'], { write: true });
   if (!auth.ok) return auth.response;
+  // 组级归属：队长只能拒绝自己组的事件（原来只判课程角色 → 可跨组驳回）
+  if (!(await assertGroupAccess(event.groupId, auth.user, auth.membership.role))) {
+    return NextResponse.json({ error: '不属于该小组' }, { status: 403 });
+  }
 
   const parsed = rejectSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {

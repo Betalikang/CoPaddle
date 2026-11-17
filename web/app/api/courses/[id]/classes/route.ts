@@ -1,10 +1,11 @@
 import { NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { assertCourseRole } from '@/lib/auth/course-access';
 import { db } from '@/lib/db/drizzle';
 import { classes } from '@/lib/db/schema';
 import { createClass, listClasses, updateClass } from '@/lib/services/classes';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -28,8 +29,8 @@ const updateSchema = z.object({
  */
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
-  const courseId = Number.parseInt(id, 10);
-  if (!Number.isFinite(courseId)) {
+  const courseId = parseId(id);
+  if (courseId === null) {
     return NextResponse.json({ error: '课程 id 无效' }, { status: 400 });
   }
 
@@ -42,12 +43,12 @@ export async function GET(_request: Request, { params }: Params) {
 
 export async function POST(request: Request, { params }: Params) {
   const { id } = await params;
-  const courseId = Number.parseInt(id, 10);
-  if (!Number.isFinite(courseId)) {
+  const courseId = parseId(id);
+  if (courseId === null) {
     return NextResponse.json({ error: '课程 id 无效' }, { status: 400 });
   }
 
-  const auth = await assertCourseRole(courseId, ['teacher', 'assistant']);
+  const auth = await assertCourseRole(courseId, ['teacher', 'assistant'], { write: true });
   if (!auth.ok) return auth.response;
 
   const parsed = createSchema.safeParse(await request.json().catch(() => null));
@@ -58,31 +59,40 @@ export async function POST(request: Request, { params }: Params) {
   try {
     const row = await createClass(courseId, parsed.data);
     return NextResponse.json({ class: row }, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: '班级名已存在' }, { status: 409 });
+  } catch (err) {
+    // 只有唯一键冲突才是「重名」，其他数据库错误不能一并报成 409
+    if (isUniqueViolation(err)) {
+      return NextResponse.json({ error: '班级名已存在' }, { status: 409 });
+    }
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : '新建班级失败' },
+      { status: 500 }
+    );
   }
 }
 
 export async function PATCH(request: Request, { params }: Params) {
   const { id } = await params;
-  const courseId = Number.parseInt(id, 10);
-  if (!Number.isFinite(courseId)) {
+  const courseId = parseId(id);
+  if (courseId === null) {
     return NextResponse.json({ error: '课程 id 无效' }, { status: 400 });
   }
 
-  const auth = await assertCourseRole(courseId, ['teacher', 'assistant']);
+  const auth = await assertCourseRole(courseId, ['teacher', 'assistant'], { write: true });
   if (!auth.ok) return auth.response;
 
   const body = await request.json().catch(() => null);
-  const classId = Number.parseInt(String(body?.classId ?? ''), 10);
-  if (!Number.isFinite(classId)) {
+  const classId = parseId(
+    typeof body?.classId === 'number' ? String(body.classId) : (body?.classId as string | undefined)
+  );
+  if (classId === null) {
     return NextResponse.json({ error: '缺少 classId' }, { status: 400 });
   }
 
   const [owned] = await db
     .select({ id: classes.id })
     .from(classes)
-    .where(eq(classes.id, classId))
+    .where(and(eq(classes.id, classId), eq(classes.courseId, courseId)))
     .limit(1);
   if (!owned) {
     return NextResponse.json({ error: '班级不存在' }, { status: 404 });
@@ -96,7 +106,23 @@ export async function PATCH(request: Request, { params }: Params) {
   try {
     const row = await updateClass(classId, parsed.data);
     return NextResponse.json({ class: row });
-  } catch {
-    return NextResponse.json({ error: '班级名已存在' }, { status: 409 });
+  } catch (err) {
+    if (isUniqueViolation(err)) {
+      return NextResponse.json({ error: '班级名已存在' }, { status: 409 });
+    }
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : '保存班级失败' },
+      { status: 500 }
+    );
   }
+}
+
+/** postgres 唯一键冲突（23505）。 */
+function isUniqueViolation(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    ((err as { code?: string }).code === '23505' ||
+      (err as { cause?: { code?: string } }).cause?.code === '23505')
+  );
 }

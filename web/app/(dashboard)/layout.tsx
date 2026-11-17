@@ -17,15 +17,14 @@ import { signOut } from '@/app/(login)/actions';
 import { useRouter } from 'next/navigation';
 import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+import { swrFetcher } from '@/lib/api/client';
 
 /** 未读小红点（登录后才显示）。 */
 function NotificationDot() {
-  const { data } = useSWR<{ unread: number }>('/api/notifications', fetcher);
+  const { data } = useSWR<{ unread: number }>('/api/notifications', swrFetcher);
   if (!data || data.unread === 0) return null;
   return (
-    <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-red-500" />
+    <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive" />
   );
 }
 
@@ -35,7 +34,7 @@ function UserMenu() {
   // hydration mismatch：挂载前只渲染同尺寸占位，挂载后再渲染真实组件
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const { data: user } = useSWR<User>('/api/user', swrFetcher);
   const router = useRouter();
 
   async function handleSignOut() {
@@ -96,15 +95,25 @@ function UserMenu() {
 
 function Header() {
   return (
-    <header className="border-b border-gray-400 dark:border-gray-800">
-      <div className="px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-        <Link href="/" className="flex items-center">
-          <BrandMark className="h-7 w-7 text-orange-500" />
-          <span className="ml-2 text-xl font-semibold text-gray-900 dark:text-gray-100">共桨 CoPaddle</span>
+    // 页头固定 56px，但不再只是一条白带：
+    // 顶部压一条 2px 桨橙细线，全站每一页都带上同一个「装订线」，滚动时也不丢。
+    <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
+      <div className="h-0.5 w-full bg-brand" aria-hidden />
+      {/* 内层减去 2px：页头总高仍是 56px，侧栏的 lg:top-14 与 h-[calc(100dvh-3.5rem)] 不用改 */}
+      <div className="flex h-[calc(3.5rem-2px)] items-center justify-between px-4 sm:px-6 lg:px-8">
+        <Link href="/" className="flex items-center gap-2">
+          <BrandMark className="h-7 w-7 text-brand" />
+          <span className="text-lg font-semibold tracking-tight">共桨 CoPaddle</span>
+          <span className="ml-1 hidden text-xs text-muted-foreground sm:inline">
+            AI 小组协作调度系统
+          </span>
         </Link>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center gap-1.5">
           <ThemeToggle />
-          <Link href="/dashboard/notifications" className="relative rounded-full p-2 hover:bg-accent">
+          <Link
+            href="/dashboard/notifications"
+            className="relative rounded-sm p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
             <Bell className="h-5 w-5" />
             <span className="sr-only">通知</span>
             <NotificationDot />
@@ -120,7 +129,7 @@ function Header() {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <section className="flex flex-col min-h-screen">
+    <section className="flex min-h-[100dvh] flex-col">
       <Header />
       {children}
     </section>

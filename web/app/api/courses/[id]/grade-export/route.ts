@@ -13,25 +13,80 @@ import {
   tasks,
   users,
 } from '@/lib/db/schema';
+import { parseId } from '@/lib/api/params';
+
+/** 导出列白名单：key 与前端 `grades/page.tsx` 的 COLUMNS 一一对应，顺序即默认列顺序。 */
+const COLUMN_DEFS = [
+  { key: 'student_no', label: '学号' },
+  { key: 'name', label: '姓名' },
+  { key: 'group', label: '小组' },
+  { key: 'duty', label: '角色' },
+  { key: 'low', label: '贡献区间低' },
+  { key: 'high', label: '贡献区间高' },
+  { key: 'review_low', label: '终审低' },
+  { key: 'review_high', label: '终审高' },
+  { key: 'peer_median', label: '互评中位数' },
+  { key: 'task_rate', label: '任务完成率' },
+] as const;
+
+type ColumnKey = (typeof COLUMN_DEFS)[number]['key'];
+
+const DEFAULT_COLUMNS: ColumnKey[] = COLUMN_DEFS.map((c) => c.key);
+
+/**
+ * 解析 `?cols=name,student_no`：只保留白名单内的列，白名单外的静默忽略。
+ * 未传 cols（或过滤后为空）时回落到原来的 10 列，保证旧链接行为不变。
+ */
+function parseCols(rawUrl: string): ColumnKey[] {
+  let raw: string | null = null;
+  try {
+    raw = new URL(rawUrl).searchParams.get('cols');
+  } catch {
+    raw = null;
+  }
+  if (raw === null) return DEFAULT_COLUMNS;
+  const asked = new Set(
+    raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+  );
+  const picked = DEFAULT_COLUMNS.filter((k) => asked.has(k));
+  return picked.length > 0 ? picked : DEFAULT_COLUMNS;
+}
+
+/**
+ * CSV 字段转义：含逗号 / 双引号 / 换行的字段用双引号包裹，内部引号写成两个引号。
+ * 姓名里带个逗号原本会把整行错位（审计 #52）。
+ */
+function csvField(value: string): string {
+  if (/[",\r\n]/.test(value)) return `"${value.replace(/"/g, '""')}"`;
+  return value;
+}
 
 /** 成绩导出（规格书 B-14）：贡献区间 + 教师终审值 + 任务完成率 + 互评中位数。 */
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const courseId = Number.parseInt(id, 10);
-  if (!Number.isFinite(courseId)) {
+  const courseId = parseId(id);
+  if (courseId === null) {
     return NextResponse.json({ error: '课程 id 无效' }, { status: 400 });
   }
   const auth = await assertCourseRole(courseId, ['teacher', 'assistant']);
   if (!auth.ok) return auth.response;
+
+  // 前端勾选的列（审计 #51）：列顺序仍按白名单固定顺序，避免勾选顺序影响表头
+  const pickedColumns = parseCols(request.url);
+  const headerLine = pickedColumns
+    .map((k) => csvField(COLUMN_DEFS.find((c) => c.key === k)?.label ?? k))
+    .join(',');
 
   // 全课程小组与成员
   const groupRows = await db.select().from(groups).where(eq(groups.courseId, courseId)).orderBy(groups.id);
   const groupName = new Map(groupRows.map((g) => [g.id, g.name]));
   const groupIds = groupRows.map((g) => g.id);
 
-  const header = '学号,姓名,小组,角色,贡献区间低,贡献区间高,终审低,终审高,互评中位数,任务完成率';
   if (groupIds.length === 0) {
-    return new Response('\uFEFF' + header + '\n', {
+    return new Response('\uFEFF' + headerLine + '\n', {
       headers: { 'Content-Type': 'text/csv; charset=utf-8' },
     });
   }
@@ -114,7 +169,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     }
   }
 
-  const lines = [header];
+  const lines = [headerLine];
   for (const m of gm) {
     const u = userMap.get(m.userId);
     const snap = snapByUser.get(m.userId);
@@ -122,20 +177,19 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     const comp = completion.get(m.userId);
     const doneRate = comp && comp.total ? `${comp.done}/${comp.total}` : '0/0';
     const med = peerMedian.get(m.userId);
-    lines.push(
-      [
-        u?.studentNo ?? '',
-        u?.name ?? '',
-        groupName.get(m.groupId) ?? '',
-        m.duty,
-        snap ? Number(snap.lowPct).toFixed(1) : '',
-        snap ? Number(snap.highPct).toFixed(1) : '',
-        review?.adjustedLow ? Number(review.adjustedLow).toFixed(1) : '',
-        review?.adjustedHigh ? Number(review.adjustedHigh).toFixed(1) : '',
-        med ?? "",
-        doneRate,
-      ].join(",")
-    );
+    const values: Record<ColumnKey, string> = {
+      student_no: u?.studentNo ?? '',
+      name: u?.name ?? '',
+      group: groupName.get(m.groupId) ?? '',
+      duty: m.duty,
+      low: snap ? Number(snap.lowPct).toFixed(1) : '',
+      high: snap ? Number(snap.highPct).toFixed(1) : '',
+      review_low: review?.adjustedLow ? Number(review.adjustedLow).toFixed(1) : '',
+      review_high: review?.adjustedHigh ? Number(review.adjustedHigh).toFixed(1) : '',
+      peer_median: med === undefined ? '' : String(med),
+      task_rate: doneRate,
+    };
+    lines.push(pickedColumns.map((k) => csvField(values[k])).join(','));
   }
 
   const csv = "\uFEFF" + lines.join("\n"); // BOM 保证 Excel 中文不乱码

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
+import { parseId } from '@/lib/api/params';
 import { assertCourseRole } from '@/lib/auth/course-access';
+import { assertGroupAccess } from '@/lib/auth/task-access';
 import { db } from '@/lib/db/drizzle';
 import { groups, replanEvents, replanOptions } from '@/lib/db/schema';
 import { adoptOption } from '@/lib/services/replan';
@@ -14,9 +16,9 @@ type Params = { params: Promise<{ id: string; optionId: string }> };
  */
 export async function POST(_request: Request, { params }: Params) {
   const { id, optionId } = await params;
-  const eventId = Number.parseInt(id, 10);
-  const optId = Number.parseInt(optionId, 10);
-  if (!Number.isFinite(eventId) || !Number.isFinite(optId)) {
+  const eventId = parseId(id);
+  const optId = parseId(optionId);
+  if (eventId === null || optId === null) {
     return NextResponse.json({ error: '参数无效' }, { status: 400 });
   }
 
@@ -50,12 +52,16 @@ export async function POST(_request: Request, { params }: Params) {
     option.action === 'redistribute'
       ? (['teacher', 'assistant', 'captain'] as const)
       : (['teacher'] as const);
-  const auth = await assertCourseRole(group.courseId, [...roles]);
+  const auth = await assertCourseRole(group.courseId, [...roles], { write: true });
   if (!auth.ok) {
     return NextResponse.json(
       { error: option.action === 'redistribute' ? '无权采纳该方案' : '「缩减范围/组间补位」需要教师采纳' },
       { status: 403 }
     );
+  }
+  // 组级归属：redistribute 会改任务归属，必须限定本组（原来漏了 → 可跨组改任务）
+  if (!(await assertGroupAccess(event.groupId, auth.user, auth.membership.role))) {
+    return NextResponse.json({ error: '不属于该小组' }, { status: 403 });
   }
 
   const result = await adoptOption(eventId, optId, auth.user.id);

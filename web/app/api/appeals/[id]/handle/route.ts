@@ -5,6 +5,7 @@ import { assertCourseRole } from '@/lib/auth/course-access';
 import { getSnapshotCourseId, handleAppeal } from '@/lib/services/contributions';
 import { db } from '@/lib/db/drizzle';
 import { attributionAppeals } from '@/lib/db/schema';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -16,8 +17,8 @@ const handleSchema = z.object({
 /** 教师处理申诉（必须填理由；规格书 S4.1）。 */
 export async function POST(request: Request, { params }: Params) {
   const { id } = await params;
-  const appealId = Number.parseInt(id, 10);
-  if (!Number.isFinite(appealId)) {
+  const appealId = parseId(id);
+  if (appealId === null) {
     return NextResponse.json({ error: '申诉 id 无效' }, { status: 400 });
   }
 
@@ -34,7 +35,7 @@ export async function POST(request: Request, { params }: Params) {
   if (courseId === null) {
     return NextResponse.json({ error: '申诉不存在' }, { status: 404 });
   }
-  const auth = await assertCourseRole(courseId, ['teacher']);
+  const auth = await assertCourseRole(courseId, ['teacher'], { write: true });
   if (!auth.ok) return auth.response;
 
   const parsed = handleSchema.safeParse(await request.json().catch(() => null));

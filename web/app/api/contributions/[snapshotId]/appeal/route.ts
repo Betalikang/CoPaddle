@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { assertCourseRole } from '@/lib/auth/course-access';
 import { getSnapshotCourseId, submitAppeal } from '@/lib/services/contributions';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ snapshotId: string }> };
 
@@ -13,8 +14,8 @@ const appealSchema = z.object({
 /** 学生提交申诉（仅针对本人账本，规格书 S4.7 红线：有申诉机制才能被接受）。 */
 export async function POST(request: Request, { params }: Params) {
   const { snapshotId } = await params;
-  const id = Number.parseInt(snapshotId, 10);
-  if (!Number.isFinite(id)) {
+  const id = parseId(snapshotId);
+  if (id === null) {
     return NextResponse.json({ error: '快照 id 无效' }, { status: 400 });
   }
 
@@ -23,7 +24,7 @@ export async function POST(request: Request, { params }: Params) {
     return NextResponse.json({ error: '账本不存在' }, { status: 404 });
   }
   // 队长/队员可申诉（仅限本人）
-  const auth = await assertCourseRole(courseId, ['captain', 'member']);
+  const auth = await assertCourseRole(courseId, ['captain', 'member'], { write: true });
   if (!auth.ok) return auth.response;
 
   const parsed = appealSchema.safeParse(await request.json().catch(() => null));

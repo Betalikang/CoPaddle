@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { assertCourseRole } from '@/lib/auth/course-access';
-import { getTaskCourseId, isTaskLead } from '@/lib/auth/task-access';
+import { getTaskCourseId, getTaskGroupId, guardGroup, isTaskLead } from '@/lib/auth/task-access';
 import { changeTaskStatus } from '@/lib/services/tasks';
 import { changeStatusSchema } from '@/lib/validation/tasks';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -13,13 +14,17 @@ type Params = { params: Promise<{ id: string }> };
  */
 export async function POST(request: Request, { params }: Params) {
   const { id } = await params;
-  const taskId = Number.parseInt(id, 10);
-  if (!Number.isFinite(taskId)) {
+  const taskId = parseId(id);
+  if (taskId === null) {
     return NextResponse.json({ error: '任务 id 无效' }, { status: 400 });
   }
 
   const courseId = await getTaskCourseId(taskId);
   if (courseId === null) {
+    return NextResponse.json({ error: '任务不存在' }, { status: 404 });
+  }
+  const groupId = await getTaskGroupId(taskId);
+  if (groupId === null) {
     return NextResponse.json({ error: '任务不存在' }, { status: 404 });
   }
 
@@ -30,16 +35,20 @@ export async function POST(request: Request, { params }: Params) {
 
   // 队员路径：仅限本人 lead 的任务；否则按教师侧角色鉴权
   let actorId: number;
-  const memberAuth = await assertCourseRole(courseId, ['member']);
+  const memberAuth = await assertCourseRole(courseId, ['member'], { write: true });
   if (memberAuth.ok) {
     const lead = await isTaskLead(taskId, memberAuth.user.id);
     if (!lead) {
       return NextResponse.json({ error: '只能变更自己主责的任务' }, { status: 403 });
     }
+    const denied = await guardGroup(groupId, memberAuth);
+    if (denied) return denied;
     actorId = memberAuth.user.id;
   } else {
-    const auth = await assertCourseRole(courseId, ['teacher', 'assistant', 'captain']);
+    const auth = await assertCourseRole(courseId, ['teacher', 'assistant', 'captain'], { write: true });
     if (!auth.ok) return auth.response;
+    const denied = await guardGroup(groupId, auth);
+    if (denied) return denied;
     actorId = auth.user.id;
   }
 

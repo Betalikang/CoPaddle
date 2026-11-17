@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
 import { assertCourseRole } from '@/lib/auth/course-access';
 import { getLatestRun } from '@/lib/services/grouping';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
 /** 最近一次成功的求解（分组工作台默认加载）。 */
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
-  const courseId = Number.parseInt(id, 10);
-  if (!Number.isFinite(courseId)) {
+  const courseId = parseId(id);
+  if (courseId === null) {
     return NextResponse.json({ error: '课程 id 无效' }, { status: 400 });
   }
 

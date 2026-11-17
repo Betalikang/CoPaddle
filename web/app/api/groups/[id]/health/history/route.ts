@@ -5,14 +5,15 @@ import { assertGroupAccess } from '@/lib/auth/task-access';
 import { db } from '@/lib/db/drizzle';
 import { groups } from '@/lib/db/schema';
 import { getGroupHealth } from '@/lib/services/health';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
 /** 健康度历史序列（教师端趋势图）。 */
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
-  const groupId = Number.parseInt(id, 10);
-  if (!Number.isFinite(groupId)) {
+  const groupId = parseId(id);
+  if (groupId === null) {
     return NextResponse.json({ error: '小组 id 无效' }, { status: 400 });
   }
 

@@ -1,7 +1,7 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
-import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { getUser, toPublicUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
 
 // 全站读 cookies/session，强制动态渲染，避免生产 PPR 静态壳冲突
@@ -25,8 +25,9 @@ export default function RootLayout({
 }) {
   return (
     <html
-      lang="en"
-      className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
+      lang="zh-CN"
+      suppressHydrationWarning
+      className={manrope.className}
     >
       <head>
         {/* 首屏前应用已存主题，避免深色用户看到白闪 */}
@@ -37,14 +38,13 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-[100dvh] bg-gray-50 dark:bg-gray-950">
+      <body className="min-h-[100dvh] bg-background text-foreground antialiased">
         <SWRConfig
           value={{
             fallback: {
-              // We do NOT await here
-              // Only components that read this data will suspend
-              '/api/user': getUser(),
-              '/api/team': getTeamForUser()
+              // 服务端预取的当前用户，客户端组件首次渲染即有数据。
+              // 必须过 toPublicUser：这个对象会被序列化进 RSC 载荷。
+              '/api/user': getUser().then((u) => (u ? toPublicUser(u) : null))
             }
           }}
         >

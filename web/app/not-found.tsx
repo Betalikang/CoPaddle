@@ -1,25 +1,21 @@
 import Link from 'next/link';
 import { BrandMark } from '@/components/brand-mark';
+import { Button } from '@/components/ui/button';
 
 export default function NotFound() {
   return (
-    <div className="flex items-center justify-center min-h-[100dvh]">
-      <div className="max-w-md space-y-8 p-4 text-center">
+    <div className="flex min-h-[100dvh] items-center justify-center px-4">
+      <div className="w-full max-w-sm text-center">
         <div className="flex justify-center">
-          <BrandMark className="size-14 text-orange-500" />
+          <BrandMark className="size-12 text-brand" />
         </div>
-        <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
-          页面不存在
-        </h1>
-        <p className="text-base text-gray-500">
-          你访问的页面可能已被移除、改名，或暂时不可用。
+        <h1 className="mt-6 text-xl font-semibold tracking-tight">页面不存在</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          你访问的页面可能已被移除、改名，或你没有访问权限。
         </p>
-        <Link
-          href="/"
-          className="max-w-48 mx-auto flex justify-center py-2 px-4 border border-gray-300 rounded-full shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-        >
-          返回首页
-        </Link>
+        <Button asChild variant="outline" className="mt-6">
+          <Link href="/dashboard">回到课程工作台</Link>
+        </Button>
       </div>
     </div>
   );

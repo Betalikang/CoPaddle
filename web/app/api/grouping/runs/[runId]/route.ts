@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
 import { assertCourseRole } from '@/lib/auth/course-access';
 import { getRunWithPlans } from '@/lib/services/grouping';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ runId: string }> };
 
 /** 求解记录 + 三套方案（含四维得分与当前分组快照）。 */
 export async function GET(_request: Request, { params }: Params) {
   const { runId } = await params;
-  const id = Number.parseInt(runId, 10);
-  if (!Number.isFinite(id)) {
+  const id = parseId(runId);
+  if (id === null) {
     return NextResponse.json({ error: 'run id 无效' }, { status: 400 });
   }
 

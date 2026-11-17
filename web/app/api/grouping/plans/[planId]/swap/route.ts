@@ -3,14 +3,15 @@ import { assertCourseRole } from '@/lib/auth/course-access';
 import { AlgoServiceError } from '@/lib/algo/client';
 import { applyMove, getPlanCourseId } from '@/lib/services/grouping';
 import { groupingSwapSchema } from '@/lib/validation/grouping';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ planId: string }> };
 
 /** 两名成员互换组（校验通过才落库）。 */
 export async function POST(request: Request, { params }: Params) {
   const { planId } = await params;
-  const id = Number.parseInt(planId, 10);
-  if (!Number.isFinite(id)) {
+  const id = parseId(planId);
+  if (id === null) {
     return NextResponse.json({ error: '方案 id 无效' }, { status: 400 });
   }
 
@@ -18,7 +19,7 @@ export async function POST(request: Request, { params }: Params) {
   if (courseId === null) {
     return NextResponse.json({ error: '方案不存在' }, { status: 404 });
   }
-  const auth = await assertCourseRole(courseId, ['teacher', 'assistant']);
+  const auth = await assertCourseRole(courseId, ['teacher', 'assistant'], { write: true });
   if (!auth.ok) return auth.response;
 
   const parsed = groupingSwapSchema.safeParse(await request.json().catch(() => null));

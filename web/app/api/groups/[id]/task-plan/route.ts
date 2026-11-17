@@ -5,6 +5,7 @@ import { assertGroupAccess } from '@/lib/auth/task-access';
 import { db } from '@/lib/db/drizzle';
 import { groups } from '@/lib/db/schema';
 import { getTaskPlan } from '@/lib/services/tasks';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -21,8 +22,8 @@ async function getGroupCourseId(groupId: number): Promise<number | null> {
 /** 当前任务计划（含任务、依赖、指派）。组内可读。 */
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
-  const groupId = Number.parseInt(id, 10);
-  if (!Number.isFinite(groupId)) {
+  const groupId = parseId(id);
+  if (groupId === null) {
     return NextResponse.json({ error: '小组 id 无效' }, { status: 400 });
   }
 

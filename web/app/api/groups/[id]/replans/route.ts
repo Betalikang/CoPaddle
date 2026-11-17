@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { assertCourseRole } from '@/lib/auth/course-access';
-import { assertGroupAccess } from '@/lib/auth/task-access';
+import { assertGroupAccess, guardGroup } from '@/lib/auth/task-access';
 import { db } from '@/lib/db/drizzle';
 import { groups } from '@/lib/db/schema';
 import { listReplanEvents, triggerReplan } from '@/lib/services/replan';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -21,8 +22,8 @@ async function getGroupCourseId(groupId: number): Promise<number | null> {
 /** 重规划事件列表（组内可读）。 */
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
-  const groupId = Number.parseInt(id, 10);
-  if (!Number.isFinite(groupId)) {
+  const groupId = parseId(id);
+  if (groupId === null) {
     return NextResponse.json({ error: '小组 id 无效' }, { status: 400 });
   }
 
@@ -50,8 +51,8 @@ const generateSchema = z.object({
 /** 生成重规划决策包（三方案 + 代价说明；队长/教师）。 */
 export async function POST(request: Request, { params }: Params) {
   const { id } = await params;
-  const groupId = Number.parseInt(id, 10);
-  if (!Number.isFinite(groupId)) {
+  const groupId = parseId(id);
+  if (groupId === null) {
     return NextResponse.json({ error: '小组 id 无效' }, { status: 400 });
   }
 
@@ -59,8 +60,11 @@ export async function POST(request: Request, { params }: Params) {
   if (courseId === null) {
     return NextResponse.json({ error: '小组不存在' }, { status: 404 });
   }
-  const auth = await assertCourseRole(courseId, ['teacher', 'assistant', 'captain']);
+  const auth = await assertCourseRole(courseId, ['teacher', 'assistant', 'captain'], { write: true });
   if (!auth.ok) return auth.response;
+  // 组级归属：队长只能给自己组生成决策包（GET 有、POST 原来漏了 → 可向别组写事件）
+  const denied = await guardGroup(groupId, auth);
+  if (denied) return denied;
 
   const parsed = generateSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {

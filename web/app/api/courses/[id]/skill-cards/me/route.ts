@@ -2,14 +2,15 @@ import { NextResponse } from 'next/server';
 import { assertCourseRole } from '@/lib/auth/course-access';
 import { getMySkillCard, upsertSkillCard } from '@/lib/services/skill-cards';
 import { skillCardSchema } from '@/lib/validation/courses';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
 // 我的技能卡：本人可读写（规格书 B-04）
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
-  const courseId = Number.parseInt(id, 10);
-  if (!Number.isFinite(courseId)) {
+  const courseId = parseId(id);
+  if (courseId === null) {
     return NextResponse.json({ error: '课程 id 无效' }, { status: 400 });
   }
 
@@ -22,12 +23,12 @@ export async function GET(_request: Request, { params }: Params) {
 
 export async function POST(request: Request, { params }: Params) {
   const { id } = await params;
-  const courseId = Number.parseInt(id, 10);
-  if (!Number.isFinite(courseId)) {
+  const courseId = parseId(id);
+  if (courseId === null) {
     return NextResponse.json({ error: '课程 id 无效' }, { status: 400 });
   }
 
-  const auth = await assertCourseRole(courseId, ['teacher', 'assistant', 'captain', 'member']);
+  const auth = await assertCourseRole(courseId, ['teacher', 'assistant', 'captain', 'member'], { write: true });
   if (!auth.ok) return auth.response;
 
   const parsed = skillCardSchema.safeParse(await request.json().catch(() => null));

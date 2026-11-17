@@ -3,6 +3,7 @@ import { assertCourseRole } from '@/lib/auth/course-access';
 import { AlgoServiceError } from '@/lib/algo/client';
 import { getPlanCourseId, previewMove } from '@/lib/services/grouping';
 import { groupingMoveSchema, groupingSwapSchema } from '@/lib/validation/grouping';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ planId: string }> };
 
@@ -11,7 +12,8 @@ async function authorize(planId: number) {
   if (courseId === null) {
     return { ok: false as const, response: NextResponse.json({ error: '方案不存在' }, { status: 404 }) };
   }
-  // 拖动微调与选定：核心权限仅教师侧（规格书 S5）
+  // 拖动微调与选定：核心权限仅教师侧（规格书 S5）。
+  // 这里刻意不加 { write: true }：预演不落库，归档课程也应该能看「如果这么移动会怎样」。
   const auth = await assertCourseRole(courseId, ['teacher', 'assistant']);
   if (!auth.ok) return { ok: false as const, response: auth.response };
   return { ok: true as const };
@@ -20,8 +22,8 @@ async function authorize(planId: number) {
 /** 拖动预演：返回四维增减、是否破坏硬约束、违规原因（不落库）。 */
 export async function POST(request: Request, { params }: Params) {
   const { planId } = await params;
-  const id = Number.parseInt(planId, 10);
-  if (!Number.isFinite(id)) {
+  const id = parseId(planId);
+  if (id === null) {
     return NextResponse.json({ error: '方案 id 无效' }, { status: 400 });
   }
   const auth = await authorize(id);

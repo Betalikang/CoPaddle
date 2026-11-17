@@ -3,6 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { assertCourseRole } from '@/lib/auth/course-access';
 import { db } from '@/lib/db/drizzle';
 import { courseMemberships, skillCards, users } from '@/lib/db/schema';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -12,8 +13,8 @@ type Params = { params: Promise<{ id: string }> };
  */
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
-  const courseId = Number.parseInt(id, 10);
-  if (!Number.isFinite(courseId)) {
+  const courseId = parseId(id);
+  if (courseId === null) {
     return NextResponse.json({ error: '课程 id 无效' }, { status: 400 });
   }
 

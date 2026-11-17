@@ -42,13 +42,15 @@ async function logActivity(
 }
 
 const signInSchema = z.object({
-  email: z.string().email().min(3).max(255),
-  password: z.string().min(8).max(100)
+  account: z.string().trim().min(3, '请输入学号或邮箱').max(255),
+  password: z.string().min(6, '密码至少 6 位').max(100)
 });
 
 export const signIn = validatedAction(signInSchema, async (data, formData) => {
-  const { email, password } = data;
+  const { account, password } = data;
 
+  // 账号既可以是邮箱，也可以是学号 / 工号
+  const identifier = account.trim().toLowerCase();
   const userWithTeam = await db
     .select({
       user: users,
@@ -57,13 +59,13 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     .from(users)
     .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
     .leftJoin(teams, eq(teamMembers.teamId, teams.id))
-    .where(eq(users.email, email))
+    .where(identifier.includes('@') ? eq(users.email, identifier) : eq(users.studentNo, identifier))
     .limit(1);
 
   if (userWithTeam.length === 0) {
     return {
-      error: '邮箱或密码错误，请重试。',
-      email,
+      error: '账号或密码错误，请重试。',
+      account,
       password
     };
   }
@@ -77,8 +79,8 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
   if (!isPasswordValid) {
     return {
-      error: '邮箱或密码错误，请重试。',
-      email,
+      error: '账号或密码错误，请重试。',
+      account,
       password
     };
   }
@@ -93,7 +95,7 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
 const signUpSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().min(6, '密码至少 6 位').max(100),
   inviteId: z.string().optional()
 });
 
@@ -214,9 +216,9 @@ export async function signOut() {
 }
 
 const updatePasswordSchema = z.object({
-  currentPassword: z.string().min(8).max(100),
-  newPassword: z.string().min(8).max(100),
-  confirmPassword: z.string().min(8).max(100)
+  currentPassword: z.string().min(6, '密码至少 6 位').max(100),
+  newPassword: z.string().min(6, '密码至少 6 位').max(100),
+  confirmPassword: z.string().min(6, '密码至少 6 位').max(100)
 });
 
 export const updatePassword = validatedActionWithUser(
@@ -274,7 +276,7 @@ export const updatePassword = validatedActionWithUser(
 );
 
 const deleteAccountSchema = z.object({
-  password: z.string().min(8).max(100)
+  password: z.string().min(6, '密码至少 6 位').max(100)
 });
 
 export const deleteAccount = validatedActionWithUser(

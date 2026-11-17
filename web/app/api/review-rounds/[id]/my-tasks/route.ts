@@ -5,6 +5,7 @@ import { peerReviewRounds } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { myReviewTasks } from '@/lib/services/peer-reviews';
 import { getUser } from '@/lib/db/queries';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -20,8 +21,8 @@ async function getRoundCourseId(roundId: number): Promise<number | null> {
 /** 我需要评谁（含已提交状态）。 */
 export async function GET(_request: Request, { params }: Params) {
   const { id } = await params;
-  const roundId = Number.parseInt(id, 10);
-  if (!Number.isFinite(roundId)) {
+  const roundId = parseId(id);
+  if (roundId === null) {
     return NextResponse.json({ error: '轮次 id 无效' }, { status: 400 });
   }
   const user = await getUser();

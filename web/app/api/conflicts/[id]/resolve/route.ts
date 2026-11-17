@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { eq } from 'drizzle-orm';
 import { assertCourseRole } from '@/lib/auth/course-access';
+import { assertGroupAccess } from '@/lib/auth/task-access';
 import { db } from '@/lib/db/drizzle';
 import { groups } from '@/lib/db/schema';
 import { getConflict, resolveConflict } from '@/lib/services/conflicts';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -17,8 +19,8 @@ const resolveSchema = z.object({
 /** 处理冲突：就地合并 / 退回对齐契约 / 重指派 / 驳回（队长/教师）。 */
 export async function POST(request: Request, { params }: Params) {
   const { id } = await params;
-  const conflictId = Number.parseInt(id, 10);
-  if (!Number.isFinite(conflictId)) {
+  const conflictId = parseId(id);
+  if (conflictId === null) {
     return NextResponse.json({ error: '冲突 id 无效' }, { status: 400 });
   }
 
@@ -34,8 +36,12 @@ export async function POST(request: Request, { params }: Params) {
   if (!group) {
     return NextResponse.json({ error: '冲突不存在' }, { status: 404 });
   }
-  const auth = await assertCourseRole(group.courseId, ['teacher', 'assistant', 'captain']);
+  const auth = await assertCourseRole(group.courseId, ['teacher', 'assistant', 'captain'], { write: true });
   if (!auth.ok) return auth.response;
+  // 组级归属：队长只能处理本组冲突（原来只判课程角色 → 可跨组 resolve）
+  if (!(await assertGroupAccess(data.conflict.groupId, auth.user, auth.membership.role))) {
+    return NextResponse.json({ error: '不属于该小组' }, { status: 403 });
+  }
 
   const parsed = resolveSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {

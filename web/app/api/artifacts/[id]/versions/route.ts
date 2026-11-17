@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { assertCourseRole } from '@/lib/auth/course-access';
+import { getArtifactGroupId, guardGroup } from '@/lib/auth/task-access';
 import { getArtifactCourseId, saveVersion } from '@/lib/services/artifacts';
+import { parseId } from '@/lib/api/params';
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -28,8 +30,8 @@ const versionSchema = z.object({
 /** 保存新版本（段落 diff → 归属沉淀）。 */
 export async function POST(request: Request, { params }: Params) {
   const { id } = await params;
-  const artifactId = Number.parseInt(id, 10);
-  if (!Number.isFinite(artifactId)) {
+  const artifactId = parseId(id);
+  if (artifactId === null) {
     return NextResponse.json({ error: '交付物 id 无效' }, { status: 400 });
   }
 
@@ -37,8 +39,14 @@ export async function POST(request: Request, { params }: Params) {
   if (courseId === null) {
     return NextResponse.json({ error: '交付物不存在' }, { status: 404 });
   }
-  const auth = await assertCourseRole(courseId, ['teacher', 'assistant', 'captain', 'member']);
+  const auth = await assertCourseRole(courseId, ['teacher', 'assistant', 'captain', 'member'], { write: true });
   if (!auth.ok) return auth.response;
+  const groupId = await getArtifactGroupId(artifactId);
+  if (groupId === null) {
+    return NextResponse.json({ error: '交付物不存在' }, { status: 404 });
+  }
+  const denied = await guardGroup(groupId, auth);
+  if (denied) return denied;
 
   const parsed = versionSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
