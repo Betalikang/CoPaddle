@@ -69,6 +69,19 @@ node scripts/screenshots.mjs     <teacherCookie> <courseId>   # 7 页 × 1280/37
 Playwright——项目没把它装进依赖，本机需要 `PERF_PLAYWRIGHT_PATH` 指向
 `node_modules/playwright/index.js`（Windows 中文用户名下裸模块解析拿不到 `chromium`）。
 
+五支脚本的目标站点与浏览器统一由 `scripts/lib/playwright.mjs` 决定：
+
+- `resolveBaseUrl()`：`COPADDLE_BASE_URL` → `SHOT_BASE_URL` → `PERF_BASE_URL` → `http://localhost:3000`。
+  以前三支脚本读前者、两支读后者，同轮验收要导两次变量，少导一次就静默打本机。
+- `resolveChromePath()`：只读 `CHROME_PATH`，缺了直接报错。不再写死某个人的本机路径。
+
+对线上站点复验时：
+
+```powershell
+$env:COPADDLE_BASE_URL='http://47.97.96.242'
+node scripts/design-check.mjs <teacherCookie> 4
+```
+
 两个脚本跑前都会先 `GET /api/user` 确认 cookie 真能登录，登录失败直接退出码 2：cookie 无效时每页
 都会回落登录页，指标会好得离谱却一页真实数据都没测到。`perf-fixture.ts` 与服务端必须使用同一个
 `AUTH_SECRET`，脚本会自动去掉 fixture 打印的 `session=` 前缀。
