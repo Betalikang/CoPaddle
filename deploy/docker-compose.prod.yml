@@ -56,6 +56,11 @@ services:
       ALGO_SERVICE_URL: http://algo:8000
       ALGO_SHARED_SECRET: ${ALGO_SHARED_SECRET}
       BASE_URL: ${BASE_URL:-http://localhost}
+      # 演示账号开关：默认关闭。只有 .env 里显式写 DEMO_MODE=true 才会在登录页渲染。
+      DEMO_MODE: ${DEMO_MODE:-false}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-}
+      # 会话 cookie 的 Secure 策略；留空则按 BASE_URL 的协议推断（见 lib/auth/cookie-policy.ts）
+      COOKIE_SECURE: ${COOKIE_SECURE:-}
     depends_on:
       db:
         condition: service_healthy
@@ -68,6 +73,9 @@ services:
     image: caddy:2-alpine
     container_name: gongjiang-caddy
     restart: unless-stopped
+    environment:
+      # 供 Caddyfile 的 {$SITE_ADDRESS} 使用：写域名即自动 HTTPS
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
     ports:
       - "80:80"
       - "443:443"

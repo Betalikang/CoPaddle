@@ -1,7 +1,33 @@
-# 默认 HTTP 反代。有域名后改成：your.domain {
-#   reverse_proxy web:3000
-# }
-:80 {
+# 共桨对外反代。
+#
+# 站点地址由 SITE_ADDRESS 决定（deploy/env.example 里有这一项）：
+#
+#   SITE_ADDRESS=your.domain.com   → Caddy 自动申请 Let's Encrypt 证书，
+#                                    启用 HTTPS，并把 :80 的 HTTP 请求 301 到 HTTPS
+#                                    （显式写域名时 Caddy 默认就这么做）。
+#   SITE_ADDRESS=:80               → 仅 HTTP。只应在「暂时没有域名」的演示/内网环境使用，
+#                                    此时浏览器到服务器之间是明文。
+#
+# 之前这里硬编码 `:80`，即使配了域名也只有 HTTP —— 口令、会话 cookie、
+# 课程与作业内容全程明文过公网。改成读环境变量后，上线域名只是改一行 env。
+{$SITE_ADDRESS::80} {
 	encode gzip
-	reverse_proxy web:3000
+
+	# 反代到内部 web 容器（不对外映射 3000）
+	reverse_proxy web:3000 {
+		# 让应用能拿到真实客户端 IP（登录限流按 IP 计数依赖它）
+		header_up X-Real-IP {remote_host}
+	}
+
+	# 基础安全响应头。HSTS 只在 HTTPS 下有意义，用 expr 条件避免 HTTP 演示环境
+	# 把浏览器锁死在 https 上。
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	@httpsOnly protocol https
+	header @httpsOnly Strict-Transport-Security "max-age=31536000; includeSubDomains"
 }

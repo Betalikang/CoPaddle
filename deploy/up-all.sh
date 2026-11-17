@@ -5,9 +5,13 @@ cd /opt/CoPaddle/deploy
 echo '== migrate =='
 docker compose -f docker-compose.prod.yml up -d db
 sleep 6
-docker compose -f docker-compose.prod.yml run --rm --no-deps \
+# 迁移失败必须中止（原来这里是 `|| true`，会带病启动新版本）
+if ! docker compose -f docker-compose.prod.yml run --rm --no-deps \
   -e POSTGRES_URL \
-  web node_modules/.bin/drizzle-kit migrate || true
+  web node_modules/.bin/drizzle-kit migrate; then
+  echo '!! 数据库迁移失败，已中止启动。' >&2
+  exit 1
+fi
 
 echo '== up all =='
 docker compose -f docker-compose.prod.yml up -d
